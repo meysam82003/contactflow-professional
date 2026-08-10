@@ -43,21 +43,21 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
-          cache-provider: basic
 
-      - name: Verify bundled PWA
+      - name: Verify unpacked PWA source
         shell: bash
         run: |
-          test -s android/pwa_assets.zip
-          unzip -t android/pwa_assets.zip
+          test -d android/pwa
+          test -s android/pwa/index.html
 
       - name: Prepare bundled PWA assets
         shell: bash
         run: |
           rm -rf android/app/src/main/assets
           mkdir -p android/app/src/main/assets
-          unzip -q android/pwa_assets.zip -d android/app/src/main/assets
+          cp -a android/pwa/. android/app/src/main/assets/
           test -s android/app/src/main/assets/index.html
+          find android/app/src/main/assets -maxdepth 2 -type f -print
 
       - name: Build debug APK
         id: build
