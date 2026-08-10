@@ -1,23 +1,9 @@
 # ContactFlow Professional 1.1
 
-نسخه شخصی چنددستگاهی ContactFlow. هسته Import/پاک‌سازی/نام‌گذاری/VCF/CSV روی خود دستگاه اجرا می‌شود؛ حساب و Sync به Gateway خصوصی متصل می‌شوند.
+نسخه شخصی چنددستگاهی ContactFlow با PWA، Windows و Android.
 
-## خروجی‌ها
+## Android
+GitHub Actions با هر تغییر در `android/**` یک APK debug می‌سازد و آن را با نام `ContactFlow-Professional-APK` در Artifacts قرار می‌دهد.
 
-- فایل‌های ریشه (`index.html`, `app.js`, `pro.js`, ...) — PWA قابل انتشار روی HTTPS.
-- `server/` — Gateway خصوصی حساب، Sync و Telegram.
-- `android/` — سورس APK و Workflow ساخت Android.
-- `desktop/` — سورس Windows portable/setup.
-
-## قابلیت‌های Professional
-
-- حساب کاربری خصوصی و چنددستگاهی
-- Backup و Sync رمزگذاری‌شده
-- مدیریت Name / City / Section
-- Telegram Mini App و Bot admin panel
-- Opt-in / Opt-out و Suppression List
-- PWA Offline برای هسته محلی
-- Windows installer source
-- Android source + GitHub Actions APK build
-
-> نکته: کمپین‌های Telegram فقط برای مخاطبان رضایت‌داده/تعامل‌داشته طراحی شده‌اند و برای دورزدن محدودیت‌های Telegram یا ارسال انبوه ناخواسته استفاده نمی‌شوند.
+## امنیت و Telegram
+کمپین‌های Telegram در این پروژه فقط برای مخاطبان رضایت‌داده/تعامل‌داشته و مسیرهای رسمی Bot/Mini App/Business طراحی شده‌اند؛ چرخاندن اکانت برای دورزدن محدودیت یا ارسال انبوه ناخواسته جزو پروژه نیست.

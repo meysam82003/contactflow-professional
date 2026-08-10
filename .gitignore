@@ -1,0 +1,17 @@
+server/data/
+server/*.db
+server/*.db-*
+**/.server_secret
+.env
+server/.env
+*.keystore
+*.jks
+local.properties
+.gradle/
+android/.gradle/
+android/app/build/
+build/
+dist/
+*.log
+.DS_Store
+desktop/installer/payload/
