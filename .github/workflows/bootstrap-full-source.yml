@@ -1,0 +1,148 @@
+name: Bootstrap Full Source and Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'bootstrap/**'
+      - '.github/workflows/bootstrap-full-source.yml'
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  hydrate-build-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reconstruct full source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat bootstrap/source_v1_2.chunk* > /tmp/contactflow-source.b64
+          base64 -d /tmp/contactflow-source.b64 > /tmp/ContactFlow_Professional_1.2_Source.zip
+          unzip -t /tmp/ContactFlow_Professional_1.2_Source.zip
+          rm -rf /tmp/contactflow-src
+          mkdir -p /tmp/contactflow-src
+          unzip -q /tmp/ContactFlow_Professional_1.2_Source.zip -d /tmp/contactflow-src
+          rsync -a --exclude='.git/' /tmp/contactflow-src/ ./
+          test -s app.js
+          test -s pro.js
+          test -s server/server.js
+          test -s desktop/main.go
+          test -s android/app/src/main/java/com/contactflow/pro/MainActivity.java
+
+      - name: Publish browsable full source to main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'contactflow-build[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m 'Publish full ContactFlow Professional 1.2 source'
+            git push origin HEAD:main
+          fi
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        shell: bash
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Sync PWA assets
+        shell: bash
+        run: |
+          rm -rf desktop/webapp android/app/src/main/assets
+          mkdir -p desktop/webapp/icons android/app/src/main/assets/icons
+          cp index.html app.js pro.js config.js styles.css manifest.webmanifest sw.js desktop/webapp/
+          cp index.html app.js pro.js config.js styles.css manifest.webmanifest sw.js android/app/src/main/assets/
+          cp -r icons/* desktop/webapp/icons/
+          cp -r icons/* android/app/src/main/assets/icons/
+
+      - name: Build all desktop targets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          cd desktop
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags='-s -w -H=windowsgui' -o ../release/ContactFlow_Professional_1.2_Windows_Portable.exe .
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o ../release/ContactFlow_Professional_1.2_Linux_x64 .
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o ../release/ContactFlow_Professional_1.2_macOS_Intel .
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags='-s -w' -o ../release/ContactFlow_Professional_1.2_macOS_AppleSilicon .
+          mkdir -p installer/payload
+          cp ../release/ContactFlow_Professional_1.2_Windows_Portable.exe installer/payload/ContactFlow.exe
+          cd installer
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags='-s -w -H=windowsgui' -o ../../release/ContactFlow_Professional_1.2_Windows_Setup.exe .
+
+      - name: Build Android APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon -p android :app:assembleDebug --stacktrace
+          cp android/app/build/outputs/apk/debug/app-debug.apk release/ContactFlow_Professional_1.2_Android.apk
+          unzip -l release/ContactFlow_Professional_1.2_Android.apk | grep 'assets/app.js'
+          unzip -l release/ContactFlow_Professional_1.2_Android.apk | grep 'assets/pro.js'
+
+      - name: Package PWA Server Source and guides
+        shell: bash
+        run: |
+          set -euo pipefail
+          zip -qr release/ContactFlow_Professional_1.2_PWA.zip index.html app.js pro.js config.js styles.css manifest.webmanifest sw.js icons README_FA.md PWA_TUTORIAL_FA.md PWA_TUTORIAL_PRO_FA.md docs
+          zip -qr release/ContactFlow_Professional_1.2_Server.zip server deploy Dockerfile docker-compose.yml DEPLOY_1_1_FA.md DEPLOY_PRO_FA.md
+          zip -qr release/ContactFlow_Professional_1.2_Guides_FA.zip docs README_FA.md PWA_TUTORIAL_FA.md PWA_TUTORIAL_PRO_FA.md WINDOWS_INSTALL_FA.md
+          cp /tmp/ContactFlow_Professional_1.2_Source.zip release/ContactFlow_Professional_1.2_Source.zip
+          cd release
+          sha256sum * > ContactFlow_Professional_1.2_SHA256.txt
+
+      - name: Publish GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG=v1.2.0
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" release/* --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$TAG" release/* --repo "$GITHUB_REPOSITORY" --target main --title 'ContactFlow Professional 1.2.0' --notes 'Full multi-device package: Windows Setup/Portable, Linux, macOS Intel/Apple Silicon, Android APK, PWA, Server, source and Persian guides.'
+          fi
+
+      - name: Upload complete build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ContactFlow-Professional-1.2-All-Devices
+          path: release/*
+          retention-days: 30
+
+      - name: Report result
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "Bootstrap/Release run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} — commit ${GITHUB_SHA}" || true
