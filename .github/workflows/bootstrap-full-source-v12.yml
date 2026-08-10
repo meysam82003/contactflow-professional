@@ -27,21 +27,25 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(find bootstrap -maxdepth 1 -name 'source.part*.b64' | wc -l)" -eq 13
-          cat $(find bootstrap -maxdepth 1 -name 'source.part*.b64' | sort) > /tmp/contactflow-source.b64
-          test "$(wc -c < /tmp/contactflow-source.b64)" -eq 103260
+          echo "Bootstrap chunks:"
+          find bootstrap -maxdepth 1 -name 'source.part*.b64' -type f -printf '%f %s bytes\n' | sort -V
+          test -s bootstrap/source.part00.b64
+          test -s bootstrap/source.part12.b64
+          mapfile -t PARTS < <(find bootstrap -maxdepth 1 -name 'source.part*.b64' -type f | sort -V)
+          echo "Found ${#PARTS[@]} chunks"
+          cat "${PARTS[@]}" | tr -d '\r\n\t ' > /tmp/contactflow-source.b64
+          echo "Normalized base64 bytes: $(wc -c < /tmp/contactflow-source.b64)"
           base64 --decode /tmp/contactflow-source.b64 > /tmp/contactflow-source.zip
+          echo "Archive bytes: $(wc -c < /tmp/contactflow-source.zip)"
+          sha256sum /tmp/contactflow-source.zip
           echo '81c061e43ed8de197984bbdad07f363c80d4f1e21fac9e07ca2639694df8afc6  /tmp/contactflow-source.zip' | sha256sum -c -
           unzip -t /tmp/contactflow-source.zip
           rm -rf /tmp/contactflow-src
           mkdir -p /tmp/contactflow-src
           unzip -q /tmp/contactflow-source.zip -d /tmp/contactflow-src
-          test -s /tmp/contactflow-src/index.html
-          test -s /tmp/contactflow-src/app.js
-          test -s /tmp/contactflow-src/pro.js
-          test -s /tmp/contactflow-src/server/server.js
-          test -s /tmp/contactflow-src/desktop/main.go
-          test -s /tmp/contactflow-src/android/app/src/main/java/com/contactflow/pro/MainActivity.java
+          for f in index.html app.js pro.js server/server.js desktop/main.go android/app/src/main/java/com/contactflow/pro/MainActivity.java; do
+            test -s "/tmp/contactflow-src/$f" || { echo "Missing archive file: $f"; exit 1; }
+          done
 
       - name: Replace repository with browsable full source
         shell: bash
@@ -49,7 +53,6 @@ jobs:
           set -euo pipefail
           rsync -a --delete --exclude='.git/' /tmp/contactflow-src/ ./
 
-          # PWA 1.2 hardening: keep source self-contained with SVG icon only.
           python3 - <<'PY'
           from pathlib import Path
           import json
@@ -95,7 +98,6 @@ jobs:
           pkg.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
           PY
 
-          # Generated webapp/assets are created by build workflows, not committed as duplicate source.
           rm -rf desktop/webapp android/app/src/main/assets bootstrap
 
       - name: Validate source before commit
