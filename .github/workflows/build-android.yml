@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   apk:
@@ -82,3 +83,22 @@ jobs:
             android/app/build/reports/**
           if-no-files-found: ignore
           retention-days: 7
+
+      - name: Report failed build to repository issue
+        if: failure()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo '## Android APK build failure'
+            echo
+            echo "Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo "Commit: ${GITHUB_SHA}"
+            echo
+            echo '### Gradle log tail'
+            echo '```text'
+            if [ -f android-build.log ]; then tail -n 140 android-build.log; else echo 'android-build.log was not created; failure happened before Gradle build.'; fi
+            echo '```'
+          } > /tmp/contactflow-build-failure.md
+          gh issue create --repo "$GITHUB_REPOSITORY" --title "Android build failure #${GITHUB_RUN_NUMBER}" --body-file /tmp/contactflow-build-failure.md || true
