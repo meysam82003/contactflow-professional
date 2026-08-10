@@ -1,0 +1,96 @@
+name: Materialize Full Source
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'bootstrap/**'
+      - '.github/workflows/materialize-source.yml'
+
+permissions:
+  contents: write
+  issues: write
+  actions: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout staged repository
+        uses: actions/checkout@v4
+
+      - name: Rebuild and verify ContactFlow 1.2 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat \
+            bootstrap/lean2.part.00 \
+            bootstrap/lean2.part.01 \
+            bootstrap/lean2.part.02 \
+            bootstrap/lean2.part.03 \
+            bootstrap/lean2.part.04 \
+            bootstrap/rem.part.00 \
+            bootstrap/rem.part.01 \
+            bootstrap/rem.part.02 \
+            bootstrap/rem.part.03 \
+            bootstrap/rem.part.04 \
+            bootstrap/rem.part.05 \
+            | tr -d '\n\r' | base64 -d > /tmp/contactflow-source.zip
+
+          echo '204f2d0ec2325bbcc77835f5003ebe18fe5fe2d919f308d366f8bff23eeb4ad2  /tmp/contactflow-source.zip' | sha256sum -c -
+          unzip -t /tmp/contactflow-source.zip
+
+          rm -rf /tmp/contactflow-source
+          mkdir -p /tmp/contactflow-source
+          unzip -q /tmp/contactflow-source.zip -d /tmp/contactflow-source
+
+          test -s /tmp/contactflow-source/index.html
+          test -s /tmp/contactflow-source/app.js
+          test -s /tmp/contactflow-source/pro.js
+          test -s /tmp/contactflow-source/server/server.js
+          test -s /tmp/contactflow-source/desktop/main.go
+          test -s /tmp/contactflow-source/desktop/installer/main.go
+          test -s /tmp/contactflow-source/android/app/src/main/java/com/contactflow/pro/MainActivity.java
+          test -s /tmp/contactflow-source/.github/workflows/release-all.yml
+          test -s /tmp/contactflow-source/docs/TELEGRAM_GUIDE_FA.md
+
+      - name: Materialize browsable source on main
+        shell: bash
+        run: |
+          set -euo pipefail
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a /tmp/contactflow-source/. .
+          mkdir -p downloads
+          cp /tmp/contactflow-source.zip downloads/ContactFlow_Professional_1.2_Source.zip
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Materialize full ContactFlow Professional 1.2 source'
+          git push origin HEAD:main
+
+      - name: Report success
+        if: success()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "✅ ContactFlow Professional 1.2 full source materialized on main. Commit: $(git rev-parse HEAD)" || true
+
+      - name: Start all-device release build
+        if: success()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run release-all.yml --repo "$GITHUB_REPOSITORY" --ref main || true
+
+      - name: Report failure
+        if: failure()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "❌ Full source materialization failed. Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" || true
