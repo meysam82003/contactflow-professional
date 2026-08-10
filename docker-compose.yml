@@ -1,0 +1,16 @@
+services:
+  contactflow:
+    build: .
+    restart: unless-stopped
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8787
+      DATA_DIR: /data
+      PUBLIC_DIR: /app
+      SESSION_DAYS: 30
+      CORS_ORIGIN: https://contactflow.example.com
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+    volumes:
+      - ./server-data:/data
+    ports:
+      - "127.0.0.1:8787:8787"

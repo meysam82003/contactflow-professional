@@ -1,3 +1,4 @@
+# ContactFlow secrets and runtime data
 server/data/
 server/*.db
 server/*.db-*
@@ -14,4 +15,9 @@ build/
 dist/
 *.log
 .DS_Store
+
 desktop/installer/payload/
+
+# generated PWA copies (source of truth is repository root)
+desktop/webapp/
+android/app/src/main/assets/

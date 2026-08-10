@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.net.Uri;
 import android.content.*;
+import android.database.Cursor;
 import android.provider.MediaStore;
 import android.webkit.*;
 import android.widget.Toast;
