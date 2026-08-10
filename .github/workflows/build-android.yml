@@ -1,159 +1,55 @@
 name: Build Android APK
-
 on:
   workflow_dispatch:
   push:
     branches: [ main ]
     paths:
       - 'android/**'
+      - 'index.html'
+      - 'app.js'
+      - 'pro.js'
+      - 'config.js'
+      - 'styles.css'
+      - 'manifest.webmanifest'
+      - 'sw.js'
+      - 'icons/**'
       - '.github/workflows/build-android.yml'
-
 permissions:
   contents: read
-  issues: write
-
 jobs:
   apk:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android API 36 and Build Tools
-        id: sdk
-        shell: bash
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK
         run: |
-          set -o pipefail
-          sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 2>&1 | tee android-sdk-install.log
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
           test -d "$ANDROID_HOME/platforms/android-36"
-          test -d "$ANDROID_HOME/build-tools/36.0.0"
-
-      - name: Set up Gradle 9.5
-        uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
-
-      - name: Reconstruct and verify complete PWA payload
-        id: payload
-        shell: bash
+      - name: Sync PWA assets into Android
         run: |
-          set -euo pipefail
-          cat \
-            android/pwa_payload/00.part \
-            android/pwa_payload/01.part \
-            android/pwa_payload/02.part \
-            android/pwa_payload/03.part \
-            android/pwa_payload/04.part \
-            > /tmp/contactflow-pwa.b64
-
-          test "$(wc -c < /tmp/contactflow-pwa.b64)" -eq 85972
-          base64 --decode /tmp/contactflow-pwa.b64 > /tmp/contactflow-pwa.tar.gz
-          echo 'c2f561395f3b79988ced15af2447684e44e7999228d8b2352d61c77cd3f0815d  /tmp/contactflow-pwa.tar.gz' | sha256sum -c -
-          tar -tzf /tmp/contactflow-pwa.tar.gz | tee pwa-payload-files.log
-
           rm -rf android/app/src/main/assets
-          mkdir -p android/app/src/main/assets
-          tar -xzf /tmp/contactflow-pwa.tar.gz -C android/app/src/main/assets
-
-          test -s android/app/src/main/assets/index.html
-          test -s android/app/src/main/assets/app.js
-          test -s android/app/src/main/assets/pro.js
-          test -s android/app/src/main/assets/styles.css
-          test -s android/app/src/main/assets/manifest.webmanifest
-          test -s android/app/src/main/assets/sw.js
-          test -s android/app/src/main/assets/icons/icon.svg
-          test -s android/app/src/main/assets/icons/icon-192.png
-          test -s android/app/src/main/assets/icons/icon-512.png
-          find android/app/src/main/assets -maxdepth 2 -type f -print
-
+          mkdir -p android/app/src/main/assets/icons
+          cp index.html app.js pro.js config.js styles.css manifest.webmanifest sw.js android/app/src/main/assets/
+          cp -r icons/* android/app/src/main/assets/icons/
       - name: Build debug APK
-        id: build
-        shell: bash
+        working-directory: android
+        run: gradle --no-daemon :app:assembleDebug --stacktrace
+      - name: Verify bundled app
         run: |
-          set -o pipefail
-          gradle --no-daemon -p android :app:assembleDebug --stacktrace --warning-mode all 2>&1 | tee android-build.log
-
-      - name: Verify APK and embedded assets
-        if: success()
-        shell: bash
-        run: |
-          APK=android/app/build/outputs/apk/debug/app-debug.apk
-          test -s "$APK"
-          unzip -l "$APK" | tee apk-contents.log
-          unzip -l "$APK" | grep -q 'assets/index.html'
-          unzip -l "$APK" | grep -q 'assets/app.js'
-          unzip -l "$APK" | grep -q 'assets/pro.js'
-          unzip -l "$APK" | grep -q 'assets/styles.css'
-          ls -lh "$APK"
-          sha256sum "$APK" | tee apk-sha256.txt
-
-      - name: Upload APK
-        if: success()
-        uses: actions/upload-artifact@v4
+          unzip -l android/app/build/outputs/apk/debug/app-debug.apk | grep 'assets/app.js'
+          unzip -l android/app/build/outputs/apk/debug/app-debug.apk | grep 'assets/pro.js'
+          unzip -l android/app/build/outputs/apk/debug/app-debug.apk | grep 'assets/config.js'
+      - uses: actions/upload-artifact@v4
         with:
-          name: ContactFlow-Professional-APK
+          name: ContactFlow-Professional-Android-1.2
           path: android/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Upload build diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ContactFlow-Android-Build-Diagnostics
-          path: |
-            android-sdk-install.log
-            android-build.log
-            pwa-payload-files.log
-            apk-contents.log
-            apk-sha256.txt
-            android/app/build/reports/**
-          if-no-files-found: ignore
-          retention-days: 7
-
-      - name: Report successful build
-        if: success()
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          SHA=$(cut -d' ' -f1 apk-sha256.txt 2>/dev/null || true)
-          gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "✅ Complete Android APK build succeeded. Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} — commit ${GITHUB_SHA} — APK SHA-256: ${SHA}" || true
-
-      - name: Report failed build
-        if: failure()
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          {
-            echo '❌ Android APK build failed.'
-            echo
-            echo "Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-            echo "Commit: ${GITHUB_SHA}"
-            echo
-            echo '### Relevant log tail'
-            echo '```text'
-            if [ -f android-build.log ]; then
-              tail -n 180 android-build.log
-            elif [ -f pwa-payload-files.log ]; then
-              tail -n 180 pwa-payload-files.log
-            elif [ -f android-sdk-install.log ]; then
-              tail -n 180 android-sdk-install.log
-            else
-              echo 'Failure happened before diagnostic logs were created.'
-            fi
-            echo '```'
-          } > /tmp/contactflow-build-status.md
-          gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body-file /tmp/contactflow-build-status.md || true
+          retention-days: 30
