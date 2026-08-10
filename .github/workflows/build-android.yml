@@ -16,6 +16,7 @@ on:
       - '.github/workflows/build-android.yml'
 permissions:
   contents: read
+  issues: write
 jobs:
   apk:
     runs-on: ubuntu-latest
@@ -48,8 +49,21 @@ jobs:
           unzip -l android/app/build/outputs/apk/debug/app-debug.apk | grep 'assets/app.js'
           unzip -l android/app/build/outputs/apk/debug/app-debug.apk | grep 'assets/pro.js'
           unzip -l android/app/build/outputs/apk/debug/app-debug.apk | grep 'assets/config.js'
+          sha256sum android/app/build/outputs/apk/debug/app-debug.apk | tee apk-sha256.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: ContactFlow-Professional-Android-1.2
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: ContactFlow-Professional-Android-1.2.1
+          path: |
+            android/app/build/outputs/apk/debug/app-debug.apk
+            apk-sha256.txt
           retention-days: 30
+      - name: Report success
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "✅ Android 1.2.1 compatibility build succeeded — Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} — commit ${GITHUB_SHA}"
+      - name: Report failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "❌ Android 1.2.1 compatibility build failed — Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} — commit ${GITHUB_SHA}"
