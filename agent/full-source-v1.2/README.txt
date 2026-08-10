@@ -1,0 +1,1 @@
+Full source synchronization is staged on this branch before promotion to main.
