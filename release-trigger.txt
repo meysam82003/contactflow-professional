@@ -1,4 +1,4 @@
-ContactFlow Professional 1.2.0
-release-trigger=2026-08-10T17:25:00+03:30
-purpose=publish-full-source-docs-and-all-device-downloads
-android=API-36-AGP-9.3.0-Gradle-9.5
+ContactFlow Professional 1.2.1 Android compatibility refresh
+release-trigger=2026-08-10T17:58:00+03:30
+purpose=replace-android-apk-with-android-5-plus-compatible-build
+android=minSdk21-webkit1.14.0-target36
