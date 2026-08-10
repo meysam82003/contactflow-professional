@@ -84,21 +84,29 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-      - name: Report failed build to repository issue
+      - name: Report successful build
+        if: success()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "✅ Android APK build succeeded. Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} — commit ${GITHUB_SHA}" || true
+
+      - name: Report failed build
         if: failure()
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           {
-            echo '## Android APK build failure'
+            echo '❌ Android APK build failed.'
             echo
             echo "Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
             echo "Commit: ${GITHUB_SHA}"
             echo
             echo '### Gradle log tail'
             echo '```text'
-            if [ -f android-build.log ]; then tail -n 140 android-build.log; else echo 'android-build.log was not created; failure happened before Gradle build.'; fi
+            if [ -f android-build.log ]; then tail -n 160 android-build.log; else echo 'android-build.log was not created; failure happened before the Gradle build step.'; fi
             echo '```'
-          } > /tmp/contactflow-build-failure.md
-          gh issue create --repo "$GITHUB_REPOSITORY" --title "Android build failure #${GITHUB_RUN_NUMBER}" --body-file /tmp/contactflow-build-failure.md || true
+          } > /tmp/contactflow-build-status.md
+          gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body-file /tmp/contactflow-build-status.md || true
