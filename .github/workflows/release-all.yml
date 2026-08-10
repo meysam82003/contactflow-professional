@@ -111,6 +111,9 @@ jobs:
     needs: [desktop, android, release]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Report release workflow status
         env:
           GH_TOKEN: ${{ github.token }}
@@ -121,3 +124,9 @@ jobs:
           STATUS="❌"
           if [ "$DESKTOP_RESULT" = "success" ] && [ "$ANDROID_RESULT" = "success" ] && [ "$RELEASE_RESULT" = "success" ]; then STATUS="✅"; fi
           gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "$STATUS ContactFlow v1.2.0 Release All — desktop=$DESKTOP_RESULT android=$ANDROID_RESULT release=$RELEASE_RESULT — Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} — commit ${GITHUB_SHA}" || true
+          printf 'run_id=%s\ncommit=%s\ndesktop=%s\nandroid=%s\nrelease=%s\n' "$GITHUB_RUN_ID" "$GITHUB_SHA" "$DESKTOP_RESULT" "$ANDROID_RESULT" "$RELEASE_RESULT" > release-status.txt
+          git config user.name 'contactflow-build[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add release-status.txt
+          git commit -m 'Record latest release status' || true
+          git push origin HEAD:main || true
