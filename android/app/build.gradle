@@ -6,13 +6,13 @@ android {
 
     defaultConfig {
         applicationId 'com.contactflow.pro'
-        minSdk 29
+        minSdk 21
         targetSdk 36
-        versionCode 10200
-        versionName '1.2.0'
+        versionCode 10201
+        versionName '1.2.1'
     }
 }
 
 dependencies {
-    implementation 'androidx.webkit:webkit:1.16.0'
+    implementation 'androidx.webkit:webkit:1.14.0'
 }
