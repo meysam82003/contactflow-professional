@@ -1,4 +1,4 @@
-ContactFlow Professional 1.2.1 Android compatibility refresh
-release-trigger=2026-08-10T17:58:00+03:30
-purpose=replace-android-apk-with-android-5-plus-compatible-build
-android=minSdk21-webkit1.14.0-target36
+ContactFlow Professional 1.3 cPanel Android wrapper
+release-trigger=2026-08-11T00:18:00+03:30
+purpose=build-universal-cpanel-web-wrapper
+android=minSdk21-remote-https-wrapper-target36
