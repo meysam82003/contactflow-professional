@@ -99,10 +99,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Workflow files are restored from the current branch because the Actions
-          # token is not allowed to create/update workflows. They are installed
-          # separately through the connected GitHub App after this commit.
-          git restore --source=HEAD --staged --worktree .github/workflows
+          # The Actions token cannot create/update workflow files. Remove any
+          # workflow files introduced by the source archive, then restore only
+          # the workflow set that already exists on the current main branch.
+          rm -rf .github/workflows
+          mkdir -p .github
+          git checkout HEAD -- .github/workflows
           git config user.name 'contactflow-ci[bot]'
           git config user.email 'contactflow-ci@users.noreply.github.com'
           git add -A
