@@ -2,9 +2,10 @@ package com.contactflow.pro;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.os.Build;
+import android.os.Environment;
 import android.net.Uri;
 import android.content.*;
-import android.database.Cursor;
 import android.provider.MediaStore;
 import android.webkit.*;
 import android.widget.Toast;
@@ -12,6 +13,8 @@ import android.util.Base64;
 
 import androidx.webkit.WebViewAssetLoader;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.OutputStream;
 
 public class MainActivity extends Activity {
@@ -29,7 +32,9 @@ public class MainActivity extends Activity {
         s.setDatabaseEnabled(true);
         s.setAllowFileAccess(false);
         s.setAllowContentAccess(true);
-        s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        }
 
         final WebViewAssetLoader loader = new WebViewAssetLoader.Builder()
             .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
@@ -45,6 +50,11 @@ public class MainActivity extends Activity {
             }
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri u=request.getUrl();
+                if ("appassets.androidplatform.net".equals(u.getHost())) return false;
+                startActivity(new Intent(Intent.ACTION_VIEW,u)); return true;
+            }
+            @Override @SuppressWarnings("deprecation") public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                Uri u=Uri.parse(url);
                 if ("appassets.androidplatform.net".equals(u.getHost())) return false;
                 startActivity(new Intent(Intent.ACTION_VIEW,u)); return true;
             }
@@ -73,20 +83,39 @@ public class MainActivity extends Activity {
         if (webView.canGoBack()) webView.goBack(); else super.onBackPressed();
     }
 
+    private String safeFileName(String value) {
+        String n = value == null ? "contactflow-export" : value.trim();
+        if (n.isEmpty()) n = "contactflow-export";
+        return n.replaceAll("[\\\\/:*?\"<>|]", "_");
+    }
+
+    private void saveLegacy(byte[] data, String name) throws Exception {
+        File dir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+        if (dir == null) dir = getFilesDir();
+        if (!dir.exists() && !dir.mkdirs()) throw new Exception("Cannot create download folder");
+        File target = new File(dir, safeFileName(name));
+        try (OutputStream out = new FileOutputStream(target)) { out.write(data); }
+        Toast.makeText(this,"ذخیره شد: "+target.getAbsolutePath(),Toast.LENGTH_LONG).show();
+    }
+
     public class AndroidBridge {
         @JavascriptInterface public void saveFile(String name,String mime,String base64) {
             runOnUiThread(() -> {
                 try {
                     byte[] data=Base64.decode(base64,Base64.DEFAULT);
-                    ContentValues v=new ContentValues();
-                    v.put(MediaStore.Downloads.DISPLAY_NAME,name);
-                    v.put(MediaStore.Downloads.MIME_TYPE,mime==null?"application/octet-stream":mime);
-                    v.put(MediaStore.Downloads.IS_PENDING,1);
-                    Uri uri=getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI,v);
-                    if(uri==null) throw new Exception("Cannot create download");
-                    try(OutputStream out=getContentResolver().openOutputStream(uri)){out.write(data);}
-                    v.clear();v.put(MediaStore.Downloads.IS_PENDING,0);getContentResolver().update(uri,v,null,null);
-                    Toast.makeText(MainActivity.this,"ذخیره شد: "+name,Toast.LENGTH_LONG).show();
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        ContentValues v=new ContentValues();
+                        v.put(MediaStore.Downloads.DISPLAY_NAME,safeFileName(name));
+                        v.put(MediaStore.Downloads.MIME_TYPE,mime==null?"application/octet-stream":mime);
+                        v.put(MediaStore.Downloads.IS_PENDING,1);
+                        Uri uri=getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI,v);
+                        if(uri==null) throw new Exception("Cannot create download");
+                        try(OutputStream out=getContentResolver().openOutputStream(uri)){out.write(data);}
+                        v.clear();v.put(MediaStore.Downloads.IS_PENDING,0);getContentResolver().update(uri,v,null,null);
+                        Toast.makeText(MainActivity.this,"ذخیره شد: "+name,Toast.LENGTH_LONG).show();
+                    } else {
+                        saveLegacy(data,name);
+                    }
                 } catch(Exception e) { Toast.makeText(MainActivity.this,"ذخیره ناموفق: "+e.getMessage(),Toast.LENGTH_LONG).show(); }
             });
         }
