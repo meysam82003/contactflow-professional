@@ -1,0 +1,168 @@
+name: Bootstrap ContactFlow 1.2 Full Source
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'bootstrap/source.part*.b64'
+      - '.github/workflows/bootstrap-full-source-v12.yml'
+
+permissions:
+  contents: write
+  actions: write
+  issues: write
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reconstruct and verify source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(find bootstrap -maxdepth 1 -name 'source.part*.b64' | wc -l)" -eq 13
+          cat $(find bootstrap -maxdepth 1 -name 'source.part*.b64' | sort) > /tmp/contactflow-source.b64
+          test "$(wc -c < /tmp/contactflow-source.b64)" -eq 103260
+          base64 --decode /tmp/contactflow-source.b64 > /tmp/contactflow-source.zip
+          echo '81c061e43ed8de197984bbdad07f363c80d4f1e21fac9e07ca2639694df8afc6  /tmp/contactflow-source.zip' | sha256sum -c -
+          unzip -t /tmp/contactflow-source.zip
+          rm -rf /tmp/contactflow-src
+          mkdir -p /tmp/contactflow-src
+          unzip -q /tmp/contactflow-source.zip -d /tmp/contactflow-src
+          test -s /tmp/contactflow-src/index.html
+          test -s /tmp/contactflow-src/app.js
+          test -s /tmp/contactflow-src/pro.js
+          test -s /tmp/contactflow-src/server/server.js
+          test -s /tmp/contactflow-src/desktop/main.go
+          test -s /tmp/contactflow-src/android/app/src/main/java/com/contactflow/pro/MainActivity.java
+
+      - name: Replace repository with browsable full source
+        shell: bash
+        run: |
+          set -euo pipefail
+          rsync -a --delete --exclude='.git/' /tmp/contactflow-src/ ./
+
+          # PWA 1.2 hardening: keep source self-contained with SVG icon only.
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          s = '\n'.join(line for line in s.splitlines() if 'apple-touch-icon' not in line) + '\n'
+          p.write_text(s, encoding='utf-8')
+
+          Path('manifest.webmanifest').write_text('''{
+            "id": "./",
+            "name": "ContactFlow Professional",
+            "short_name": "ContactFlow Pro",
+            "description": "مدیریت مخاطب، حساب چنددستگاهی، Backup رمزگذاری‌شده و Telegram Mini App",
+            "start_url": "./index.html",
+            "scope": "./",
+            "display": "standalone",
+            "background_color": "#0b1020",
+            "theme_color": "#0b1020",
+            "lang": "fa",
+            "dir": "rtl",
+            "icons": [
+              {
+                "src": "./icons/icon.svg",
+                "sizes": "any",
+                "type": "image/svg+xml",
+                "purpose": "any maskable"
+              }
+            ]
+          }\n''', encoding='utf-8')
+
+          sw = Path('sw.js')
+          t = sw.read_text(encoding='utf-8')
+          lines = t.splitlines()
+          lines[0] = "const CACHE = 'contactflow-professional-v1.2.0';"
+          lines[1] = "const ASSETS = ['./','./index.html','./styles.css','./app.js','./pro.js','./config.js','./manifest.webmanifest','./icons/icon.svg'];"
+          sw.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+
+          pkg = Path('server/package.json')
+          data = json.loads(pkg.read_text(encoding='utf-8'))
+          data['version'] = '1.2.0'
+          data['description'] = 'ContactFlow Professional 1.2 account, encrypted sync, cloud files, Mini App and Telegram Business gateway'
+          pkg.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          PY
+
+          # Generated webapp/assets are created by build workflows, not committed as duplicate source.
+          rm -rf desktop/webapp android/app/src/main/assets bootstrap
+
+      - name: Validate source before commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check app.js
+          node --check pro.js
+          node --check server/server.js
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          html = Path('index.html').read_text(encoding='utf-8')
+          ids = re.findall(r'\bid=["\']([^"\']+)', html)
+          if len(ids) != len(set(ids)):
+              raise SystemExit('Duplicate HTML ids found')
+          required = [
+              'index.html','app.js','pro.js','config.js','styles.css','manifest.webmanifest','sw.js',
+              'server/server.js','desktop/main.go','desktop/installer/main.go',
+              'android/app/src/main/java/com/contactflow/pro/MainActivity.java',
+              'scripts/sync-assets.sh','scripts/build-desktop.sh',
+              '.github/workflows/build-android.yml','.github/workflows/build-windows.yml',
+              '.github/workflows/build-desktop-all.yml','.github/workflows/release-all.yml'
+          ]
+          missing = [x for x in required if not Path(x).is_file()]
+          if missing:
+              raise SystemExit('Missing source files: ' + ', '.join(missing))
+          print('Validated full source; HTML ids:', len(ids))
+          PY
+
+      - name: Commit complete source to main
+        id: commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'contactflow-ci[bot]'
+          git config user.email 'contactflow-ci@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'No source changes to commit.'
+          else
+            git commit -m 'Release ContactFlow Professional 1.2 full source'
+            git push origin HEAD:main
+          fi
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Start all-device release build
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sleep 5
+          gh workflow run release-all.yml --repo "$GITHUB_REPOSITORY" --ref main
+
+      - name: Report bootstrap success
+        if: success()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "✅ ContactFlow 1.2 full source bootstrap succeeded. Browsable source was committed to main and Release All was dispatched. Source commit: ${{ steps.commit.outputs.sha }} — bootstrap run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" || true
+
+      - name: Report bootstrap failure
+        if: failure()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "❌ ContactFlow 1.2 full source bootstrap failed. Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" || true
