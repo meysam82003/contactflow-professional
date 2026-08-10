@@ -29,20 +29,23 @@ jobs:
           set -euo pipefail
           echo "Bootstrap chunks:"
           find bootstrap -maxdepth 1 -name 'source.part*.b64' -type f -printf '%f %s bytes\n' | sort -V
-          for n in 00 01 02 03 04 05 06 07 08 09 11 12; do
+          for n in 00 02 03 04 06 07 08 09 11 12; do
             test -s "bootstrap/source.part${n}.b64" || { echo "Missing source.part${n}.b64"; exit 1; }
           done
-          test -s bootstrap/source.part05.tail.b64
-          test -s bootstrap/source.part10a.clean.b64
-          test -s bootstrap/source.part10b.clean.b64
+          for f in source.part01a.clean.b64 source.part01b.clean.b64 source.part05a.clean.b64 source.part05b.clean.b64 source.part10a.clean.b64 source.part10b.clean.b64; do
+            test -s "bootstrap/$f" || { echo "Missing $f"; exit 1; }
+          done
           {
-            cat bootstrap/source.part00.b64 bootstrap/source.part01.b64 bootstrap/source.part02.b64 bootstrap/source.part03.b64 bootstrap/source.part04.b64 bootstrap/source.part05.b64
-            cat bootstrap/source.part05.tail.b64
+            cat bootstrap/source.part00.b64
+            cat bootstrap/source.part01a.clean.b64 bootstrap/source.part01b.clean.b64
+            cat bootstrap/source.part02.b64 bootstrap/source.part03.b64 bootstrap/source.part04.b64
+            cat bootstrap/source.part05a.clean.b64 bootstrap/source.part05b.clean.b64
             cat bootstrap/source.part06.b64 bootstrap/source.part07.b64 bootstrap/source.part08.b64 bootstrap/source.part09.b64
             cat bootstrap/source.part10a.clean.b64 bootstrap/source.part10b.clean.b64
             cat bootstrap/source.part11.b64 bootstrap/source.part12.b64
           } | tr -d '\r\n\t ' > /tmp/contactflow-source.b64
           echo "Normalized base64 bytes: $(wc -c < /tmp/contactflow-source.b64)"
+          test "$(wc -c < /tmp/contactflow-source.b64)" -eq 103260
           base64 --decode /tmp/contactflow-source.b64 > /tmp/contactflow-source.zip
           echo "Archive bytes: $(wc -c < /tmp/contactflow-source.zip)"
           sha256sum /tmp/contactflow-source.zip
