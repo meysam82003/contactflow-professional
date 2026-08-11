@@ -1,67 +1,211 @@
-# ContactFlow Professional 1.2
+# ContactFlow Personal Ultimate 3.0
 
-نسخه شخصی چنددستگاهی ContactFlow. هسته Import/پاک‌سازی/نام‌گذاری/VCF/CSV روی خود دستگاه اجرا می‌شود؛ حساب و Sync به Gateway خصوصی متصل می‌شوند.
+ContactFlow یک ابزار **Local‑First** برای مدیریت حجم بالای مخاطب، Import/Export، شماره‌سازی، Backup و آماده‌سازی کمپین‌های مجاز است. نسخه 3.0 سیستم حساب ContactFlow را به‌طور کامل حذف می‌کند: **Login / Register / Forgot Password / Recovery / Server URL / Cloud Account / Account Sync وجود ندارند.**
 
-## خروجی‌ها
+> نسخه جاری: `3.0.0-alpha.1`  
+> معماری: Local‑First / Offline‑First  
+> زبان رابط: فارسی RTL
 
-- `build/windows/ContactFlow_Setup.exe` — نصب واقعی Windows، بدون Python و بدون Node روی سیستم کاربر.
-- فایل‌های ریشه (`index.html`, `app.js`, `pro.js`, ...) — PWA قابل انتشار روی HTTPS.
-- `server/` — Gateway خصوصی حساب، Sync و Telegram.
-- `android/` — سورس APK و Workflow ساخت Android.
+## تغییر اصلی نسخه 3.0
 
-## قابلیت‌های Professional
+برنامه دیگر برای شروع کار به سرور مرکزی، MySQL، حساب کاربری یا رمز عبور نیاز ندارد. داده‌ها در دیتابیس محلی دستگاه نگه‌داری می‌شوند و انتقال بین دستگاه‌ها از طریق Backup انجام می‌شود.
 
-- حساب کاربری خصوصی
-- مشتق‌سازی جداگانه کلید Authentication و Encryption روی Client
-- AES-256-GCM برای Snapshotهای Sync و Backup
-- Sync قطعه‌ای با Batch پیش‌فرض 5,000 مخاطب
-- Restore با اعتبارسنجی رمز قبل از حذف دیتابیس محلی
-- Auto-Sync بر اساس Revision دیتابیس
-- Backup محلی رمزگذاری‌شده `.cfbackup`
-- Sync بین دستگاه‌ها
-- Telegram Gateway سمت Server
-- Opt-in فقط با `/start` یا `/subscribe`
-- Opt-out با `/stop` یا `/unsubscribe`
-- Campaign Queue با Rate Limiter سمت Server
-- PWA Offline برای هسته محلی
-- Windows installer + Uninstaller
-- Android wrapper source با ذخیره Export در Downloads
+## قابلیت‌ها
 
-## شروع سریع Windows
+### مدیریت مخاطبین
+- Import چندفایلی `CSV / TSV / TXT / XLSX`
+- تنظیم مستقل برای هر فایل Import
+- تشخیص و نرمال‌سازی شماره موبایل ایران
+- حذف Duplicate
+- City / Section / Source
+- نام‌گذاری سریالی با Template
+- ویرایش گروهی Name / City / Section
+- جستجو و فیلتر
 
-1. `ContactFlow_Setup.exe` را اجرا کنید.
-2. نصب را تأیید کنید.
-3. برنامه از Desktop یا Start Menu اجرا می‌شود.
-4. برای استفاده Local هیچ Server لازم نیست.
-5. برای Sync چنددستگاهی، Gateway را مطابق `DEPLOY_PRO_FA.md` Deploy کنید.
+### شماره‌ساز
+- ساخت رنج شماره ایران
+- حالت ترتیبی و تصادفی
+- تا 1,000,000 شماره در هر Batch
+- City / Section / Source مستقل
+- Template نام
+- افزودن مستقیم به دیتابیس یا Export جدا
 
-## شروع سریع PWA
+### Export
+- VCF
+- CSV
+- خروجی قطعه‌ای Chunked
+- ZIP برای چند قطعه
+- صف خروجی با تنظیم مستقل
 
-برای نصب واقعی PWA باید فایل‌های ریشه از HTTPS یا localhost باز شوند. برای حالت Professional بهتر است همین پروژه همراه `server/server.js` روی دامنه خصوصی Deploy شود تا UI و API یک Origin داشته باشند.
+### Audience و Consent
+- `Opt‑in`
+- `Existing Chat`
+- `Suppressed`
+- `Unverified`
+- Import رضایت از فایل
+- Export لیست Suppression
 
-## امنیت
+### Campaign Composer
+- متن
+- عکس / ویدیو / فایل
+- پیام مرجع کانال
+- لینک اصلی
+- لینک توقف تبلیغ
+- لینک فعال‌سازی تبلیغ
+- لینک درخواست تبلیغ
+- Preview
+- Template Library
+- Draftهای محلی
 
-Bot Token را هرگز داخل `app.js` یا `pro.js` قرار ندهید. فقط روی Server در `TELEGRAM_BOT_TOKEN` نگه‌داری شود. رمز اصلی کاربر در LocalStorage ذخیره نمی‌شود و Encryption Key به Server ارسال نمی‌شود.
+### درخواست تبلیغ
+- ثبت روی Telegram Numeric ID
+- Username
+- عنوان
+- تعداد درخواست‌شده
+- تعداد انجام‌شده
+- باقی‌مانده
+- Pending / Running / Completed
 
+### Backup
+- Backup دستی با فرمت `.cfbackup`
+- Restore کامل دیتابیس محلی
+- Activity Log
+- Google Drive بدون حساب ContactFlow
+- در Android انتخاب Google Drive از System File Picker
+- در PWA/Desktop امکان OAuth مستقیم Google Drive بعد از تنظیم OAuth Client ID
 
-## Professional 1.2
-- Login Gate اجباری با ثبت‌نام/ورود/Recovery.
-- Import چندفایلی با تنظیمات مستقل و اجرای صف.
-- Export Queue و ZIP اختیاری برای خروجی‌های چندبخشی.
-- رفع 404 دسکتاپ: localhost UI دیگر به‌عنوان Cloud API فرض نمی‌شود.
-- سورس کامل PWA/Server/Desktop/Android و Workflowهای همه دستگاه‌ها در Repository نگهداری می‌شود.
+## Telegram QR Connector
 
+رابط کاربر فقط **QR** است و از کاربر `api_id` یا `api_hash` خواسته نمی‌شود. این مقادیر Credential برنامه هستند و باید فقط در Build Native تنظیم شوند.
 
-جزئیات نسخه 1.2: `IMPLEMENTATION_STATUS_1_2_FA.md`
+Telegram برای QR Login رسمی از Login Token استفاده می‌کند و TDLib نیز `requestQrCodeAuthentication` و وضعیت `authorizationStateWaitOtherDeviceConfirmation` را ارائه می‌دهد.
 
+منابع رسمی:
+- https://core.telegram.org/api/qr-login
+- https://core.telegram.org/api/obtaining_api_id
+- https://core.telegram.org/tdlib/docs/classtd_1_1td__api_1_1request_qr_code_authentication.html
 
-## ساختار سورس 1.2
+### وضعیت فعلی Connector
 
-- `index.html`, `app.js`, `pro.js`, `styles.css`: رابط PWA و موتور محلی
-- `server/`: حساب کاربری، Recovery، Sync رمزگذاری‌شده، Cloud Files و Telegram Mini App/Business API
-- `desktop/`: Shell بدون Python برای Windows/Linux/macOS و Installer ویندوز
-- `android/`: پروژه Native Android/WebView
-- `scripts/`: همگام‌سازی Assetها و Build محلی Desktop
-- `.github/workflows/`: Build Android، Windows، همه Desktopها و Release همه دستگاه‌ها
+Web Core و قرارداد Native Connector آماده‌اند. اگر Build فاقد TDLib و Credential رسمی Telegram App باشد، رابط **QR ساختگی نمایش نمی‌دهد** و وضعیت `QR Setup` نشان داده می‌شود.
 
-> برای ورود یک حساب روی چند دستگاه، `server/` باید روی یک آدرس HTTPS مرکزی با Storage پایدار Deploy شود و `config.js` همان URL را در `apiBase` قرار دهد. نسخه Desktop دیگر `127.0.0.1` را Cloud API فرض نمی‌کند؛ بنابراین خطای اشتباه HTTP 404 مربوط به Login/Sync حذف شده است.
+برای Release واقعی Telegram Connector باید در GitHub Secrets یا محیط Build، Credential برنامه تنظیم و TDLib Native Connector کامپایل شود. Session حساب Telegram باید فقط روی دستگاه Native نگه‌داری شود؛ PWA محل ذخیره Session حساس نیست.
+
+## سیاست Telegram
+
+ContactFlow 3.0 برای عملیات مجاز طراحی شده است: Audience رضایت‌داده، Existing Chat و Suppression. قابلیت اسکن شماره‌های تصادفی برای کشف کاربران Telegram یا ارسال ناخواسته به غریبه‌ها جزو Build رسمی این پروژه نیست.
+
+Telegram صراحتاً ارسال تبلیغات ناخواسته به غریبه‌ها و Spam/Flooding از API را محدود می‌کند:
+- https://telegram.org/faq_spam
+- https://core.telegram.org/api/terms
+- https://core.telegram.org/api/obtaining_api_id
+
+## ساختار Repository
+
+```text
+/
+├── index.html
+├── app.js
+├── ultimate.js
+├── config.js
+├── styles.css
+├── manifest.webmanifest
+├── sw.js
+├── icons/
+│
+├── desktop/
+│   ├── main.go
+│   ├── webapp/          # هنگام Build از Root Sync می‌شود
+│   └── installer/
+│
+├── android/
+│   └── app/
+│       └── src/main/assets/   # هنگام Build از Root Sync می‌شود
+│
+├── docs/
+│   ├── INSTALL_FA.md
+│   ├── USER_GUIDE_FA.md
+│   ├── ARCHITECTURE_FA.md
+│   ├── BACKUP_GOOGLE_DRIVE_FA.md
+│   └── TELEGRAM_QR_FA.md
+│
+└── .github/workflows/
+    ├── build-android.yml
+    └── release-all.yml
+```
+
+## Windows
+
+نسخه Desktop یک HTTP Server حساب یا Cloud Server نیست. فایل‌های Embed شده برنامه روی یک **پورت آزاد تصادفی localhost** نمایش داده می‌شوند تا با نسخه‌های قدیمی روی `127.0.0.1:17654` تداخل نداشته باشند.
+
+در نسخه 3.0 دیگر هیچ Server URL یا Account API وجود ندارد.
+
+## Android
+
+APK باید Assets نسخه 3.0 را از داخل خودش باز کند. کاربر در اولین اجرا Server URL وارد نمی‌کند. Import از File Picker سیستم و Export/Backup از Bridge بومی انجام می‌شود.
+
+## PWA
+
+فایل‌های Root را روی HTTPS قرار دهید. سپس در Chrome/Edge گزینه Install App / Add to Home Screen را بزنید. باز کردن مستقیم `index.html` با File Manager برای PWA کامل مناسب نیست، چون Service Worker روی `file://` فعال نمی‌شود.
+
+## Google Drive
+
+`config.js` دارای `googleClientId` خالی است. برای اتصال مستقیم Drive در PWA/Desktop باید OAuth Client رسمی Google خودتان را قرار دهید. اگر Client ID تنظیم نشده باشد، Backup دستی همیشه فعال باقی می‌ماند.
+
+## Build
+
+از GitHub Actions می‌توانید Build همه دستگاه‌ها را اجرا کنید:
+
+1. Actions
+2. `Release All Devices — Personal Ultimate 3.0`
+3. `Run workflow`
+4. Artifactهای Windows / Linux / macOS / Android / PWA / Source ساخته می‌شوند.
+
+## تست Release
+
+Workflow قبل از انتشار بررسی می‌کند که Asset نهایی شامل عبارت‌های زیر نباشد:
+
+```text
+auth-gate
+auth-login
+auth-register
+Forgot Password
+Server URL
+127.0.0.1:17654
+```
+
+و وجود صفحات اصلی نسخه 3.0 را کنترل می‌کند:
+
+```text
+generator
+import
+contacts
+exports
+audience
+telegram
+campaign
+requests
+backup
+activity
+```
+
+## اسناد
+
+- نصب: `docs/INSTALL_FA.md`
+- آموزش کامل: `docs/USER_GUIDE_FA.md`
+- معماری: `docs/ARCHITECTURE_FA.md`
+- Telegram QR: `docs/TELEGRAM_QR_FA.md`
+- Backup و Google Drive: `docs/BACKUP_GOOGLE_DRIVE_FA.md`
+- تغییرات: `CHANGELOG.md`
+
+## امنیت و حریم خصوصی
+
+- داده مخاطبین Local‑First است.
+- Account Server وجود ندارد.
+- Telegram Session نباید داخل PWA ذخیره شود.
+- Telegram App Credentials نباید در JavaScript عمومی قرار بگیرند.
+- Backup شامل داده حساس است؛ فایل `.cfbackup` را در محل مطمئن نگه دارید.
+
+---
+
+**ContactFlow Personal Ultimate 3.0 — Local‑First, Accountless, Multi‑Device.**
