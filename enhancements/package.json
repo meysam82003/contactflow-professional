@@ -1,0 +1,20 @@
+{
+  "name": "contactflow-ultimate-web-connectors",
+  "private": true,
+  "version": "3.1.0-alpha.1",
+  "scripts": {"build": "webpack --mode production"},
+  "dependencies": {
+    "telegram": "2.26.22",
+    "qrcode": "1.5.4",
+    "big-integer": "1.6.52",
+    "buffer": "6.0.3",
+    "process": "0.11.10",
+    "events": "3.3.0",
+    "stream-browserify": "3.0.0",
+    "crypto-browserify": "3.12.1"
+  },
+  "devDependencies": {
+    "webpack": "5.101.3",
+    "webpack-cli": "6.0.1"
+  }
+}
