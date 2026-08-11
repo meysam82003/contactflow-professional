@@ -1,16 +1,41 @@
 # ContactFlow Personal Ultimate 3.1
 
-ContactFlow یک مجموعه Local‑First برای مدیریت حجم زیاد مخاطب، Import/Export، شماره‌ساز، Audience/Consent، Campaign، Backup، Google Drive، اتصال چند حساب Telegram با QR و Telegram Mini App است.
+ContactFlow یک مجموعه Local‑First برای مدیریت حجم زیاد مخاطب، Import/Export، شماره‌ساز، Campaign، Backup و Telegram Mini App است.
 
-> نسخه: `3.1.0-alpha.1`
+> نسخه پایه: `3.1.0-alpha.1` + Hosted Mini App Contact Workspace hotfix
 
 ## اصل معماری
 
-ContactFlow دیگر حساب داخلی، Login، Register، Forgot Password یا Server URL ندارد. داده‌های اصلی روی همان دستگاه در IndexedDB نگه‌داری می‌شوند و Backup دستی یا Google Drive انتخابی است.
+ContactFlow حساب داخلی، Login، Register، Forgot Password یا Server URL ندارد. داده‌های اصلی روی همان دستگاه در IndexedDB نگه‌داری می‌شوند و Backup دستی انتخابی است.
 
-Telegram Account با **QR واقعی Telegram** و Web‑MTProto متصل می‌شود. حداکثر ۱۰ Session مستقل روی هر دستگاه نگه‌داری می‌شود و برای هر کمپین حساب فرستنده به‌صورت دستی انتخاب می‌شود؛ هیچ account rotation برای دورزدن FloodWait وجود ندارد.
+## دو حالت Telegram
 
-## قابلیت‌های اصلی
+### 1) Hosted Mini App — بدون App credentials
+این حالت برای چیزی است که فقط با Upload روی هاست و URL کار کند:
+
+`https://domain/contactflow/miniapp.html`
+
+Mini App در این حالت برای باز شدن و مدیریت شماره‌ها به `TELEGRAM_API_ID`، `TELEGRAM_API_HASH` یا `GOOGLE_CLIENT_ID` در Build نیاز ندارد.
+
+قابلیت‌ها:
+- Import چند فایل TXT/CSV
+- Paste شماره
+- Normalize ایران/بین‌المللی
+- حذف Duplicate
+- Preview و آمار معتبر/نامعتبر
+- CSV
+- VCF
+- Share VCF به Google Drive از Share Sheet سیستم در دستگاه‌های پشتیبانی‌شده
+- Backup/Restore محلی `.cfbackup`
+- Telegram ID/Username کاربر Mini App
+- `requestContact` برای شماره خود همان کاربر با تأیید خودش
+
+### 2) User MTProto Connector — قابلیت‌های سطح حساب
+Telegram متدهای `contacts.importContacts`، `contacts.resolvePhone` و `contacts.addContact` را فقط برای User Session ارائه می‌کند. بنابراین Phone Lookup واقعی و افزودن مستقیم مخاطب به حساب Telegram از داخل Bot/Mini App ممکن نیست مگر یک User Session رسمی وجود داشته باشد.
+
+QR login رسمی User Session نیز در سطح پروتکل به App credentials نیاز دارد. اگر این credentials موجود نباشد، ContactFlow نباید QR یا نتیجه Checker ساختگی نمایش دهد.
+
+## قابلیت‌های اصلی ContactFlow
 
 - شماره‌ساز ایران: ترتیبی/تصادفی، Prefix، شهر، بخش و نام‌گذاری سریالی
 - Import چندفایلی CSV/TSV/TXT/XLSX با تنظیمات مستقل هر فایل
@@ -18,97 +43,59 @@ Telegram Account با **QR واقعی Telegram** و Web‑MTProto متصل می�
 - حذف تکراری، Mapping ستون، Sequence و Bulk Edit
 - Contacts با فیلتر شهر/بخش/منبع
 - Export CSV/VCF/TXT و خروجی قطعه‌ای/ZIP در هسته اصلی
-- Audience Ledger: `optin`, `existing_chat`, `suppressed`
-- Suppression Enforcement
-- Telegram QR Login واقعی در Web Core
-- حداکثر ۱۰ حساب Telegram
-- Session Vault رمزگذاری‌شده محلی
-- انتخاب دستی حساب فعال و Health Check
-- Authorized Contact Checker با نتایج `matched / not_returned / retry`
-- پاک‌سازی Contact Import موقت بعد از Check
-- خروجی جداگانه نتایج Checker
-- نمایش چت‌های موجود
-- Campaign Composer: متن، لینک‌ها و Reference Channel Post
-- Forward پیام مرجع کانال برای مخاطب مجاز
-- Promotional mode فقط برای Opt‑in صریح
-- Service mode برای Opt‑in یا Existing Chat
+- Suppression / مخاطبین مجاز برای جلوگیری از ارسال ناخواسته
+- Campaign Composer
 - Dry Run، Duplicate Guard، سقف اجرا، Delay، Stop/Pause
-- توقف روی FloodWait / PeerFlood / Restricted / Frozen
-- گزارش پیشرفت لحظه‌ای
+- توقف روی FloodWait / Restricted / Frozen
+- گزارش پیشرفت
 - Backup کامل `.cfbackup`
-- Google Drive appData Sync + Backup قابل مشاهده
-- SHA‑256 و Conflict Detection
-- Android System Document Picker با امکان انتخاب Google Drive
-- Telegram Mini App کامل: Consent، Pricing، Ad Request، Progress، Membership Gate
-- Bot commands و Inline panel برای Opt‑in/Opt‑out، تعرفه و درخواست
-- Admin Mini App dashboard برای پیشرفت درخواست‌ها
-- Diagnostics و Feature Matrix
+- Android System Document Picker
+- Hosted Telegram Mini App
 - Activity/Audit Log
-- Windows Setup/Portable، Android، Linux، macOS و PWA از یک Canonical Web Core
+- Windows Setup/Portable، Android، Linux، macOS و PWA
 
-فهرست توسعه‌های ۳.۱ در `docs/FEATURES_25PLUS_FA.md` آمده است.
+## Telegram Checker — واقعیت API
 
-## نکته مهم درباره Telegram Checker
+طبق API رسمی Telegram:
 
-Checker فقط روی شماره‌های **داده‌شده/مجاز** اجرا می‌شود. نتیجه `not_returned` به معنی قطعی «تلگرام ندارد» نیست؛ Privacy تلگرام می‌تواند مانع برگشت برخی حساب‌ها شود. ContactFlow این نتیجه را عمداً با همین نام ذخیره می‌کند.
+- `contacts.resolvePhone` می‌تواند برای User Session شماره را Resolve کند.
+- `contacts.importContacts` می‌تواند لیست مخاطبین را وارد کند.
+- هر دو فقط برای کاربران (User Session) هستند، نه Bot/Mini App.
+- Privacy حساب مقصد می‌تواند باعث شود شماره‌ای با وجود داشتن Telegram برنگردد.
+
+بنابراین Hosted Mini App بدون User Session نمی‌تواند به‌طور رسمی بگوید هر شماره Telegram دارد یا ندارد. این نسخه به‌جای نتیجه جعلی، `VCF` و `needs-check.csv` تولید می‌کند.
 
 شماره‌ساز برای ساخت/پاک‌سازی دیتاست وجود دارد؛ خروجی شماره‌های تولیدشده به‌صورت خودکار برای کشف انبوه حساب‌های Telegram اسکن نمی‌شود.
 
-## ارسال پیام
+## افزودن مخاطبین بدون API_ID/HASH
 
-- تبلیغ خصوصی: فقط `optin` صریح.
-- پیام خدماتی: `optin` یا چت موجود.
-- Privacy عمومی Telegram به‌تنهایی Consent تبلیغاتی محسوب نمی‌شود.
-- هر Campaign فقط با حسابی که کاربر انتخاب می‌کند اجرا می‌شود.
-- FloodWait باعث توقف می‌شود، نه سوییچ خودکار به حساب بعدی.
+مسیر رسمی و بدون App credentials در Hosted Mini App:
 
-## Telegram QR — تنظیم Build یک‌بار برای توسعه‌دهنده
+1. شماره‌ها را Import و Normalize کنید.
+2. VCF بگیرید.
+3. VCF را داخل Contacts گوشی/سیستم Import کنید.
+4. اگر Sync Contacts در Telegram روشن باشد، Telegram دفترچه مخاطبین سیستم را Sync می‌کند.
 
-کاربر نهایی API ID/HASH وارد نمی‌کند. برای Build رسمی، مالک برنامه باید یک‌بار Telegram App credentials را در GitHub Actions Secrets بگذارد:
+## Google Drive بدون GOOGLE_CLIENT_ID
 
-- `TELEGRAM_API_ID`
-- `TELEGRAM_API_HASH`
+Hosted Mini App دیگر برای Backup پایه خطای `GOOGLE_CLIENT_ID در Build تنظیم نشده است` نمی‌دهد. Backup و VCF فایل واقعی می‌سازند. روی Android و دستگاه‌های دارای Web Share API، فایل را می‌توان به Share Sheet فرستاد و Google Drive را انتخاب کرد. روی Desktop فایل دانلود می‌شود و قابل Upload در Drive است.
 
-این مقادیر از `my.telegram.org` برای برنامه توسعه‌دهنده گرفته می‌شوند. اگر در Build تنظیم نباشند، صفحه Diagnostics صریحاً وضعیت `Not configured` نشان می‌دهد و QR ساختگی تولید نمی‌شود.
+Direct Drive OAuth پیشرفته همچنان یک قابلیت جداگانه است و اگر فعال شود به Google Client ID نیاز دارد؛ نبود آن نباید مانع Backup محلی/Share شود.
 
-## Google Drive
+## درباره پیام‌رسانی
 
-برای PWA/Windows Direct Drive Sync، Secret زیر در GitHub تنظیم شود:
-
-- `GOOGLE_CLIENT_ID`
-
-Authorized JavaScript Origin برای Windows پیش‌فرض:
-
-`http://localhost:17655`
-
-برای PWA نیز Origin دامنه HTTPS خودتان اضافه شود.
-
-Android برای Backup/Restore به جای نگهداری OAuth Token داخل WebView از System Document Picker استفاده می‌کند؛ در Picker می‌توان Google Drive را انتخاب کرد.
+عبارت `Opt-in` از رابط Hosted Mini App مخاطبین حذف شده است، اما کنترل جلوگیری از ارسال خودکار ناخواسته از موتور Campaign حذف نشده است. Public privacy یا قابل Resolve بودن شماره به معنی اجازه تبلیغ خصوصی محسوب نمی‌شود.
 
 ## Telegram Mini App
 
-کد cPanel در `telegram-miniapp/` است و هیچ ContactFlow Account نمی‌سازد. نصب:
+کد cPanel در `telegram-miniapp/` است. نصب ساده Contact Workspace:
 
-1. پوشه را روی HTTPS آپلود کنید.
-2. `install.php` را باز کنید.
-3. Bot Token، Admin Numeric ID و MySQL را وارد کنید.
-4. Installer Webhook، Menu Button و Commands را تنظیم می‌کند.
-5. `health.php` را برای Health Check بررسی کنید.
+1. پوشه `telegram-miniapp` را روی HTTPS Upload/Extract کنید.
+2. URL زیر را در BotFather به‌عنوان Main Mini App یا Menu Button ثبت کنید:
+   `https://domain/contactflow/miniapp.html`
+3. صفحه بدون Build Secret باز می‌شود.
 
-Mini App برای کاربر:
-- Opt‑in / Opt‑out
-- تعرفه
-- ثبت درخواست تبلیغ
-- وضعیت و Progress درخواست
-- Membership Gate
-
-برای Admin:
-- آمار کاربران/Opt‑in/درخواست‌ها
-- لیست درخواست‌ها
-- تغییر `done_count` و Status
-- API مدیریت Pricing و Required Channels
-
-Bot فرستنده تبلیغ خصوصی نیست؛ وظیفه Bot/Mini App مدیریت رضایت، درخواست و وضعیت است.
+`setup.php` و Gateway فقط برای قابلیت‌های Bot/Business اختیاری هستند و برای خود Contact Workspace لازم نیستند.
 
 ## Build از GitHub
 
@@ -116,44 +103,23 @@ Workflow اصلی:
 
 `.github/workflows/release-all.yml`
 
-این Workflow:
-1. Canonical 3.0 را بازسازی می‌کند.
-2. لایه 3.1 را اعمال می‌کند.
-3. Telegram Web bundle را Build می‌کند.
-4. JavaScript/PHP را Validation می‌کند.
-5. PWA، Windows، Linux، macOS، Android، Mini App و Source را Build/Package می‌کند.
-6. بررسی می‌کند Login/Server URL/HTTP 501 قدیمی در Build نهایی نباشد.
-7. SHA256 می‌سازد و GitHub Pre‑release را منتشر می‌کند.
+Workflow PWA، Windows، Linux، macOS، Android، Mini App و Source را Build/Package می‌کند و SHA256 می‌سازد.
 
-## فایل‌های مهم سورس
+## فایل‌های مهم
 
 - `.source-bundles/v3/` — Canonical Web Core 3.0
-- `.source-bundles/v31/` — بسته augmentation نسخه 3.1
-- `enhancements/telegram-web-entry.js` — Web‑MTProto connector
-- `enhancements/runtime-patch.js` — UI/feature augmentation
-- `enhancements/drive-sync.js` — Drive Sync 2.0
-- `telegram-miniapp/` — Bot/Mini App cPanel package
-- `desktop/` — Desktop shell/installer
+- `.source-bundles/v31/` — augmentation نسخه 3.1
+- `enhancements/telegram-web-entry.js` — User MTProto connector اختیاری
+- `enhancements/drive-sync.js` — Direct Drive Sync اختیاری
+- `telegram-miniapp/miniapp.html` — Hosted Mini App بدون Build Secrets
+- `telegram-miniapp/` — بسته cPanel
+- `desktop/` — Desktop shell
 - `android/` — Android shell
-- `scripts/apply-v31.mjs` — اعمال 3.1 روی Canonical Core
-
-## وضعیت امنیت
-
-- Sessionهای Telegram در Backup معمولی به‌صورت plaintext صادر نمی‌شوند.
-- ContactFlow Account Server وجود ندارد.
-- Bot Token فقط روی cPanel Mini App نگه‌داری می‌شود.
-- Telegram App credentials فقط هنگام Build تزریق می‌شوند و در Git repository نوشته نمی‌شوند.
-- در Web client هر credential لازم برای MTProto نهایتاً قابل استخراج از Build است؛ بنابراین از credential اختصاصی همین برنامه استفاده کنید، نه credential برنامه دیگر.
-- Suppression قبل از هر ارسال تبلیغاتی اعمال می‌شود.
 
 ## Debug
 
-از صفحه `Diagnostics` داخل برنامه استفاده کنید. برای Mini App:
+برای Hosted Mini App فقط این URL را مستقیم در مرورگر باز کنید:
 
-`telegram-miniapp/health.php`
+`https://domain/contactflow/miniapp.html`
 
-و برای Desktop:
-
-`http://localhost:17655/health`
-
-در صورت تغییر Port، Diagnostics Port واقعی را نشان می‌دهد.
+اگر صفحه باز شد، بخش Contact Workspace مستقل از Bot Gateway سالم است. برای امکانات اختیاری Gateway از `telegram-miniapp/health.php` استفاده کنید.
