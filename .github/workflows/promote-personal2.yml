@@ -1,0 +1,44 @@
+name: Promote ContactFlow Personal 2.0
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/promote-personal2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify staged source
+        run: |
+          test -f __personal2_stage__/VERSION
+          grep -qx '2.0.0-alpha.1' __personal2_stage__/VERSION
+          test -f __personal2_stage__/web/app.js
+          node --check __personal2_stage__/web/app.js
+          ! grep -RniE 'auth-gate|cloud-login|cloud-register|sync-push|sync-pull|/api/v1/auth|Server URL' __personal2_stage__/web __personal2_stage__/desktop __personal2_stage__/android
+      - name: Replace repository root with Personal 2.0
+        run: |
+          rm -rf /tmp/contactflow-personal2
+          mkdir -p /tmp/contactflow-personal2
+          cp -a __personal2_stage__/. /tmp/contactflow-personal2/
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a /tmp/contactflow-personal2/. .
+          test ! -e install.php
+          test ! -e api.php
+          test ! -d __personal2_stage__
+      - name: Commit replacement
+        run: |
+          git config user.name 'ContactFlow Builder'
+          git config user.email 'contactflow-builder@users.noreply.github.com'
+          git add -A
+          git commit -m 'Replace 1.x with ContactFlow Personal 2.0 local-first'
+          git push origin HEAD:main
