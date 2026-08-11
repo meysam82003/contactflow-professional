@@ -1,211 +1,159 @@
-# ContactFlow Personal Ultimate 3.0
+# ContactFlow Personal Ultimate 3.1
 
-ContactFlow یک ابزار **Local‑First** برای مدیریت حجم بالای مخاطب، Import/Export، شماره‌سازی، Backup و آماده‌سازی کمپین‌های مجاز است. نسخه 3.0 سیستم حساب ContactFlow را به‌طور کامل حذف می‌کند: **Login / Register / Forgot Password / Recovery / Server URL / Cloud Account / Account Sync وجود ندارند.**
+ContactFlow یک مجموعه Local‑First برای مدیریت حجم زیاد مخاطب، Import/Export، شماره‌ساز، Audience/Consent، Campaign، Backup، Google Drive، اتصال چند حساب Telegram با QR و Telegram Mini App است.
 
-> نسخه جاری: `3.0.0-alpha.1`  
-> معماری: Local‑First / Offline‑First  
-> زبان رابط: فارسی RTL
+> نسخه: `3.1.0-alpha.1`
 
-## تغییر اصلی نسخه 3.0
+## اصل معماری
 
-برنامه دیگر برای شروع کار به سرور مرکزی، MySQL، حساب کاربری یا رمز عبور نیاز ندارد. داده‌ها در دیتابیس محلی دستگاه نگه‌داری می‌شوند و انتقال بین دستگاه‌ها از طریق Backup انجام می‌شود.
+ContactFlow دیگر حساب داخلی، Login، Register، Forgot Password یا Server URL ندارد. داده‌های اصلی روی همان دستگاه در IndexedDB نگه‌داری می‌شوند و Backup دستی یا Google Drive انتخابی است.
 
-## قابلیت‌ها
+Telegram Account با **QR واقعی Telegram** و Web‑MTProto متصل می‌شود. حداکثر ۱۰ Session مستقل روی هر دستگاه نگه‌داری می‌شود و برای هر کمپین حساب فرستنده به‌صورت دستی انتخاب می‌شود؛ هیچ account rotation برای دورزدن FloodWait وجود ندارد.
 
-### مدیریت مخاطبین
-- Import چندفایلی `CSV / TSV / TXT / XLSX`
-- تنظیم مستقل برای هر فایل Import
-- تشخیص و نرمال‌سازی شماره موبایل ایران
-- حذف Duplicate
-- City / Section / Source
-- نام‌گذاری سریالی با Template
-- ویرایش گروهی Name / City / Section
-- جستجو و فیلتر
+## قابلیت‌های اصلی
 
-### شماره‌ساز
-- ساخت رنج شماره ایران
-- حالت ترتیبی و تصادفی
-- تا 1,000,000 شماره در هر Batch
-- City / Section / Source مستقل
-- Template نام
-- افزودن مستقیم به دیتابیس یا Export جدا
+- شماره‌ساز ایران: ترتیبی/تصادفی، Prefix، شهر، بخش و نام‌گذاری سریالی
+- Import چندفایلی CSV/TSV/TXT/XLSX با تنظیمات مستقل هر فایل
+- Normalize شماره ایران و بین‌المللی
+- حذف تکراری، Mapping ستون، Sequence و Bulk Edit
+- Contacts با فیلتر شهر/بخش/منبع
+- Export CSV/VCF/TXT و خروجی قطعه‌ای/ZIP در هسته اصلی
+- Audience Ledger: `optin`, `existing_chat`, `suppressed`
+- Suppression Enforcement
+- Telegram QR Login واقعی در Web Core
+- حداکثر ۱۰ حساب Telegram
+- Session Vault رمزگذاری‌شده محلی
+- انتخاب دستی حساب فعال و Health Check
+- Authorized Contact Checker با نتایج `matched / not_returned / retry`
+- پاک‌سازی Contact Import موقت بعد از Check
+- خروجی جداگانه نتایج Checker
+- نمایش چت‌های موجود
+- Campaign Composer: متن، لینک‌ها و Reference Channel Post
+- Forward پیام مرجع کانال برای مخاطب مجاز
+- Promotional mode فقط برای Opt‑in صریح
+- Service mode برای Opt‑in یا Existing Chat
+- Dry Run، Duplicate Guard، سقف اجرا، Delay، Stop/Pause
+- توقف روی FloodWait / PeerFlood / Restricted / Frozen
+- گزارش پیشرفت لحظه‌ای
+- Backup کامل `.cfbackup`
+- Google Drive appData Sync + Backup قابل مشاهده
+- SHA‑256 و Conflict Detection
+- Android System Document Picker با امکان انتخاب Google Drive
+- Telegram Mini App کامل: Consent، Pricing، Ad Request، Progress، Membership Gate
+- Bot commands و Inline panel برای Opt‑in/Opt‑out، تعرفه و درخواست
+- Admin Mini App dashboard برای پیشرفت درخواست‌ها
+- Diagnostics و Feature Matrix
+- Activity/Audit Log
+- Windows Setup/Portable، Android، Linux، macOS و PWA از یک Canonical Web Core
 
-### Export
-- VCF
-- CSV
-- خروجی قطعه‌ای Chunked
-- ZIP برای چند قطعه
-- صف خروجی با تنظیم مستقل
+فهرست توسعه‌های ۳.۱ در `docs/FEATURES_25PLUS_FA.md` آمده است.
 
-### Audience و Consent
-- `Opt‑in`
-- `Existing Chat`
-- `Suppressed`
-- `Unverified`
-- Import رضایت از فایل
-- Export لیست Suppression
+## نکته مهم درباره Telegram Checker
 
-### Campaign Composer
-- متن
-- عکس / ویدیو / فایل
-- پیام مرجع کانال
-- لینک اصلی
-- لینک توقف تبلیغ
-- لینک فعال‌سازی تبلیغ
-- لینک درخواست تبلیغ
-- Preview
-- Template Library
-- Draftهای محلی
+Checker فقط روی شماره‌های **داده‌شده/مجاز** اجرا می‌شود. نتیجه `not_returned` به معنی قطعی «تلگرام ندارد» نیست؛ Privacy تلگرام می‌تواند مانع برگشت برخی حساب‌ها شود. ContactFlow این نتیجه را عمداً با همین نام ذخیره می‌کند.
 
-### درخواست تبلیغ
-- ثبت روی Telegram Numeric ID
-- Username
-- عنوان
-- تعداد درخواست‌شده
-- تعداد انجام‌شده
-- باقی‌مانده
-- Pending / Running / Completed
+شماره‌ساز برای ساخت/پاک‌سازی دیتاست وجود دارد؛ خروجی شماره‌های تولیدشده به‌صورت خودکار برای کشف انبوه حساب‌های Telegram اسکن نمی‌شود.
 
-### Backup
-- Backup دستی با فرمت `.cfbackup`
-- Restore کامل دیتابیس محلی
-- Activity Log
-- Google Drive بدون حساب ContactFlow
-- در Android انتخاب Google Drive از System File Picker
-- در PWA/Desktop امکان OAuth مستقیم Google Drive بعد از تنظیم OAuth Client ID
+## ارسال پیام
 
-## Telegram QR Connector
+- تبلیغ خصوصی: فقط `optin` صریح.
+- پیام خدماتی: `optin` یا چت موجود.
+- Privacy عمومی Telegram به‌تنهایی Consent تبلیغاتی محسوب نمی‌شود.
+- هر Campaign فقط با حسابی که کاربر انتخاب می‌کند اجرا می‌شود.
+- FloodWait باعث توقف می‌شود، نه سوییچ خودکار به حساب بعدی.
 
-رابط کاربر فقط **QR** است و از کاربر `api_id` یا `api_hash` خواسته نمی‌شود. این مقادیر Credential برنامه هستند و باید فقط در Build Native تنظیم شوند.
+## Telegram QR — تنظیم Build یک‌بار برای توسعه‌دهنده
 
-Telegram برای QR Login رسمی از Login Token استفاده می‌کند و TDLib نیز `requestQrCodeAuthentication` و وضعیت `authorizationStateWaitOtherDeviceConfirmation` را ارائه می‌دهد.
+کاربر نهایی API ID/HASH وارد نمی‌کند. برای Build رسمی، مالک برنامه باید یک‌بار Telegram App credentials را در GitHub Actions Secrets بگذارد:
 
-منابع رسمی:
-- https://core.telegram.org/api/qr-login
-- https://core.telegram.org/api/obtaining_api_id
-- https://core.telegram.org/tdlib/docs/classtd_1_1td__api_1_1request_qr_code_authentication.html
+- `TELEGRAM_API_ID`
+- `TELEGRAM_API_HASH`
 
-### وضعیت فعلی Connector
-
-Web Core و قرارداد Native Connector آماده‌اند. اگر Build فاقد TDLib و Credential رسمی Telegram App باشد، رابط **QR ساختگی نمایش نمی‌دهد** و وضعیت `QR Setup` نشان داده می‌شود.
-
-برای Release واقعی Telegram Connector باید در GitHub Secrets یا محیط Build، Credential برنامه تنظیم و TDLib Native Connector کامپایل شود. Session حساب Telegram باید فقط روی دستگاه Native نگه‌داری شود؛ PWA محل ذخیره Session حساس نیست.
-
-## سیاست Telegram
-
-ContactFlow 3.0 برای عملیات مجاز طراحی شده است: Audience رضایت‌داده، Existing Chat و Suppression. قابلیت اسکن شماره‌های تصادفی برای کشف کاربران Telegram یا ارسال ناخواسته به غریبه‌ها جزو Build رسمی این پروژه نیست.
-
-Telegram صراحتاً ارسال تبلیغات ناخواسته به غریبه‌ها و Spam/Flooding از API را محدود می‌کند:
-- https://telegram.org/faq_spam
-- https://core.telegram.org/api/terms
-- https://core.telegram.org/api/obtaining_api_id
-
-## ساختار Repository
-
-```text
-/
-├── index.html
-├── app.js
-├── ultimate.js
-├── config.js
-├── styles.css
-├── manifest.webmanifest
-├── sw.js
-├── icons/
-│
-├── desktop/
-│   ├── main.go
-│   ├── webapp/          # هنگام Build از Root Sync می‌شود
-│   └── installer/
-│
-├── android/
-│   └── app/
-│       └── src/main/assets/   # هنگام Build از Root Sync می‌شود
-│
-├── docs/
-│   ├── INSTALL_FA.md
-│   ├── USER_GUIDE_FA.md
-│   ├── ARCHITECTURE_FA.md
-│   ├── BACKUP_GOOGLE_DRIVE_FA.md
-│   └── TELEGRAM_QR_FA.md
-│
-└── .github/workflows/
-    ├── build-android.yml
-    └── release-all.yml
-```
-
-## Windows
-
-نسخه Desktop یک HTTP Server حساب یا Cloud Server نیست. فایل‌های Embed شده برنامه روی یک **پورت آزاد تصادفی localhost** نمایش داده می‌شوند تا با نسخه‌های قدیمی روی `127.0.0.1:17654` تداخل نداشته باشند.
-
-در نسخه 3.0 دیگر هیچ Server URL یا Account API وجود ندارد.
-
-## Android
-
-APK باید Assets نسخه 3.0 را از داخل خودش باز کند. کاربر در اولین اجرا Server URL وارد نمی‌کند. Import از File Picker سیستم و Export/Backup از Bridge بومی انجام می‌شود.
-
-## PWA
-
-فایل‌های Root را روی HTTPS قرار دهید. سپس در Chrome/Edge گزینه Install App / Add to Home Screen را بزنید. باز کردن مستقیم `index.html` با File Manager برای PWA کامل مناسب نیست، چون Service Worker روی `file://` فعال نمی‌شود.
+این مقادیر از `my.telegram.org` برای برنامه توسعه‌دهنده گرفته می‌شوند. اگر در Build تنظیم نباشند، صفحه Diagnostics صریحاً وضعیت `Not configured` نشان می‌دهد و QR ساختگی تولید نمی‌شود.
 
 ## Google Drive
 
-`config.js` دارای `googleClientId` خالی است. برای اتصال مستقیم Drive در PWA/Desktop باید OAuth Client رسمی Google خودتان را قرار دهید. اگر Client ID تنظیم نشده باشد، Backup دستی همیشه فعال باقی می‌ماند.
+برای PWA/Windows Direct Drive Sync، Secret زیر در GitHub تنظیم شود:
 
-## Build
+- `GOOGLE_CLIENT_ID`
 
-از GitHub Actions می‌توانید Build همه دستگاه‌ها را اجرا کنید:
+Authorized JavaScript Origin برای Windows پیش‌فرض:
 
-1. Actions
-2. `Release All Devices — Personal Ultimate 3.0`
-3. `Run workflow`
-4. Artifactهای Windows / Linux / macOS / Android / PWA / Source ساخته می‌شوند.
+`http://localhost:17655`
 
-## تست Release
+برای PWA نیز Origin دامنه HTTPS خودتان اضافه شود.
 
-Workflow قبل از انتشار بررسی می‌کند که Asset نهایی شامل عبارت‌های زیر نباشد:
+Android برای Backup/Restore به جای نگهداری OAuth Token داخل WebView از System Document Picker استفاده می‌کند؛ در Picker می‌توان Google Drive را انتخاب کرد.
 
-```text
-auth-gate
-auth-login
-auth-register
-Forgot Password
-Server URL
-127.0.0.1:17654
-```
+## Telegram Mini App
 
-و وجود صفحات اصلی نسخه 3.0 را کنترل می‌کند:
+کد cPanel در `telegram-miniapp/` است و هیچ ContactFlow Account نمی‌سازد. نصب:
 
-```text
-generator
-import
-contacts
-exports
-audience
-telegram
-campaign
-requests
-backup
-activity
-```
+1. پوشه را روی HTTPS آپلود کنید.
+2. `install.php` را باز کنید.
+3. Bot Token، Admin Numeric ID و MySQL را وارد کنید.
+4. Installer Webhook، Menu Button و Commands را تنظیم می‌کند.
+5. `health.php` را برای Health Check بررسی کنید.
 
-## اسناد
+Mini App برای کاربر:
+- Opt‑in / Opt‑out
+- تعرفه
+- ثبت درخواست تبلیغ
+- وضعیت و Progress درخواست
+- Membership Gate
 
-- نصب: `docs/INSTALL_FA.md`
-- آموزش کامل: `docs/USER_GUIDE_FA.md`
-- معماری: `docs/ARCHITECTURE_FA.md`
-- Telegram QR: `docs/TELEGRAM_QR_FA.md`
-- Backup و Google Drive: `docs/BACKUP_GOOGLE_DRIVE_FA.md`
-- تغییرات: `CHANGELOG.md`
+برای Admin:
+- آمار کاربران/Opt‑in/درخواست‌ها
+- لیست درخواست‌ها
+- تغییر `done_count` و Status
+- API مدیریت Pricing و Required Channels
 
-## امنیت و حریم خصوصی
+Bot فرستنده تبلیغ خصوصی نیست؛ وظیفه Bot/Mini App مدیریت رضایت، درخواست و وضعیت است.
 
-- داده مخاطبین Local‑First است.
-- Account Server وجود ندارد.
-- Telegram Session نباید داخل PWA ذخیره شود.
-- Telegram App Credentials نباید در JavaScript عمومی قرار بگیرند.
-- Backup شامل داده حساس است؛ فایل `.cfbackup` را در محل مطمئن نگه دارید.
+## Build از GitHub
 
----
+Workflow اصلی:
 
-**ContactFlow Personal Ultimate 3.0 — Local‑First, Accountless, Multi‑Device.**
+`.github/workflows/release-all.yml`
+
+این Workflow:
+1. Canonical 3.0 را بازسازی می‌کند.
+2. لایه 3.1 را اعمال می‌کند.
+3. Telegram Web bundle را Build می‌کند.
+4. JavaScript/PHP را Validation می‌کند.
+5. PWA، Windows، Linux، macOS، Android، Mini App و Source را Build/Package می‌کند.
+6. بررسی می‌کند Login/Server URL/HTTP 501 قدیمی در Build نهایی نباشد.
+7. SHA256 می‌سازد و GitHub Pre‑release را منتشر می‌کند.
+
+## فایل‌های مهم سورس
+
+- `.source-bundles/v3/` — Canonical Web Core 3.0
+- `.source-bundles/v31/` — بسته augmentation نسخه 3.1
+- `enhancements/telegram-web-entry.js` — Web‑MTProto connector
+- `enhancements/runtime-patch.js` — UI/feature augmentation
+- `enhancements/drive-sync.js` — Drive Sync 2.0
+- `telegram-miniapp/` — Bot/Mini App cPanel package
+- `desktop/` — Desktop shell/installer
+- `android/` — Android shell
+- `scripts/apply-v31.mjs` — اعمال 3.1 روی Canonical Core
+
+## وضعیت امنیت
+
+- Sessionهای Telegram در Backup معمولی به‌صورت plaintext صادر نمی‌شوند.
+- ContactFlow Account Server وجود ندارد.
+- Bot Token فقط روی cPanel Mini App نگه‌داری می‌شود.
+- Telegram App credentials فقط هنگام Build تزریق می‌شوند و در Git repository نوشته نمی‌شوند.
+- در Web client هر credential لازم برای MTProto نهایتاً قابل استخراج از Build است؛ بنابراین از credential اختصاصی همین برنامه استفاده کنید، نه credential برنامه دیگر.
+- Suppression قبل از هر ارسال تبلیغاتی اعمال می‌شود.
+
+## Debug
+
+از صفحه `Diagnostics` داخل برنامه استفاده کنید. برای Mini App:
+
+`telegram-miniapp/health.php`
+
+و برای Desktop:
+
+`http://localhost:17655/health`
+
+در صورت تغییر Port، Diagnostics Port واقعی را نشان می‌دهد.
