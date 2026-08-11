@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <title>ContactFlow Personal 2.0</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script async defer src="https://accounts.google.com/gsi/client"></script>
+</head>
+<body>
+<header class="topbar">
+  <div>
+    <h1>ContactFlow <span>Personal 2.0</span></h1>
+    <p>Local‑First • بدون حساب و سرور مرکزی</p>
+  </div>
+  <div class="status" id="storageStatus">آماده</div>
+</header>
+<nav class="tabs" aria-label="بخش‌ها">
+  <button data-tab="import" class="active">ورود فایل</button>
+  <button data-tab="contacts">مخاطبین</button>
+  <button data-tab="bulk">ویرایش گروهی</button>
+  <button data-tab="export">خروجی</button>
+  <button data-tab="backup">Backup</button>
+  <button data-tab="settings">تنظیمات</button>
+</nav>
+<main>
+<section id="tab-import" class="panel active">
+  <div class="card">
+    <h2>صف Import چندفایلی</h2>
+    <p class="muted">CSV/TXT به‌صورت مرحله‌ای پردازش می‌شود. XLSX در صورت دسترسی به موتور Excel مرورگر قابل ورود است.</p>
+    <label class="dropzone">
+      <input id="importFiles" type="file" multiple accept=".csv,.txt,.xlsx,.xls">
+      <strong>انتخاب فایل‌ها</strong>
+      <small>CSV / TXT / XLSX</small>
+    </label>
+    <div id="importQueue" class="queue"></div>
+    <div class="toolbar">
+      <button id="startImport" class="primary">شروع صف Import</button>
+      <button id="clearQueue">پاک‌کردن صف</button>
+    </div>
+    <div class="progress"><div id="importProgress"></div></div>
+    <pre id="importLog" class="log"></pre>
+  </div>
+</section>
+
+<section id="tab-contacts" class="panel">
+  <div class="card">
+    <div class="toolbar wrap">
+      <input id="contactSearch" placeholder="جستجو در نام، شهر، بخش یا شماره">
+      <button id="refreshContacts">نمایش</button>
+      <button id="deleteFiltered" class="danger">حذف نتیجه فیلتر</button>
+    </div>
+    <div class="metrics">
+      <div><strong id="totalContacts">0</strong><span>کل مخاطبین</span></div>
+      <div><strong id="filteredContacts">0</strong><span>نتیجه فیلتر</span></div>
+    </div>
+    <div class="table-wrap">
+      <table><thead><tr><th>#</th><th>نام</th><th>شماره</th><th>شهر</th><th>بخش</th></tr></thead><tbody id="contactRows"></tbody></table>
+    </div>
+    <div class="toolbar"><button id="prevPage">قبلی</button><span id="pageLabel">صفحه 1</span><button id="nextPage">بعدی</button></div>
+  </div>
+</section>
+
+<section id="tab-bulk" class="panel">
+  <div class="card">
+    <h2>ویرایش گروهی</h2>
+    <p class="muted">فیلتر اختیاری است؛ اگر خالی باشد همه مخاطبین هدف هستند.</p>
+    <div class="grid2">
+      <label>فیلتر<input id="bulkFilter" placeholder="تهران یا 0912 ..."></label>
+      <label>پیشوند نام<input id="bulkName" placeholder="مثلاً مشتری"></label>
+      <label>شهر جدید<input id="bulkCity" placeholder="اختیاری"></label>
+      <label>بخش جدید<input id="bulkSection" placeholder="اختیاری"></label>
+      <label>شروع سریال<input id="bulkStart" type="number" min="1" value="1"></label>
+    </div>
+    <button id="runBulk" class="primary">اعمال ویرایش</button>
+    <pre id="bulkLog" class="log"></pre>
+  </div>
+</section>
+
+<section id="tab-export" class="panel">
+  <div class="card">
+    <h2>Export</h2>
+    <div class="grid2">
+      <label>فیلتر<input id="exportFilter" placeholder="اختیاری"></label>
+      <label>تعداد در هر فایل<input id="exportChunk" type="number" min="100" value="5000"></label>
+      <label>فرمت<select id="exportFormat"><option value="csv">CSV</option><option value="vcf">VCF</option></select></label>
+      <label class="check"><input id="exportZip" type="checkbox" checked> ZIP اگر موتور ZIP در دسترس باشد</label>
+    </div>
+    <button id="runExport" class="primary">ساخت خروجی</button>
+    <pre id="exportLog" class="log"></pre>
+  </div>
+</section>
+
+<section id="tab-backup" class="panel">
+  <div class="card">
+    <h2>Backup & Restore</h2>
+    <p class="muted">فایل Backup شامل دیتابیس محلی و تنظیمات ContactFlow است. برای اطلاعات حساس رمز بگذارید.</p>
+    <div class="grid2">
+      <label>رمز Backup<input id="backupPassword" type="password" autocomplete="new-password" placeholder="اختیاری؛ حداقل 8 کاراکتر"></label>
+      <label>تکرار رمز<input id="backupPassword2" type="password" autocomplete="new-password"></label>
+    </div>
+    <div class="toolbar wrap">
+      <button id="makeBackup" class="primary">ایجاد Backup دستی</button>
+      <label class="buttonlike">Restore<input id="restoreFile" type="file" accept=".cfbackup,application/json" hidden></label>
+    </div>
+    <hr>
+    <h3>Google Drive</h3>
+    <div class="grid2">
+      <label>Google OAuth Client ID<input id="googleClientId" placeholder="xxxx.apps.googleusercontent.com"></label>
+      <label>وضعیت<input id="driveState" readonly value="متصل نیست"></label>
+    </div>
+    <div class="toolbar wrap">
+      <button id="saveGoogleId">ذخیره Client ID</button>
+      <button id="connectDrive">اتصال Google Drive</button>
+      <button id="backupDrive" class="primary">Backup روی Drive</button>
+      <button id="listDrive">لیست Backupها</button>
+    </div>
+    <div id="driveFiles" class="queue"></div>
+    <pre id="backupLog" class="log"></pre>
+  </div>
+</section>
+
+<section id="tab-settings" class="panel">
+  <div class="card">
+    <h2>تنظیمات محلی</h2>
+    <div class="grid2">
+      <label>پیشوند پیش‌فرض نام<input id="defaultPrefix" value="مخاطب"></label>
+      <label>شهر پیش‌فرض<input id="defaultCity"></label>
+      <label>بخش پیش‌فرض<input id="defaultSection"></label>
+      <label class="check"><input id="autoDedupe" type="checkbox" checked> حذف شماره تکراری هنگام Import</label>
+    </div>
+    <button id="saveSettings" class="primary">ذخیره تنظیمات</button>
+    <hr>
+    <h3>نگهداری</h3>
+    <button id="wipeLocal" class="danger">پاک‌کردن کامل داده محلی</button>
+    <p class="muted">قبل از پاک‌سازی، Backup بگیرید.</p>
+  </div>
+</section>
+</main>
+<footer>ContactFlow Personal 2.0 • Local‑First</footer>
+<script src="app.js"></script>
+</body>
+</html>
