@@ -1,0 +1,42 @@
+name: Build Desktop — ContactFlow Personal 2.0
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'desktop/**'
+      - 'web/**'
+      - '.github/workflows/build-desktop.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+      - name: Sync web assets
+        run: |
+          rm -rf desktop/webapp
+          mkdir -p desktop/webapp
+          cp -a web/. desktop/webapp/
+      - name: Build all desktop targets
+        working-directory: desktop
+        run: |
+          mkdir -p ../dist
+          GOOS=windows GOARCH=amd64 go build -trimpath -ldflags='-s -w -H=windowsgui' -o ../dist/ContactFlow_Personal_2.0_Windows_x64.exe .
+          GOOS=linux GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o ../dist/ContactFlow_Personal_2.0_Linux_x64 .
+          GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o ../dist/ContactFlow_Personal_2.0_macOS_Intel .
+          GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags='-s -w' -o ../dist/ContactFlow_Personal_2.0_macOS_AppleSilicon .
+          sha256sum ../dist/* > ../dist/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ContactFlow-Personal-2.0-Desktop
+          path: dist/*
+          retention-days: 30
