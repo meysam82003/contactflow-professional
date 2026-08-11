@@ -1,19 +1,26 @@
-name: Build ContactFlow Personal Android
+name: Build ContactFlow Personal 2.3 Android
 on:
   workflow_dispatch:
   push:
     branches: [ main ]
     paths:
-      - 'personal2-trigger.txt'
+      - 'personal23_bundle.tgz.b64'
+      - '.github/workflows/build-android.yml'
 permissions:
   contents: read
-  issues: write
 jobs:
   apk:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - name: Apply Personal 2.3 source bundle
+        run: |
+          base64 -d personal23_bundle.tgz.b64 > /tmp/personal23.tgz
+          echo '7ff6cc183e0540f56975b8afefbf470330af1620377b18dbe5da67cad854df4d  /tmp/personal23.tgz' | sha256sum -c -
+          tar -xzf /tmp/personal23.tgz -C .
+          grep -q 'ContactFlow Personal 2.3' index.html
+          ! grep -Eq 'auth-gate|auth-register|auth-login|Server URL|127\.0\.0\.1:17654' index.html
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -26,41 +33,37 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
-      - name: Sync Personal 2.0 PWA assets
+      - name: Sync verified Personal 2.3 assets
         run: |
           rm -rf android/app/src/main/assets
           mkdir -p android/app/src/main/assets/icons
-          cp index.html app.js pro.js config.js styles.css manifest.webmanifest sw.js android/app/src/main/assets/
+          cp index.html app.js localplus.js styles.css localplus.css manifest.webmanifest sw.js android/app/src/main/assets/
           cp -r icons/* android/app/src/main/assets/icons/
       - name: Build APK
         working-directory: android
         run: gradle --no-daemon :app:assembleDebug --stacktrace
-      - name: Verify APK
+      - name: Verify APK and restored features
         run: |
           APK=android/app/build/outputs/apk/debug/app-debug.apk
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | tee apk-badging.txt
           grep "sdkVersion:'21'" apk-badging.txt
           grep "targetSdkVersion:'36'" apk-badging.txt
-          unzip -p "$APK" assets/index.html | grep 'ContactFlow Personal 2.0'
-          unzip -p "$APK" assets/index.html | grep 'data-page="backup"'
-          ! unzip -p "$APK" assets/index.html | grep -q 'auth-gate'
+          unzip -p "$APK" assets/index.html > /tmp/index.html
+          grep -q 'ContactFlow Personal 2.3' /tmp/index.html
+          grep -q 'data-page="import"' /tmp/index.html
+          grep -q 'data-page="exports"' /tmp/index.html
+          grep -q 'data-page="generator"' /tmp/index.html
+          grep -q 'data-page="telegram"' /tmp/index.html
+          grep -q 'data-page="campaign"' /tmp/index.html
+          grep -q 'data-page="backup"' /tmp/index.html
+          ! grep -Eq 'auth-gate|auth-register|auth-login|Server URL|127\.0\.0\.1:17654' /tmp/index.html
           sha256sum "$APK" | tee apk-sha256.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: ContactFlow-Personal-2.0-Android-Alpha1
+          name: ContactFlow-Personal-2.3-Android-Alpha1
           path: |
             android/app/build/outputs/apk/debug/app-debug.apk
             apk-sha256.txt
             apk-badging.txt
           retention-days: 30
-      - name: Report success
-        if: success()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "✅ ContactFlow Personal 2.0 Android Alpha 1 succeeded — Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} — commit ${GITHUB_SHA}"
-      - name: Report failure
-        if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "❌ ContactFlow Personal 2.0 Android Alpha 1 failed — Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} — commit ${GITHUB_SHA}"
