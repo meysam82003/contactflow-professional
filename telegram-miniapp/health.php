@@ -1,0 +1,1 @@
+<?php require __DIR__.'/lib.php';$cfg=cf_config();$cs=cf_read_json('connections',[]);$on=0;foreach($cs as $c)if(!empty($c['enabled']))$on++;cf_json(['ok'=>true,'service'=>'ContactFlow Telegram Business Gateway','version'=>CF_VERSION,'configured'=>(bool)$cfg,'botUsername'=>$cfg['bot_username']??'','activeConnections'=>$on,'miniApp'=>cf_base_url().'/miniapp.html']);
