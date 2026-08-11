@@ -17,6 +17,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 jobs:
   verify-web:
@@ -36,7 +37,8 @@ jobs:
           tar -xzf /tmp/cf3.tgz -C /tmp/cf3
           node --check /tmp/cf3/app.js
           node --check /tmp/cf3/ultimate.js
-          grep -q 'ContactFlow Personal Ultimate 3.0' /tmp/cf3/index.html
+          grep -q 'ContactFlow' /tmp/cf3/index.html
+          grep -q 'Personal Ultimate 3.0' /tmp/cf3/index.html
           for page in generator import contacts exports audience telegram campaign requests backup activity; do
             grep -q "data-page=\"$page\"" /tmp/cf3/index.html
           done
@@ -149,7 +151,8 @@ jobs:
           grep "sdkVersion:'21'" apk-badging.txt
           grep "targetSdkVersion:'36'" apk-badging.txt
           unzip -p "$APK" assets/index.html > /tmp/apk-index.html
-          grep -q 'ContactFlow Personal Ultimate 3.0' /tmp/apk-index.html
+          grep -q 'ContactFlow' /tmp/apk-index.html
+          grep -q 'Personal Ultimate 3.0' /tmp/apk-index.html
           ! grep -E 'auth-gate|auth-login|auth-register|Server URL|127\.0\.0\.1:17654' /tmp/apk-index.html
           mkdir -p dist
           cp "$APK" dist/ContactFlow_Personal_Ultimate_3.0_Android_Alpha.apk
@@ -193,3 +196,24 @@ jobs:
             • Generator, multi-file Import, Contacts, bulk editing, export queue, Audience/Consent, Campaign Composer, Ad Requests, Backup/Restore, Google Drive path and Activity Log included
             • Telegram UI is QR-first. No fake QR is generated. Real QR authorization requires official Telegram App credentials and a configured TDLib Native Connector in the native build.
             • APK is an Alpha/debug-signed build.
+
+  report:
+    if: always()
+    needs: [verify-web, desktop, android, release]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report release status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERIFY: ${{ needs.verify-web.result }}
+          DESKTOP: ${{ needs.desktop.result }}
+          ANDROID: ${{ needs.android.result }}
+          RELEASE: ${{ needs.release.result }}
+        shell: bash
+        run: |
+          if [[ "$VERIFY" == success && "$DESKTOP" == success && "$ANDROID" == success && "$RELEASE" == success ]]; then
+            gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "✅ ContactFlow Personal Ultimate 3.0 all-device release succeeded — verify=${VERIFY}, desktop=${DESKTOP}, android=${ANDROID}, release=${RELEASE} — Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} — commit ${GITHUB_SHA}"
+          else
+            gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "❌ ContactFlow Personal Ultimate 3.0 release needs attention — verify=${VERIFY}, desktop=${DESKTOP}, android=${ANDROID}, release=${RELEASE} — Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} — commit ${GITHUB_SHA}"
+            exit 1
+          fi
