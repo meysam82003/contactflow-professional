@@ -1,5 +1,27 @@
 # Changelog
 
+## Hosted Mini App Contact Workspace hotfix — 2026-08-12
+
+### Mini App
+- `telegram-miniapp/miniapp.html` به یک Contact Workspace مستقل تبدیل شد.
+- برای باز شدن و امکانات پایه به `TELEGRAM_API_ID`، `TELEGRAM_API_HASH` یا `GOOGLE_CLIENT_ID` در Build نیاز ندارد.
+- Import TXT/CSV، Paste، Normalize، Dedup و Preview اضافه شد.
+- خروجی CSV و VCF اضافه شد.
+- Share VCF از Web Share API برای ارسال به Google Drive/Providerهای سیستم اضافه شد.
+- Backup/Restore محلی `.cfbackup` اضافه شد.
+- Telegram ID/Username از Mini App و `requestContact` برای شماره خود همان کاربر اضافه شد.
+- واژه `Opt-in` از UI Contact Workspace حذف شد؛ کنترل جلوگیری از ارسال ناخواسته در Campaign Engine حذف نشده است.
+
+### Telegram contacts API truth
+- Checker شبکه‌ای ساختگی از Hosted Mini App حذف/غیرفعال است.
+- مستند شد که `contacts.resolvePhone`, `contacts.importContacts`, `contacts.addContact` فقط User Session هستند.
+- نبود Match به دلیل Privacy لزوماً به معنی «Telegram ندارد» نیست.
+- مسیر بدون App credentials برای افزودن مخاطبین: VCF → Contacts سیستم → Telegram Sync Contacts.
+
+### Google Drive fallback
+- نبود `GOOGLE_CLIENT_ID` دیگر مانع Backup پایه Hosted Mini App نیست.
+- فایل واقعی Backup/VCF ساخته می‌شود و در دستگاه‌های پشتیبانی‌شده می‌تواند از Share Sheet به Google Drive ارسال شود.
+
 ## 3.1.0-alpha.1 — Web Telegram / Drive / Mini App restoration
 
 ### Telegram Account Connector
