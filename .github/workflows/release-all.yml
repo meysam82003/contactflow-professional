@@ -50,7 +50,7 @@ jobs:
           echo 'acb866bdc9fb1610729f441dd572ec5da3e9a4901addcd9d5666cc80a9ef214e  /tmp/cf31aug.tgz' | sha256sum -c -
           tar -xzf /tmp/cf31aug.tgz -C /tmp/cf31aug
 
-      - name: Build browser Telegram Web-MTProto connector
+      - name: Build optional legacy Web-MTProto bundle
         shell: bash
         run: |
           set -euo pipefail
@@ -61,7 +61,7 @@ jobs:
           npm run build
           test -s dist/telegram-web.bundle.js
 
-      - name: Apply 3.1 augmentation
+      - name: Apply Business Bot, hosted Mini App and backup hotfix
         id: cfg
         shell: bash
         env:
@@ -73,8 +73,9 @@ jobs:
         run: |
           set -euo pipefail
           cp /tmp/cf31aug/enhancements/dist/telegram-web.bundle.js /tmp/cf31/
-          cp /tmp/cf31aug/enhancements/runtime-patch.js /tmp/cf31aug/enhancements/drive-sync.js /tmp/cf31aug/enhancements/enhancements.css /tmp/cf31/
-          node /tmp/cf31aug/scripts/apply-v31.mjs /tmp/cf31 | tee /tmp/cf31-config.json
+          cp /tmp/cf31aug/enhancements/runtime-patch.js /tmp/cf31/
+          cp "$GITHUB_WORKSPACE/enhancements/drive-sync.js" "$GITHUB_WORKSPACE/enhancements/business-connect.js" "$GITHUB_WORKSPACE/enhancements/enhancements.css" /tmp/cf31/
+          node "$GITHUB_WORKSPACE/scripts/apply-v31.mjs" /tmp/cf31 | tee /tmp/cf31-config.json
           node - <<'NODE'
           const fs=require('fs');const j=JSON.parse(fs.readFileSync('/tmp/cf31-config.json','utf8'));
           fs.appendFileSync(process.env.GITHUB_OUTPUT,`telegram_configured=${j.telegramConfigured}\ngoogle_configured=${j.googleConfigured}\nminiapp_configured=${j.miniAppConfigured}\n`);
@@ -88,15 +89,18 @@ jobs:
           node --check /tmp/cf31/ultimate.js
           node --check /tmp/cf31/runtime-patch.js
           node --check /tmp/cf31/drive-sync.js
-          node --check /tmp/cf31aug/scripts/apply-v31.mjs
+          node --check /tmp/cf31/business-connect.js
+          node --check scripts/apply-v31.mjs
           grep -q 'Personal Ultimate 3.1' /tmp/cf31/index.html
           for page in generator import contacts exports audience telegram campaign requests backup activity; do
             grep -q "data-page=\"$page\"" /tmp/cf31/index.html
           done
-          grep -q 'telegram-web.bundle.js' /tmp/cf31/index.html
+          grep -q 'business-connect.js' /tmp/cf31/index.html
           grep -q 'drive-sync.js' /tmp/cf31/index.html
           grep -q 'runtime-patch.js' /tmp/cf31/index.html
-          ! grep -E 'auth-gate|auth-login|auth-register|Forgot Password|Server URL|127\.0\.0\.1:17654|QR Connector not configured in this build' /tmp/cf31/index.html
+          grep -q '"telegramMode":"business_bot"' /tmp/cf31/config.js
+          grep -q '"googleMode":"oauth_or_system_folder"' /tmp/cf31/config.js
+          ! grep -ER 'QR Connector not configured in this build|GOOGLE_CLIENT_ID در Build تنظیم نشده است|Google OAuth Client ID داخلی Build تنظیم نشده' /tmp/cf31/index.html /tmp/cf31/ultimate.js /tmp/cf31/drive-sync.js /tmp/cf31/business-connect.js
           ! grep -E 'native/telegram/qr' /tmp/cf31/ultimate.js
           ! grep -E 'contactflow-professional-v1\.2|pro\.js' /tmp/cf31/sw.js
 
@@ -150,6 +154,7 @@ jobs:
           mkdir -p desktop/webapp
           cp -R webcore/. desktop/webapp/
           ! grep -ERn 'auth-gate|auth-login|auth-register|Server URL|127\.0\.0\.1:17654' desktop/webapp/index.html
+          grep -q 'business-connect.js' desktop/webapp/index.html
 
       - name: Build Windows Linux macOS
         shell: bash
@@ -224,7 +229,7 @@ jobs:
           grep "targetSdkVersion:'36'" apk-badging.txt
           unzip -p "$APK" assets/index.html > /tmp/apk-index.html
           grep -q 'Personal Ultimate 3.1' /tmp/apk-index.html
-          grep -q 'telegram-web.bundle.js' /tmp/apk-index.html
+          grep -q 'business-connect.js' /tmp/apk-index.html
           ! grep -E 'auth-gate|auth-login|auth-register|Server URL|127\.0\.0\.1:17654|QR Connector not configured' /tmp/apk-index.html
           mkdir -p dist
           cp "$APK" dist/ContactFlow_Personal_Ultimate_3.1.0-alpha.1_Android_Alpha.apk
@@ -240,25 +245,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate PHP Mini App and Bot
+      - name: Validate hosted Mini App and Business Bot Gateway
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf /tmp/cf31aug && mkdir -p /tmp/cf31aug
-          cat .source-bundles/v31/augment.part* | base64 -d > /tmp/cf31aug.tgz
-          tar -xzf /tmp/cf31aug.tgz -C /tmp/cf31aug
-          php -l /tmp/cf31aug/telegram-miniapp/lib.php
-          php -l /tmp/cf31aug/telegram-miniapp/install.php
-          php -l /tmp/cf31aug/telegram-miniapp/webhook.php
-          php -l /tmp/cf31aug/telegram-miniapp/api.php
-          php -l /tmp/cf31aug/telegram-miniapp/health.php
-          grep -q 'X-Telegram-Init-Data' /tmp/cf31aug/telegram-miniapp/miniapp/index.html
-          grep -q 'webhook_secret' /tmp/cf31aug/telegram-miniapp/webhook.php
+          for f in telegram-miniapp/lib.php telegram-miniapp/setup.php telegram-miniapp/webhook.php telegram-miniapp/gateway.php telegram-miniapp/cron.php telegram-miniapp/health.php; do php -l "$f"; done
+          test -s telegram-miniapp/miniapp.html
+          grep -q 'X-Telegram-Init-Data' telegram-miniapp/miniapp.html
+          grep -q 'business_connection' telegram-miniapp/webhook.php
+          grep -q 'business_connection_id' telegram-miniapp/gateway.php
+          grep -q 'miniapp.html' telegram-miniapp/setup.php
       - name: Package cPanel Mini App
         shell: bash
         run: |
           mkdir -p dist
-          (cd /tmp/cf31aug && zip -qr $GITHUB_WORKSPACE/dist/ContactFlow_Personal_Ultimate_3.1.0-alpha.1_Telegram_MiniApp_cPanel.zip telegram-miniapp docs/TELEGRAM_MINIAPP_FA.md)
+          zip -qr dist/ContactFlow_Personal_Ultimate_3.1.0-alpha.1_Telegram_MiniApp_cPanel.zip telegram-miniapp docs/BUSINESS_CONNECTOR_FA.md
+          test -s dist/ContactFlow_Personal_Ultimate_3.1.0-alpha.1_Telegram_MiniApp_cPanel.zip
       - uses: actions/upload-artifact@v4
         with:
           name: cf31-release-miniapp
@@ -284,7 +286,7 @@ jobs:
           cat .source-bundles/v31/augment.part* | base64 -d > /tmp/cf31aug.tgz
           tar -xzf /tmp/cf31aug.tgz -C /tmp/cf31aug
           cp -R /tmp/cf31aug dist/source/v31-augmentation
-          cp -R desktop android docs .github dist/source/
+          cp -R desktop android docs .github enhancements telegram-miniapp scripts dist/source/
           cp README.md README_FA.md CHANGELOG.md VERSION SECURITY.md DEPLOY_3_1_FA.md dist/source/ 2>/dev/null || true
           (cd dist/source && zip -qr ../ContactFlow_Personal_Ultimate_3.1.0-alpha.1_Source.zip .)
       - uses: actions/upload-artifact@v4
@@ -307,23 +309,24 @@ jobs:
       - name: Release info and SHA256
         shell: bash
         env:
-          TG_CONFIGURED: ${{ needs.webcore.outputs.telegram_configured }}
-          GOOGLE_CONFIGURED: ${{ needs.webcore.outputs.google_configured }}
-          MINIAPP_CONFIGURED: ${{ needs.webcore.outputs.miniapp_configured }}
+          TG_READY: ${{ needs.webcore.outputs.telegram_configured }}
+          BACKUP_READY: ${{ needs.webcore.outputs.google_configured }}
+          MINIAPP_READY: ${{ needs.webcore.outputs.miniapp_configured }}
         run: |
           set -euo pipefail
           cd release
           cat > ContactFlow_Personal_Ultimate_3.1.0-alpha.1_RELEASE_INFO_FA.txt <<EOF
-          ContactFlow Personal Ultimate 3.1.0-alpha.1
+          ContactFlow Personal Ultimate 3.1.0-alpha.1 — Business/MiniApp/Backup Hotfix
           Source commit: ${GITHUB_SHA}
           Workflow run: ${GITHUB_RUN_ID}
-          Telegram App credentials configured: ${TG_CONFIGURED}
-          Google Client ID configured: ${GOOGLE_CONFIGURED}
-          Mini App URL configured in app build: ${MINIAPP_CONFIGURED}
+          Telegram Business Bot connector ready without API ID/Hash: ${TG_READY}
+          Backup fallback ready without mandatory GOOGLE_CLIENT_ID: ${BACKUP_READY}
+          Hosted Mini App URL mode ready without build secret: ${MINIAPP_READY}
 
-          QR 3.1: Web-MTProto; HTTP 501 Native connector مسیر اصلی نیست.
-          ContactFlow Login/Register/Forgot Password/Server URL وجود ندارد.
-          Telegram Mini App cPanel package در Release موجود است.
+          Telegram primary mode: Bot Pair + Telegram Business Connection.
+          Legacy Web-MTProto files are retained but are no longer required or the default connector.
+          Mini App deployment: unzip on HTTPS hosting and register https://domain/path/miniapp.html at runtime.
+          Backup: Android System Picker, desktop Sync Folder/file fallback, optional Google OAuth if Client ID exists.
           EOF
           find . -maxdepth 1 -type f ! -name 'ContactFlow_Personal_Ultimate_3.1.0-alpha.1_SHA256.txt' -print0 | sort -z | xargs -0 sha256sum > ContactFlow_Personal_Ultimate_3.1.0-alpha.1_SHA256.txt
           ls -lh
@@ -340,18 +343,17 @@ jobs:
           preserve_order: true
           files: release/*
           body: |
-            # ContactFlow Personal Ultimate 3.1.0-alpha.1
+            # ContactFlow Personal Ultimate 3.1.0-alpha.1 — Hotfix
 
-            - Web‑MTProto Telegram QR connector; no legacy HTTP 501 QR path.
-            - Up to 10 independent Telegram sessions with manual sender selection.
-            - Authorized contact checker: matched / not_returned / retry.
-            - Campaign safety: explicit opt-in for promotional private messaging, service mode for opt-in/existing chats, dry-run, caps, delay, duplicate guard and stop-on-FloodWait/restriction.
-            - Google Drive Sync 2.0: appDataFolder, visible backup, SHA-256 and conflict detection; Android uses system document picker.
-            - Telegram Mini App restored and expanded with consent, pricing, requests, progress, membership gate, admin dashboard and health endpoint.
-            - 35+ added/expanded features; existing ContactFlow 3.0 local features remain.
-            - No ContactFlow Login/Register/Forgot Password/Server URL.
+            - Primary Telegram connector is Bot Pair + Telegram Business Connection; no TELEGRAM_API_ID / TELEGRAM_API_HASH required for this path.
+            - Up to 10 local account pairings with manual sender selection, connection labels, known-chat list and test-send.
+            - Promotional campaigns are limited to explicit opt-in Business chats; queue progress, cancel and Telegram retry_after handling are included.
+            - Hosted Mini App restored: unzip to HTTPS hosting and register `https://domain/path/miniapp.html` at runtime; no Mini App build secret required.
+            - Backup no longer fails when GOOGLE_CLIENT_ID is absent: Android System Picker, desktop Sync Folder and file backup/restore are available; Google OAuth remains optional.
+            - One-click VCF workflow prepares large contact lists for import into system Contacts; no fake Bot-side contact import.
+            - Existing ContactFlow 3.0/3.1 features remain in the build.
 
-            Full Persian documentation is included in the repository and Source ZIP.
+            Persian setup and troubleshooting docs are included in the repository and Source ZIP.
 
   report:
     if: always()
@@ -370,8 +372,8 @@ jobs:
         shell: bash
         run: |
           if [[ "$WEB" == success && "$DESKTOP" == success && "$ANDROID" == success && "$MINIAPP" == success && "$SOURCE" == success && "$RELEASE" == success ]]; then
-            gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "✅ ContactFlow 3.1 release succeeded — web=$WEB desktop=$DESKTOP android=$ANDROID miniapp=$MINIAPP source=$SOURCE release=$RELEASE — Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" || true
+            gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "✅ ContactFlow 3.1 hotfix release succeeded — web=$WEB desktop=$DESKTOP android=$ANDROID miniapp=$MINIAPP source=$SOURCE release=$RELEASE — Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" || true
           else
-            gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "❌ ContactFlow 3.1 release needs attention — web=$WEB desktop=$DESKTOP android=$ANDROID miniapp=$MINIAPP source=$SOURCE release=$RELEASE — Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" || true
+            gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "❌ ContactFlow 3.1 hotfix release needs attention — web=$WEB desktop=$DESKTOP android=$ANDROID miniapp=$MINIAPP source=$SOURCE release=$RELEASE — Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" || true
             exit 1
           fi
