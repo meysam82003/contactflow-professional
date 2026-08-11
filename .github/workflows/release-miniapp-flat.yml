@@ -6,7 +6,6 @@ on:
     branches: [ main ]
     paths:
       - 'telegram-miniapp/**'
-      - 'docs/BUSINESS_CONNECTOR_FA.md'
       - '.github/workflows/release-miniapp-flat.yml'
   workflow_run:
     workflows: ['Release All Devices — Personal Ultimate 3.1']
@@ -23,14 +22,33 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
-      - name: Validate hosted Mini App
+
+      - name: Validate hosted ContactFlow Mini App Workspace
         shell: bash
         run: |
           set -euo pipefail
-          for f in telegram-miniapp/lib.php telegram-miniapp/setup.php telegram-miniapp/webhook.php telegram-miniapp/gateway.php telegram-miniapp/cron.php telegram-miniapp/health.php; do php -l "$f"; done
           test -s telegram-miniapp/miniapp.html
-          grep -q 'X-Telegram-Init-Data' telegram-miniapp/miniapp.html
-          grep -q 'business_connection_id' telegram-miniapp/gateway.php
+          test -s telegram-miniapp/README_FA.md
+          grep -q 'contactflow_miniapp_workspace_v2' telegram-miniapp/miniapp.html
+          grep -q 'Telegram Contact Sync' telegram-miniapp/miniapp.html
+          grep -q 'indexedDB.open' telegram-miniapp/miniapp.html
+          grep -q 'ContactFlow_Backup_' telegram-miniapp/miniapp.html
+          grep -q 'ساخت VCF برای Telegram Sync' telegram-miniapp/miniapp.html
+          ! grep -q 'QR Connector not configured in this build' telegram-miniapp/miniapp.html
+          ! grep -q 'GOOGLE_CLIENT_ID در Build تنظیم نشده است' telegram-miniapp/miniapp.html
+          ! grep -q 'auth-gate' telegram-miniapp/miniapp.html
+          python3 - <<'PY'
+          import re, pathlib
+          h=pathlib.Path('telegram-miniapp/miniapp.html').read_text(encoding='utf-8')
+          scripts=re.findall(r'<script>(.*?)</script>',h,re.S)
+          assert scripts, 'inline script missing'
+          pathlib.Path('/tmp/contactflow-miniapp.js').write_text(scripts[-1],encoding='utf-8')
+          PY
+          node --check /tmp/contactflow-miniapp.js
+          for f in telegram-miniapp/lib.php telegram-miniapp/setup.php telegram-miniapp/webhook.php telegram-miniapp/gateway.php telegram-miniapp/cron.php telegram-miniapp/health.php; do
+            if [[ -f "$f" ]]; then php -l "$f"; fi
+          done
+
       - name: Build flat cPanel ZIP
         shell: bash
         run: |
@@ -38,18 +56,26 @@ jobs:
           rm -rf package dist
           mkdir -p package dist
           cp -R telegram-miniapp/. package/
-          cp docs/BUSINESS_CONNECTOR_FA.md package/BUSINESS_CONNECTOR_FA.md
-          rm -f package/storage/config.php package/storage/*.json package/storage/*.tmp.*
+          rm -f package/storage/config.php package/storage/*.json package/storage/*.tmp.* 2>/dev/null || true
+          cat > package/BUILD_INFO.txt <<EOF
+          ContactFlow Hosted Mini App Workspace v2
+          Source commit: ${GITHUB_SHA}
+          URL example: https://domain/contactflow/miniapp.html
+          TELEGRAM_API_ID/HASH required for hosted workspace: no
+          GOOGLE_CLIENT_ID required for local/share/folder backup: no
+          EOF
           (cd package && zip -qr ../dist/ContactFlow_Personal_Ultimate_3.1.0-alpha.1_Telegram_MiniApp_cPanel.zip .)
           unzip -l dist/ContactFlow_Personal_Ultimate_3.1.0-alpha.1_Telegram_MiniApp_cPanel.zip | tee miniapp-zip-list.txt
           unzip -l dist/ContactFlow_Personal_Ultimate_3.1.0-alpha.1_Telegram_MiniApp_cPanel.zip | grep -q ' miniapp.html$'
           ! unzip -l dist/ContactFlow_Personal_Ultimate_3.1.0-alpha.1_Telegram_MiniApp_cPanel.zip | grep -q ' telegram-miniapp/miniapp.html$'
-          sha256sum dist/* > dist/MINIAPP_SHA256.txt
+          sha256sum dist/ContactFlow_Personal_Ultimate_3.1.0-alpha.1_Telegram_MiniApp_cPanel.zip > dist/MINIAPP_SHA256.txt
+
       - uses: actions/upload-artifact@v4
         with:
           name: cf31-release-miniapp-flat
           path: dist/*
           retention-days: 30
+
       - name: Replace Mini App asset in existing release
         uses: softprops/action-gh-release@v3
         with:
