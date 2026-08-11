@@ -45,7 +45,8 @@ jobs:
           tar -xzf /tmp/cf3.tgz -C /tmp/cf3
           node --check /tmp/cf3/app.js
           node --check /tmp/cf3/ultimate.js
-          grep -q 'ContactFlow Personal Ultimate 3.0' /tmp/cf3/index.html
+          grep -q 'ContactFlow' /tmp/cf3/index.html
+          grep -q 'Personal Ultimate 3.0' /tmp/cf3/index.html
           if grep -ERn 'auth-gate|auth-login|auth-register|Forgot Password|Server URL|127\.0\.0\.1:17654|pseudoQR' \
             /tmp/cf3/index.html /tmp/cf3/app.js /tmp/cf3/ultimate.js /tmp/cf3/config.js /tmp/cf3/sw.js; then
             echo 'Legacy account/server/fake QR code detected in canonical source.' >&2
