@@ -5,14 +5,7 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'index.html'
-      - 'app.js'
-      - 'ultimate.js'
-      - 'config.js'
-      - 'styles.css'
-      - 'manifest.webmanifest'
-      - 'sw.js'
-      - 'icons/**'
+      - '.source-bundles/v3/**'
       - 'android/**'
       - '.github/workflows/build-android.yml'
       - 'android-trigger.txt'
@@ -29,14 +22,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Verify web core before Android build
+      - name: Materialize and verify Personal Ultimate web core
         shell: bash
         run: |
           set -euo pipefail
-          node --check app.js
-          node --check ultimate.js
-          grep -q 'ContactFlow Personal Ultimate 3.0' index.html
-          ! grep -ERn 'auth-gate|auth-login|auth-register|Forgot Password|Server URL|127\.0\.0\.1:17654|pseudoQR' index.html app.js ultimate.js config.js
+          rm -rf /tmp/cf3 && mkdir -p /tmp/cf3
+          cat .source-bundles/v3/web3.part* | base64 -d > /tmp/cf3.tgz
+          tar -xzf /tmp/cf3.tgz -C /tmp/cf3
+          node --check /tmp/cf3/app.js
+          node --check /tmp/cf3/ultimate.js
+          grep -q 'ContactFlow Personal Ultimate 3.0' /tmp/cf3/index.html
+          ! grep -ERn 'auth-gate|auth-login|auth-register|Forgot Password|Server URL|127\.0\.0\.1:17654|pseudoQR' /tmp/cf3/index.html /tmp/cf3/app.js /tmp/cf3/ultimate.js /tmp/cf3/config.js
 
       - uses: actions/setup-java@v4
         with:
@@ -54,8 +50,8 @@ jobs:
         run: |
           rm -rf android/app/src/main/assets
           mkdir -p android/app/src/main/assets
-          cp index.html app.js ultimate.js config.js styles.css manifest.webmanifest sw.js android/app/src/main/assets/
-          cp -R icons android/app/src/main/assets/icons
+          cp /tmp/cf3/index.html /tmp/cf3/app.js /tmp/cf3/ultimate.js /tmp/cf3/config.js /tmp/cf3/styles.css /tmp/cf3/manifest.webmanifest /tmp/cf3/sw.js android/app/src/main/assets/
+          cp -R /tmp/cf3/icons android/app/src/main/assets/icons
 
       - name: Build APK
         working-directory: android
