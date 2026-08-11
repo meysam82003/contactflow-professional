@@ -1,20 +1,24 @@
-# Telegram Mini App — ContactFlow 3.1
+# ContactFlow Telegram Mini App + Business Gateway
 
-Mini App در نسخه 3.1 حذف نشده است. سورس Canonical آن در بسته `.source-bundles/v31/augment.part*` نگه‌داری می‌شود و Workflow Release آن را به‌صورت فایل ZIP cPanel مستقل منتشر می‌کند.
+## Mini App ساده
+فقط پوشه را روی هاست Extract کنید و آدرس زیر را داخل ContactFlow ثبت کنید:
 
-خروجی Release:
-`ContactFlow_Personal_Ultimate_3.1.0-alpha.1_Telegram_MiniApp_cPanel.zip`
+`https://domain/contactflow/miniapp.html`
 
-شامل:
-- `install.php`
-- `lib.php`
-- `webhook.php`
-- `api.php`
-- `health.php`
-- `schema.sql`
-- `miniapp/index.html`
-- `storage/.htaccess`
+Mini App برای باز شدن به هیچ Secret در Build برنامه نیاز ندارد.
 
-وظایف: Opt-in/Opt-out، Suppression، Pricing، Ad Request، Progress، Numeric-ID binding، Membership Gate، Admin dashboard و Health diagnostics.
+## اتصال Bot / Business برای ارسال پیام
+یک بار `setup.php` را باز کنید و Bot Token را وارد کنید. Setup به‌صورت خودکار Webhook، Commandها و Menu Button مینی‌اپ را تنظیم می‌کند.
 
-راهنمای کامل: `docs/TELEGRAM_MINIAPP_3_1_FA.md` و `DEPLOY_3_1_FA.md`.
+برای هر حساب Telegram:
+1. Bot را با همان حساب Start کنید.
+2. کد ۶ رقمی Pair را داخل ContactFlow وارد کنید.
+3. در Telegram → Settings → Telegram Business → Chatbots همین Bot را متصل کنید و دسترسی چت‌های لازم را بدهید.
+4. ContactFlow Business Connection را دریافت و برای Campaign انتخاب می‌کند.
+
+ContactFlow تا ۱۰ Pair را محلی نگه می‌دارد و حساب فرستنده به‌صورت دستی انتخاب می‌شود؛ چرخش خودکار برای دورزدن محدودیت‌ها وجود ندارد.
+
+ارسال تبلیغاتی فقط برای Opt-inهای صریح انجام می‌شود. `/subscribe` رضایت را فعال و `/stop` آن را لغو می‌کند.
+
+## مخاطبین
+Bot نمی‌تواند شماره‌های دلخواه را مستقیماً داخل دفترچه مخاطبین حساب Telegram وارد کند. دکمه VCF در ContactFlow خروجی چندبخشی می‌سازد تا آن را در Contacts گوشی/سیستم Import کنید و سپس در صورت فعال بودن Contact Sync، Telegram آن مخاطبین را ببیند.
