@@ -47,9 +47,15 @@ jobs:
           cd /tmp/cf31aug/enhancements
           npm install --no-audit --no-fund
           npm run build
-          cd $GITHUB_WORKSPACE
-          cp /tmp/cf31aug/enhancements/dist/telegram-web.bundle.js /tmp/cf31aug/enhancements/runtime-patch.js /tmp/cf31aug/enhancements/drive-sync.js /tmp/cf31aug/enhancements/enhancements.css /tmp/cf31/
-          node /tmp/cf31aug/scripts/apply-v31.mjs /tmp/cf31
+          cd "$GITHUB_WORKSPACE"
+          cp /tmp/cf31aug/enhancements/dist/telegram-web.bundle.js /tmp/cf31/
+          cp /tmp/cf31aug/enhancements/runtime-patch.js /tmp/cf31/
+          cp enhancements/drive-sync.js enhancements/business-connect.js enhancements/enhancements.css /tmp/cf31/
+          node scripts/apply-v31.mjs /tmp/cf31
+          node --check /tmp/cf31/business-connect.js
+          node --check /tmp/cf31/drive-sync.js
+          grep -q '"telegramMode":"business_bot"' /tmp/cf31/config.js
+          ! grep -ER 'QR Connector not configured in this build|GOOGLE_CLIENT_ID در Build تنظیم نشده است' /tmp/cf31/ultimate.js /tmp/cf31/drive-sync.js /tmp/cf31/business-connect.js
           cp /tmp/cf31aug/MainActivity.java android/app/src/main/java/com/contactflow/pro/MainActivity.java
           cp /tmp/cf31aug/android-build.gradle android/app/build.gradle
           rm -rf android/app/src/main/assets && mkdir -p android/app/src/main/assets
@@ -63,7 +69,7 @@ jobs:
           APK=android/app/build/outputs/apk/debug/app-debug.apk
           test -s "$APK"
           unzip -p "$APK" assets/index.html | grep -q 'Personal Ultimate 3.1'
-          unzip -p "$APK" assets/index.html | grep -q 'telegram-web.bundle.js'
+          unzip -p "$APK" assets/index.html | grep -q 'business-connect.js'
           mkdir -p dist && cp "$APK" dist/ContactFlow_Personal_Ultimate_3.1.0-alpha.1_Android_Alpha.apk
       - uses: actions/upload-artifact@v4
         with:
