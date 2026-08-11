@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 jobs:
   sync:
@@ -30,11 +31,9 @@ jobs:
           mkdir -p /tmp/contactflow-v3
           cat .source-bundles/v3/web3.part* | base64 -d > /tmp/contactflow-v3.tgz
           tar -xzf /tmp/contactflow-v3.tgz -C /tmp/contactflow-v3
-
           node --check /tmp/contactflow-v3/app.js
           node --check /tmp/contactflow-v3/ultimate.js
           grep -q 'ContactFlow Personal Ultimate 3.0' /tmp/contactflow-v3/index.html
-
           if grep -ERn 'auth-gate|auth-login|auth-register|Forgot Password|Server URL|127\.0\.0\.1:17654|pseudoQR' \
             /tmp/contactflow-v3/index.html \
             /tmp/contactflow-v3/app.js \
@@ -58,7 +57,6 @@ jobs:
           cp /tmp/contactflow-v3/sw.js sw.js
           rm -rf icons
           cp -R /tmp/contactflow-v3/icons icons
-
           rm -f pro.js localplus.js localplus.css
 
           rm -rf desktop/webapp
@@ -77,16 +75,9 @@ jobs:
           set -euo pipefail
           node --check app.js
           node --check ultimate.js
-          grep -q 'data-page="generator"' index.html
-          grep -q 'data-page="import"' index.html
-          grep -q 'data-page="contacts"' index.html
-          grep -q 'data-page="exports"' index.html
-          grep -q 'data-page="audience"' index.html
-          grep -q 'data-page="telegram"' index.html
-          grep -q 'data-page="campaign"' index.html
-          grep -q 'data-page="requests"' index.html
-          grep -q 'data-page="backup"' index.html
-          grep -q 'data-page="activity"' index.html
+          for page in generator import contacts exports audience telegram campaign requests backup activity; do
+            grep -q "data-page=\"$page\"" index.html
+          done
           ! grep -ERn 'auth-gate|auth-login|auth-register|Forgot Password|Server URL|127\.0\.0\.1:17654|pseudoQR' \
             index.html app.js ultimate.js config.js sw.js desktop/webapp android/app/src/main/assets
 
@@ -103,3 +94,15 @@ jobs:
           fi
           git commit -m 'source: sync Personal Ultimate 3.0 canonical web core'
           git push origin HEAD:main
+
+      - name: Report sync success
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "✅ Personal Ultimate 3.0 canonical source sync succeeded — Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} — source commit ${GITHUB_SHA}"
+
+      - name: Report sync failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "❌ Personal Ultimate 3.0 canonical source sync failed — Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} — source commit ${GITHUB_SHA}"
