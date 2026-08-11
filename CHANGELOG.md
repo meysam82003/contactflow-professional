@@ -1,5 +1,53 @@
 # Changelog
 
+## 3.1.0-alpha.1 — Web Telegram / Drive / Mini App restoration
+
+### Telegram Account Connector
+- مسیر QR قدیمی Native/HTTP 501 از مسیر اصلی حذف شد.
+- Web‑MTProto QR connector اضافه شد.
+- حداکثر ۱۰ Session مستقل روی هر دستگاه.
+- QR refresh و 2FA.
+- Session Vault رمزگذاری‌شده محلی.
+- Active account دستی و Health Check.
+- هیچ account rotation برای دورزدن FloodWait وجود ندارد.
+
+### Authorized Checker
+- Checker واقعی روی Audience داده‌شده/مجاز.
+- Batch import با `matched / not_returned / retry`.
+- Cleanup contactهای موقت.
+- CSV جداگانه هر نتیجه.
+- `not_returned` عمداً معادل قطعی «تلگرام ندارد» نیست.
+
+### Campaign execution
+- Promotional فقط برای Opt‑in صریح.
+- Service برای Opt‑in یا Existing Chat.
+- Reference Channel Post / Forward.
+- Dry Run، run cap، delay، duplicate-send guard، progress و stop.
+- توقف روی FloodWait / PeerFlood / Restricted / Frozen.
+
+### Google Drive Sync 2.0
+- `appDataFolder` برای sync مخفی.
+- `drive.file` برای Backup دستی قابل مشاهده.
+- SHA‑256 metadata و conflict detection.
+- Token expiry/reconnect handling.
+- Android System Document Picker برای Backup/Restore و انتخاب Google Drive.
+- Windows shell روی `localhost` باز می‌شود تا OAuth JavaScript origin قابل تنظیم باشد.
+
+### Telegram Mini App / Bot
+- Mini App به پروژه اصلی برگشت.
+- Consent، Suppression، Pricing، Ad Request، progress هر ۵ ثانیه و Membership Gate.
+- Admin dashboard و API مدیریت progress/pricing/channels.
+- Commands جدید `/myads`, `/membership`, `/help`.
+- `health.php` برای DB/Bot/Webhook diagnostics.
+- Bot فرستنده advertising DMs نیست.
+
+### Cross-device / CI
+- Android WebViewAssetLoader با origin امن داخلی.
+- Android 5+ با AndroidX WebKit 1.14.0.
+- یک Canonical Web Core برای PWA/Desktop/Android.
+- 35+ قابلیت افزوده/گسترش‌یافته بدون حذف قابلیت‌های Local 3.0.
+- Release workflow PWA/Windows/Linux/macOS/Android/MiniApp/Source/SHA256 می‌سازد.
+
 ## 3.0.0-alpha.1 — ContactFlow Personal Ultimate
 
 ### Breaking architecture change
