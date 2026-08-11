@@ -5,14 +5,7 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'index.html'
-      - 'app.js'
-      - 'ultimate.js'
-      - 'config.js'
-      - 'styles.css'
-      - 'manifest.webmanifest'
-      - 'sw.js'
-      - 'icons/**'
+      - '.source-bundles/v3/**'
       - 'desktop/**'
       - 'android/**'
       - 'VERSION'
@@ -33,26 +26,22 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Validate Personal Ultimate web core
+      - name: Rebuild and validate canonical Personal Ultimate 3.0
         shell: bash
         run: |
           set -euo pipefail
           test "$(cat VERSION)" = '3.0.0-alpha.1'
-          node --check app.js
-          node --check ultimate.js
-          grep -q 'ContactFlow Personal Ultimate 3.0' index.html
-          grep -q 'data-page="generator"' index.html
-          grep -q 'data-page="import"' index.html
-          grep -q 'data-page="contacts"' index.html
-          grep -q 'data-page="exports"' index.html
-          grep -q 'data-page="audience"' index.html
-          grep -q 'data-page="telegram"' index.html
-          grep -q 'data-page="campaign"' index.html
-          grep -q 'data-page="requests"' index.html
-          grep -q 'data-page="backup"' index.html
-          grep -q 'data-page="activity"' index.html
+          rm -rf /tmp/cf3 && mkdir -p /tmp/cf3
+          cat .source-bundles/v3/web3.part* | base64 -d > /tmp/cf3.tgz
+          tar -xzf /tmp/cf3.tgz -C /tmp/cf3
+          node --check /tmp/cf3/app.js
+          node --check /tmp/cf3/ultimate.js
+          grep -q 'ContactFlow Personal Ultimate 3.0' /tmp/cf3/index.html
+          for page in generator import contacts exports audience telegram campaign requests backup activity; do
+            grep -q "data-page=\"$page\"" /tmp/cf3/index.html
+          done
           ! grep -ERn 'auth-gate|auth-login|auth-register|Forgot Password|Server URL|127\.0\.0\.1:17654|pseudoQR' \
-            index.html app.js ultimate.js config.js sw.js
+            /tmp/cf3/index.html /tmp/cf3/app.js /tmp/cf3/ultimate.js /tmp/cf3/config.js /tmp/cf3/sw.js
 
   desktop:
     needs: verify-web
@@ -62,60 +51,59 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.23.x'
-
-      - name: Sync web assets
+      - name: Materialize canonical web core
         shell: bash
         run: |
           set -euo pipefail
+          rm -rf /tmp/cf3 && mkdir -p /tmp/cf3
+          cat .source-bundles/v3/web3.part* | base64 -d > /tmp/cf3.tgz
+          tar -xzf /tmp/cf3.tgz -C /tmp/cf3
           rm -rf desktop/webapp
           mkdir -p desktop/webapp
-          cp index.html app.js ultimate.js config.js styles.css manifest.webmanifest sw.js desktop/webapp/
-          cp -R icons desktop/webapp/icons
-
+          cp /tmp/cf3/index.html /tmp/cf3/app.js /tmp/cf3/ultimate.js /tmp/cf3/config.js /tmp/cf3/styles.css /tmp/cf3/manifest.webmanifest /tmp/cf3/sw.js desktop/webapp/
+          cp -R /tmp/cf3/icons desktop/webapp/icons
       - name: Build desktop binaries
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf dist
-          mkdir -p dist
-
+          rm -rf dist && mkdir -p dist
           cd desktop
           CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags='-s -w -H=windowsgui' -o ../dist/ContactFlow_Personal_Ultimate_3.0_Windows_Portable.exe .
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o ../dist/ContactFlow_Personal_Ultimate_3.0_Linux_x64 .
           CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o ../dist/ContactFlow_Personal_Ultimate_3.0_macOS_Intel .
           CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags='-s -w' -o ../dist/ContactFlow_Personal_Ultimate_3.0_macOS_AppleSilicon .
-
-          rm -rf installer/payload
-          mkdir -p installer/payload
+          rm -rf installer/payload && mkdir -p installer/payload
           cp ../dist/ContactFlow_Personal_Ultimate_3.0_Windows_Portable.exe installer/payload/ContactFlow.exe
           cd installer
           CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags='-s -w -H=windowsgui' -o ../../dist/ContactFlow_Personal_Ultimate_3.0_Windows_Setup.exe .
-
       - name: Package PWA and source
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p dist/pwa
-          cp index.html app.js ultimate.js config.js styles.css manifest.webmanifest sw.js dist/pwa/
-          cp -R icons dist/pwa/icons
+          mkdir -p dist/pwa dist/source/webapp
+          cp /tmp/cf3/index.html /tmp/cf3/app.js /tmp/cf3/ultimate.js /tmp/cf3/config.js /tmp/cf3/styles.css /tmp/cf3/manifest.webmanifest /tmp/cf3/sw.js dist/pwa/
+          cp -R /tmp/cf3/icons dist/pwa/icons
           cp README_FA.md CHANGELOG.md dist/pwa/
           cp -R docs dist/pwa/docs
           (cd dist/pwa && zip -qr ../ContactFlow_Personal_Ultimate_3.0_PWA.zip .)
-          rm -rf dist/pwa
-          git archive --format=zip --output=dist/ContactFlow_Personal_Ultimate_3.0_Source.zip HEAD
 
-      - name: Verify desktop files
+          cp -R /tmp/cf3/. dist/source/webapp/
+          cp -R desktop android docs .github dist/source/
+          cp README_FA.md CHANGELOG.md VERSION dist/source/
+          (cd dist/source && zip -qr ../ContactFlow_Personal_Ultimate_3.0_Source.zip .)
+          rm -rf dist/pwa dist/source
+      - name: Verify desktop outputs
         shell: bash
         run: |
           set -euo pipefail
-          test -s dist/ContactFlow_Personal_Ultimate_3.0_Windows_Portable.exe
-          test -s dist/ContactFlow_Personal_Ultimate_3.0_Windows_Setup.exe
-          test -s dist/ContactFlow_Personal_Ultimate_3.0_Linux_x64
-          test -s dist/ContactFlow_Personal_Ultimate_3.0_macOS_Intel
-          test -s dist/ContactFlow_Personal_Ultimate_3.0_macOS_AppleSilicon
-          test -s dist/ContactFlow_Personal_Ultimate_3.0_PWA.zip
-          test -s dist/ContactFlow_Personal_Ultimate_3.0_Source.zip
-
+          for f in \
+            ContactFlow_Personal_Ultimate_3.0_Windows_Portable.exe \
+            ContactFlow_Personal_Ultimate_3.0_Windows_Setup.exe \
+            ContactFlow_Personal_Ultimate_3.0_Linux_x64 \
+            ContactFlow_Personal_Ultimate_3.0_macOS_Intel \
+            ContactFlow_Personal_Ultimate_3.0_macOS_AppleSilicon \
+            ContactFlow_Personal_Ultimate_3.0_PWA.zip \
+            ContactFlow_Personal_Ultimate_3.0_Source.zip; do test -s "dist/$f"; done
       - uses: actions/upload-artifact@v4
         with:
           name: ContactFlow-Personal-Ultimate-3.0-Desktop-PWA-Source
@@ -138,20 +126,19 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
-
-      - name: Sync Personal Ultimate assets
+      - name: Materialize canonical assets
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf android/app/src/main/assets
-          mkdir -p android/app/src/main/assets
-          cp index.html app.js ultimate.js config.js styles.css manifest.webmanifest sw.js android/app/src/main/assets/
-          cp -R icons android/app/src/main/assets/icons
-
+          rm -rf /tmp/cf3 android/app/src/main/assets
+          mkdir -p /tmp/cf3 android/app/src/main/assets
+          cat .source-bundles/v3/web3.part* | base64 -d > /tmp/cf3.tgz
+          tar -xzf /tmp/cf3.tgz -C /tmp/cf3
+          cp /tmp/cf3/index.html /tmp/cf3/app.js /tmp/cf3/ultimate.js /tmp/cf3/config.js /tmp/cf3/styles.css /tmp/cf3/manifest.webmanifest /tmp/cf3/sw.js android/app/src/main/assets/
+          cp -R /tmp/cf3/icons android/app/src/main/assets/icons
       - name: Build Android APK
         working-directory: android
         run: gradle --no-daemon :app:assembleDebug --stacktrace
-
       - name: Verify APK
         shell: bash
         run: |
@@ -166,8 +153,6 @@ jobs:
           ! grep -E 'auth-gate|auth-login|auth-register|Server URL|127\.0\.0\.1:17654' /tmp/apk-index.html
           mkdir -p dist
           cp "$APK" dist/ContactFlow_Personal_Ultimate_3.0_Android_Alpha.apk
-          sha256sum dist/ContactFlow_Personal_Ultimate_3.0_Android_Alpha.apk > dist/Android_SHA256.txt
-
       - uses: actions/upload-artifact@v4
         with:
           name: ContactFlow-Personal-Ultimate-3.0-Android
@@ -183,16 +168,13 @@ jobs:
           pattern: ContactFlow-Personal-Ultimate-3.0-*
           path: release
           merge-multiple: true
-
       - name: Generate checksums
         shell: bash
         run: |
           set -euo pipefail
           cd release
-          rm -f Android_SHA256.txt
           sha256sum * > ContactFlow_Personal_Ultimate_3.0_SHA256.txt
           ls -lh
-
       - name: Publish prerelease
         uses: softprops/action-gh-release@v2
         with:
@@ -204,10 +186,10 @@ jobs:
           body: |
             ContactFlow Personal Ultimate 3.0 Alpha 1
 
-            - Local-First / Accountless
-            - Login/Register/Forgot Password/Server URL removed
-            - Windows fixed to avoid the legacy fixed localhost origin
-            - Android uses bundled local assets and no server URL prompt
-            - Number generator, multi-file import, contacts, bulk editing, export queue, audience/consent, campaign composer, ad requests, backup/restore and activity log included
-            - Telegram UI is QR-first. This Alpha does not generate a fake QR: real QR sign-in requires the official Telegram App credentials and a configured TDLib Native Connector in the build.
-            - APK is an Alpha/debug-signed build.
+            • Local‑First / Accountless
+            • Login / Register / Forgot Password / Server URL removed
+            • Windows legacy localhost collision fixed
+            • Android opens bundled local 3.0 assets with no server URL prompt
+            • Generator, multi-file Import, Contacts, bulk editing, export queue, Audience/Consent, Campaign Composer, Ad Requests, Backup/Restore, Google Drive path and Activity Log included
+            • Telegram UI is QR-first. No fake QR is generated. Real QR authorization requires official Telegram App credentials and a configured TDLib Native Connector in the native build.
+            • APK is an Alpha/debug-signed build.
