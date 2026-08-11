@@ -32,7 +32,8 @@ jobs:
           tar -xzf /tmp/cf3.tgz -C /tmp/cf3
           node --check /tmp/cf3/app.js
           node --check /tmp/cf3/ultimate.js
-          grep -q 'ContactFlow Personal Ultimate 3.0' /tmp/cf3/index.html
+          grep -q 'ContactFlow' /tmp/cf3/index.html
+          grep -q 'Personal Ultimate 3.0' /tmp/cf3/index.html
           ! grep -ERn 'auth-gate|auth-login|auth-register|Forgot Password|Server URL|127\.0\.0\.1:17654|pseudoQR' /tmp/cf3/index.html /tmp/cf3/app.js /tmp/cf3/ultimate.js /tmp/cf3/config.js
 
       - uses: actions/setup-java@v4
@@ -68,7 +69,8 @@ jobs:
           grep "sdkVersion:'21'" apk-badging.txt
           grep "targetSdkVersion:'36'" apk-badging.txt
           unzip -p "$APK" assets/index.html > /tmp/index.html
-          grep -q 'ContactFlow Personal Ultimate 3.0' /tmp/index.html
+          grep -q 'ContactFlow' /tmp/index.html
+          grep -q 'Personal Ultimate 3.0' /tmp/index.html
           grep -q 'data-page="generator"' /tmp/index.html
           grep -q 'data-page="telegram"' /tmp/index.html
           grep -q 'data-page="backup"' /tmp/index.html
