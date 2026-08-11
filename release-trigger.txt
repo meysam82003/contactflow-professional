@@ -1,4 +1,4 @@
-ContactFlow Personal Ultimate 3.0
-version=3.0.0-alpha.1
+ContactFlow Personal Ultimate 3.1
+version=3.1.0-alpha.1
 requested=2026-08-11
-purpose=build-accountless-local-first-all-devices
+purpose=web-mtproto-drive-miniapp-all-devices
