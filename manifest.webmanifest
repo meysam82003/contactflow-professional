@@ -1,7 +1,21 @@
 {
-  "id":"./","name":"ContactFlow Professional","short_name":"ContactFlow Pro",
-  "description":"مدیریت مخاطب، حساب چنددستگاهی، Backup رمزگذاری‌شده و Telegram Mini App",
-  "start_url":"./index.html","scope":"./","display":"standalone",
-  "background_color":"#0b1020","theme_color":"#0b1020","lang":"fa","dir":"rtl",
-  "icons":[{"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+  "id": "./",
+  "name": "ContactFlow Personal Ultimate",
+  "short_name": "ContactFlow",
+  "description": "ContactFlow Personal Ultimate 3.0 — Local-First contact workflow without account server",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b1020",
+  "theme_color": "#0b1020",
+  "lang": "fa",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }
