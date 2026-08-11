@@ -1,0 +1,1 @@
+GitHub Actions copies ../web into this folder before build.
