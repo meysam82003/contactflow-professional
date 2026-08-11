@@ -1,80 +1,89 @@
-name: Build ContactFlow Personal 2.3 Android
+name: Build Android — Personal Ultimate 3.0
+
 on:
   workflow_dispatch:
   push:
     branches: [ main ]
     paths:
-      - 'personal23_bundle.tgz.b64'
+      - 'index.html'
+      - 'app.js'
+      - 'ultimate.js'
+      - 'config.js'
+      - 'styles.css'
+      - 'manifest.webmanifest'
+      - 'sw.js'
+      - 'icons/**'
+      - 'android/**'
       - '.github/workflows/build-android.yml'
+      - 'android-trigger.txt'
+
 permissions:
   contents: read
-  issues: write
+
 jobs:
   apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
-      - name: Apply Personal 2.3 source bundle
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify web core before Android build
+        shell: bash
         run: |
-          base64 -d personal23_bundle.tgz.b64 > /tmp/personal23.tgz
-          echo '7ff6cc183e0540f56975b8afefbf470330af1620377b18dbe5da67cad854df4d  /tmp/personal23.tgz' | sha256sum -c -
-          tar -xzf /tmp/personal23.tgz -C .
-          grep -q 'ContactFlow Personal 2.3' index.html
-          ! grep -Eq 'auth-gate|auth-register|auth-login|Server URL|127\.0\.0\.1:17654' index.html
+          set -euo pipefail
+          node --check app.js
+          node --check ultimate.js
+          grep -q 'ContactFlow Personal Ultimate 3.0' index.html
+          ! grep -ERn 'auth-gate|auth-login|auth-register|Forgot Password|Server URL|127\.0\.0\.1:17654|pseudoQR' index.html app.js ultimate.js config.js
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
       - name: Install Android SDK
-        run: |
-          sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
-          test -d "$ANDROID_HOME/platforms/android-36"
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
-      - name: Sync verified Personal 2.3 assets
+
+      - name: Sync local assets
+        shell: bash
         run: |
           rm -rf android/app/src/main/assets
-          mkdir -p android/app/src/main/assets/icons
-          cp index.html app.js localplus.js styles.css localplus.css manifest.webmanifest sw.js android/app/src/main/assets/
-          cp -r icons/* android/app/src/main/assets/icons/
+          mkdir -p android/app/src/main/assets
+          cp index.html app.js ultimate.js config.js styles.css manifest.webmanifest sw.js android/app/src/main/assets/
+          cp -R icons android/app/src/main/assets/icons
+
       - name: Build APK
         working-directory: android
         run: gradle --no-daemon :app:assembleDebug --stacktrace
-      - name: Verify APK and restored features
+
+      - name: Verify Android 5+ APK
+        shell: bash
         run: |
+          set -euo pipefail
           APK=android/app/build/outputs/apk/debug/app-debug.apk
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | tee apk-badging.txt
           grep "sdkVersion:'21'" apk-badging.txt
           grep "targetSdkVersion:'36'" apk-badging.txt
           unzip -p "$APK" assets/index.html > /tmp/index.html
-          grep -q 'ContactFlow Personal 2.3' /tmp/index.html
-          grep -q 'data-page="import"' /tmp/index.html
-          grep -q 'data-page="exports"' /tmp/index.html
+          grep -q 'ContactFlow Personal Ultimate 3.0' /tmp/index.html
           grep -q 'data-page="generator"' /tmp/index.html
           grep -q 'data-page="telegram"' /tmp/index.html
-          grep -q 'data-page="campaign"' /tmp/index.html
           grep -q 'data-page="backup"' /tmp/index.html
-          ! grep -Eq 'auth-gate|auth-register|auth-login|Server URL|127\.0\.0\.1:17654' /tmp/index.html
-          sha256sum "$APK" | tee apk-sha256.txt
+          ! grep -E 'auth-gate|auth-login|auth-register|Server URL|127\.0\.0\.1:17654' /tmp/index.html
+          cp "$APK" ContactFlow_Personal_Ultimate_3.0_Android_Alpha.apk
+          sha256sum ContactFlow_Personal_Ultimate_3.0_Android_Alpha.apk > apk-sha256.txt
+
       - uses: actions/upload-artifact@v4
         with:
-          name: ContactFlow-Personal-2.3-Android-Alpha1
+          name: ContactFlow-Personal-Ultimate-3.0-Android-Alpha
           path: |
-            android/app/build/outputs/apk/debug/app-debug.apk
+            ContactFlow_Personal_Ultimate_3.0_Android_Alpha.apk
             apk-sha256.txt
             apk-badging.txt
           retention-days: 30
-      - name: Report success
-        if: success()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "✅ ContactFlow Personal 2.3 Android succeeded — Run ${GITHUB_RUN_ID} — commit ${GITHUB_SHA}"
-      - name: Report failure
-        if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "❌ ContactFlow Personal 2.3 Android failed — Run ${GITHUB_RUN_ID} — commit ${GITHUB_SHA}"
