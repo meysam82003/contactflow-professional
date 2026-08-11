@@ -290,7 +290,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: cf31-release-source
-          path: dist/*
+          path: dist/ContactFlow_Personal_Ultimate_3.1.0-alpha.1_Source.zip
           retention-days: 30
 
   release:
@@ -325,7 +325,7 @@ jobs:
           ContactFlow Login/Register/Forgot Password/Server URL وجود ندارد.
           Telegram Mini App cPanel package در Release موجود است.
           EOF
-          sha256sum * > ContactFlow_Personal_Ultimate_3.1.0-alpha.1_SHA256.txt
+          find . -maxdepth 1 -type f ! -name 'ContactFlow_Personal_Ultimate_3.1.0-alpha.1_SHA256.txt' -print0 | sort -z | xargs -0 sha256sum > ContactFlow_Personal_Ultimate_3.1.0-alpha.1_SHA256.txt
           ls -lh
 
       - name: Publish GitHub prerelease
