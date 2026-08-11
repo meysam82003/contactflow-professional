@@ -54,6 +54,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          cp "$GITHUB_WORKSPACE/enhancements/package.json" "$GITHUB_WORKSPACE/enhancements/webpack.config.cjs" "$GITHUB_WORKSPACE/enhancements/telegram-web-entry.js" /tmp/cf31aug/enhancements/
+          sed -i "s#from 'telegram/sessions';#from 'telegram/sessions/StringSession';#" /tmp/cf31aug/enhancements/telegram-web-entry.js
           cd /tmp/cf31aug/enhancements
           npm install --no-audit --no-fund
           npm run build
