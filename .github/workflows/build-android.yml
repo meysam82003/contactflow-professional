@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   apk:
@@ -83,3 +84,15 @@ jobs:
             apk-sha256.txt
             apk-badging.txt
           retention-days: 30
+
+      - name: Report success
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "✅ ContactFlow Personal Ultimate 3.0 Android build succeeded — Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} — commit ${GITHUB_SHA}"
+
+      - name: Report failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "❌ ContactFlow Personal Ultimate 3.0 Android build failed — Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} — commit ${GITHUB_SHA}"
