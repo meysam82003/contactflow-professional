@@ -1,3 +1,99 @@
-<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>ContactFlow Mini App</title><script src="https://telegram.org/js/telegram-web-app.js"></script><style>:root{color-scheme:dark}body{font-family:Tahoma,Arial;background:var(--tg-theme-bg-color,#0d1526);color:var(--tg-theme-text-color,#eef2ff);margin:0;padding:18px}.wrap{max-width:720px;margin:auto}.card{background:var(--tg-theme-secondary-bg-color,#131f35);border:1px solid #2c3a56;border-radius:18px;padding:18px;margin:12px 0}.hero{display:flex;justify-content:space-between;gap:12px;align-items:center}.pill{padding:6px 10px;border-radius:999px;background:#234;white-space:nowrap}button{width:100%;border:0;border-radius:12px;padding:13px;margin:7px 0;background:var(--tg-theme-button-color,#6d5dfc);color:var(--tg-theme-button-text-color,#fff);font-weight:700}.ghost{background:#26344f}.muted{opacity:.75;font-size:13px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.metric{padding:10px;background:#0b1425;border-radius:12px}.metric b{display:block;font-size:20px;margin-top:5px}</style></head><body><div class="wrap"><div class="card hero"><div><h2 style="margin:0">ContactFlow Mini App</h2><div class="muted">Hosted — فقط URL هاست، بدون Secret در Build</div></div><span id="mode" class="pill">Loading</span></div><div class="card"><h3>رضایت پیام</h3><p class="muted">ارسال تبلیغاتی فقط وقتی Opt-in روشن باشد انجام می‌شود.</p><button id="on">اجازه پیام‌های تبلیغاتی</button><button id="off" class="ghost">لغو اجازه</button><div id="consent" class="muted"></div></div><div class="card"><h3>وضعیت اتصال</h3><div class="grid"><div class="metric">Business Connection<b id="connections">–</b></div><div class="metric">Telegram ID<b id="uid">–</b></div></div><p id="state" class="muted"></p></div><div class="card"><h3>اتصال حساب فرستنده</h3><p>Bot را Start کنید، کد Pair را داخل ContactFlow وارد کنید و سپس در Telegram → Settings → Telegram Business → Chatbots همین Bot را متصل کنید.</p><button id="openbot" class="ghost">باز کردن Bot</button></div></div><script>
-const tg=window.Telegram?.WebApp;tg?.ready();tg?.expand();const $=id=>document.getElementById(id);const init=tg?.initData||'';async function api(action,body){const r=await fetch('./gateway.php?action='+action,{method:body?'POST':'GET',headers:{'Content-Type':'application/json','X-Telegram-Init-Data':init},body:body?JSON.stringify(body):undefined});return r.json()}async function info(){const x=await fetch('./gateway.php?action=info').then(r=>r.json()).catch(()=>({}));$('openbot').onclick=()=>x.botUsername&&(location.href='https://t.me/'+x.botUsername+'?start=pair');if(!init){$('mode').textContent='Standalone';$('state').textContent=x.configured?'صفحه روی هاست سالم است. برای اطلاعات حساب، آن را از داخل Telegram باز کنید.':'Mini App روی هاست سالم است. برای ارسال پیام، setup.php را یک‌بار با Bot Token راه‌اندازی کنید.';return}const p=await api('miniapp_profile');if(!p.ok){$('mode').textContent='Auth Error';$('state').textContent=p.error||'خطا';return}$('mode').textContent='Telegram';$('uid').textContent=p.user.id;$('connections').textContent=(p.businessConnections||[]).filter(x=>x.enabled).length;$('consent').textContent=p.subscriber?.optin?'✅ رضایت فعال است':'⛔ رضایت فعال نیست'}$('on').onclick=async()=>{const p=await api('miniapp_consent',{optin:true});$('consent').textContent=p.ok?'✅ رضایت فعال شد':'خطا'};$('off').onclick=async()=>{const p=await api('miniapp_consent',{optin:false});$('consent').textContent=p.ok?'⛔ رضایت لغو شد':'خطا'};info();
-</script></body></html>
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ContactFlow Mini App</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{font-family:Tahoma,Arial;background:var(--tg-theme-bg-color,#0d1526);color:var(--tg-theme-text-color,#eef2ff);margin:0;padding:14px}.wrap{max-width:920px;margin:auto}.card{background:var(--tg-theme-secondary-bg-color,#131f35);border:1px solid #2c3a56;border-radius:18px;padding:16px;margin:12px 0}.hero{display:flex;justify-content:space-between;gap:12px;align-items:center}.pill{padding:6px 10px;border-radius:999px;background:#234;white-space:nowrap}.muted{opacity:.78;font-size:13px;line-height:1.9}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.metric{padding:11px;background:#0b1425;border-radius:12px}.metric b{display:block;font-size:20px;margin-top:6px}.row{display:flex;gap:8px;flex-wrap:wrap}.row button{flex:1 1 170px}.btn,button{border:0;border-radius:12px;padding:12px 14px;margin:5px 0;background:var(--tg-theme-button-color,#6d5dfc);color:var(--tg-theme-button-text-color,#fff);font-weight:700;cursor:pointer}.ghost{background:#26344f}.danger{background:#6e2732}.ok{background:#155c46}.warn{background:#6a5220}textarea,input[type=file]{width:100%;border:1px solid #344765;border-radius:12px;background:#0a1323;color:#fff;padding:12px;margin:7px 0}textarea{min-height:150px;resize:vertical;direction:ltr;text-align:left}.list{max-height:280px;overflow:auto;border:1px solid #2d3e5c;border-radius:12px}.item{display:grid;grid-template-columns:1fr auto;gap:8px;padding:9px 11px;border-bottom:1px solid #22314b;font-size:13px}.item:last-child{border-bottom:0}.good{color:#74e5b2}.bad{color:#ff9ca8}.note{background:#0b1425;border-right:4px solid #6d5dfc;padding:11px;border-radius:10px;line-height:1.9}.small{font-size:12px}.hidden{display:none!important}@media(max-width:640px){.grid{grid-template-columns:1fr}.hero{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card hero">
+    <div><h2 style="margin:0">ContactFlow Mini App</h2><div class="muted">Hosted Contact Workspace — فقط URL هاست، بدون TELEGRAM_API_ID/HASH و بدون GOOGLE_CLIENT_ID</div></div>
+    <span id="mode" class="pill">Loading</span>
+  </div>
+
+  <div class="card">
+    <h3>پروفایل Telegram Mini App</h3>
+    <div class="grid">
+      <div class="metric">Telegram ID<b id="uid">–</b></div>
+      <div class="metric">Username<b id="uname">–</b></div>
+    </div>
+    <div class="row"><button id="request-own-phone" class="ghost">دریافت شماره خودم از Telegram</button></div>
+    <div id="profile-state" class="muted"></div>
+  </div>
+
+  <div class="card">
+    <h3>ورود و پاک‌سازی شماره‌ها</h3>
+    <p class="muted">TXT/CSV را انتخاب کنید یا شماره‌ها را Paste کنید. پردازش داخل مرورگر انجام می‌شود و شماره‌ها برای Check به Bot ارسال نمی‌شوند.</p>
+    <input id="file" type="file" accept=".txt,.csv,text/plain,text/csv" multiple>
+    <textarea id="numbers" placeholder="09121234567\n+989121234568\n9121234569"></textarea>
+    <div class="row"><button id="process">Normalize + حذف تکراری</button><button id="clear" class="danger">پاک کردن</button></div>
+    <div class="grid">
+      <div class="metric">ورودی<b id="m-total">0</b></div>
+      <div class="metric">معتبر<b id="m-valid">0</b></div>
+      <div class="metric">تکراری<b id="m-dupe">0</b></div>
+      <div class="metric">نامعتبر<b id="m-invalid">0</b></div>
+    </div>
+    <div id="preview" class="list hidden"></div>
+  </div>
+
+  <div class="card">
+    <h3>خروجی مخاطبین</h3>
+    <div class="row">
+      <button id="csv">خروجی CSV</button>
+      <button id="vcf" class="ok">خروجی VCF برای Contacts</button>
+      <button id="share-vcf" class="ghost">Share VCF / Google Drive</button>
+      <button id="backup" class="ghost">Backup محلی</button>
+    </div>
+    <input id="restore" type="file" accept=".json,.cfbackup,application/json">
+    <p class="muted">در Android اگر Share Sheet فعال باشد می‌توانید فایل VCF یا Backup را مستقیماً به Google Drive بفرستید؛ بنابراین این مسیر به GOOGLE_CLIENT_ID نیاز ندارد.</p>
+  </div>
+
+  <div class="card">
+    <h3>افزودن به Telegram Contacts</h3>
+    <div class="note">
+      Mini App رسمی Telegram نمی‌تواند به‌جای حساب شما متدهای <code>contacts.importContacts</code> یا <code>contacts.resolvePhone</code> را اجرا کند. بدون User Session و App credentials، روش رسمیِ بدون جعل این است که VCF را در Contacts گوشی/سیستم Import کنید؛ اگر Sync Contacts در Telegram روشن باشد، Telegram همان دفترچه مخاطبین را Sync می‌کند.
+    </div>
+    <p class="muted">برای جلوگیری از نتیجه‌ی اشتباه، این نسخه شماره‌ای را صرفاً به خاطر نبود نتیجه «قطعاً بدون Telegram» علامت نمی‌زند.</p>
+  </div>
+
+  <div class="card">
+    <h3>Checker وضعیت Telegram</h3>
+    <div class="note warn">Checker شبکه‌ای داخل Mini App غیرفعال است، چون API رسمی Phone Lookup فقط برای User Session است و Mini App/Bot چنین مجوزی ندارد. ContactFlow به‌جای نمایش نتیجه ساختگی، فایل آماده‌ی بررسی و VCF می‌سازد.</div>
+    <div class="row"><button id="needs-check" class="ghost">خروجی needs-check.csv</button></div>
+  </div>
+</div>
+<script>
+const tg=window.Telegram?.WebApp;tg?.ready();tg?.expand();
+const $=id=>document.getElementById(id);
+let rows=[];
+function toast(msg){try{tg?.showAlert?.(msg)}catch{};console.log(msg)}
+function pickTokens(text){return String(text||'').split(/[\s,;|\t]+/).map(x=>x.trim()).filter(Boolean)}
+function norm(raw){let s=String(raw||'').replace(/[^\d+]/g,'');if(!s)return null;if(s.startsWith('0098'))s='+'+s.slice(2);if(s.startsWith('98')&&!s.startsWith('+'))s='+'+s;if(s.startsWith('0')&&/^09\d{9}$/.test(s))s='+98'+s.slice(1);if(/^9\d{9}$/.test(s))s='+98'+s;if(/^\+989\d{9}$/.test(s))return s;if(/^\+[1-9]\d{7,14}$/.test(s))return s;return null}
+function processAll(){const toks=pickTokens($('numbers').value);const seen=new Set();let dupe=0,invalid=0;rows=[];for(const t of toks){const n=norm(t);if(!n){invalid++;continue}if(seen.has(n)){dupe++;continue}seen.add(n);rows.push(n)}$('m-total').textContent=toks.length;$('m-valid').textContent=rows.length;$('m-dupe').textContent=dupe;$('m-invalid').textContent=invalid;renderPreview();saveSmall();return rows}
+function renderPreview(){const p=$('preview');if(!rows.length){p.classList.add('hidden');p.innerHTML='';return}p.classList.remove('hidden');p.innerHTML=rows.slice(0,80).map((n,i)=>`<div class="item"><span dir="ltr">${n}</span><span>${i+1}</span></div>`).join('')+(rows.length>80?`<div class="item"><span>… ${rows.length-80} مورد دیگر</span><span></span></div>`:'')}
+function blobDownload(name,type,text){const b=new Blob([text],{type});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1500);return new File([b],name,{type})}
+function csvText(){return 'phone\n'+rows.map(x=>'"'+x.replaceAll('"','""')+'"').join('\n')}
+function vcfText(){return rows.map((n,i)=>`BEGIN:VCARD\r\nVERSION:3.0\r\nFN:ContactFlow ${String(i+1).padStart(6,'0')}\r\nTEL;TYPE=CELL:${n}\r\nEND:VCARD`).join('\r\n')+'\r\n'}
+async function shareFile(name,type,text){if(!rows.length)return toast('اول شماره‌ها را پردازش کنید.');const f=new File([text],name,{type});try{if(navigator.canShare?.({files:[f]})){await navigator.share({files:[f],title:name});return}blobDownload(name,type,text);toast('Share فایل روی این دستگاه در دسترس نبود؛ فایل دانلود شد.')}catch(e){if(e?.name!=='AbortError')toast('اشتراک فایل انجام نشد: '+e.message)}}
+function saveSmall(){try{localStorage.setItem('cf_mini_last_numbers',JSON.stringify(rows.slice(0,2000)))}catch{}}
+function restoreSmall(){try{const x=JSON.parse(localStorage.getItem('cf_mini_last_numbers')||'[]');if(Array.isArray(x)&&x.length){rows=x;$('numbers').value=x.join('\n');$('m-total').textContent=x.length;$('m-valid').textContent=x.length;renderPreview()}}catch{}}
+$('file').onchange=async e=>{let all=[];for(const f of [...e.target.files])all.push(await f.text());$('numbers').value=[$('numbers').value,...all].filter(Boolean).join('\n')};
+$('process').onclick=processAll;
+$('clear').onclick=()=>{rows=[];$('numbers').value='';['m-total','m-valid','m-dupe','m-invalid'].forEach(x=>$(x).textContent='0');renderPreview();localStorage.removeItem('cf_mini_last_numbers')};
+$('csv').onclick=()=>{if(!rows.length)processAll();if(rows.length)blobDownload('contactflow_contacts.csv','text/csv;charset=utf-8',csvText())};
+$('vcf').onclick=()=>{if(!rows.length)processAll();if(rows.length)blobDownload('contactflow_contacts.vcf','text/vcard;charset=utf-8',vcfText())};
+$('share-vcf').onclick=async()=>{if(!rows.length)processAll();await shareFile('contactflow_contacts.vcf','text/vcard;charset=utf-8',vcfText())};
+$('needs-check').onclick=()=>{if(!rows.length)processAll();if(rows.length)blobDownload('contactflow_needs_check.csv','text/csv;charset=utf-8',csvText())};
+$('backup').onclick=()=>{if(!rows.length)processAll();const data=JSON.stringify({format:'contactflow-mini-backup-v1',createdAt:new Date().toISOString(),numbers:rows},null,2);blobDownload('ContactFlow_Mini_Backup_'+new Date().toISOString().slice(0,10)+'.cfbackup','application/json',data)};
+$('restore').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;try{const j=JSON.parse(await f.text());if(!Array.isArray(j.numbers))throw new Error('فرمت Backup معتبر نیست');rows=[...new Set(j.numbers.map(norm).filter(Boolean))];$('numbers').value=rows.join('\n');$('m-total').textContent=rows.length;$('m-valid').textContent=rows.length;$('m-dupe').textContent='0';$('m-invalid').textContent='0';renderPreview();saveSmall()}catch(err){toast(err.message)}};
+$('request-own-phone').onclick=()=>{if(!tg?.requestContact)return toast('نسخه Telegram شما requestContact را پشتیبانی نمی‌کند.');tg.requestContact(ok=>{$('profile-state').textContent=ok?'شماره خود حساب با اجازه شما برای Bot ارسال شد.':'درخواست شماره لغو شد.'})};
+function profile(){const u=tg?.initDataUnsafe?.user;if(u){$('mode').textContent='Telegram';$('uid').textContent=u.id??'–';$('uname').textContent=u.username?'@'+u.username:'–';$('profile-state').textContent='Mini App از داخل Telegram باز شده است.'}else{$('mode').textContent='Standalone';$('profile-state').textContent='صفحه روی هاست سالم است. برای اطلاعات Telegram آن را از داخل Mini App باز کنید.'}}
+profile();restoreSmall();
+</script>
+</body>
+</html>
