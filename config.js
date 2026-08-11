@@ -1,2 +1,5 @@
-// ContactFlow deployment config. For same-origin deployments leave apiBase empty.
-window.CONTACTFLOW_CONFIG = window.CONTACTFLOW_CONFIG || { apiBase: '' };
+window.CONTACTFLOW_CONFIG = {
+  edition: 'Personal Ultimate 3.0',
+  googleClientId: '',
+  telegramNativeAppConfigured: false
+};
