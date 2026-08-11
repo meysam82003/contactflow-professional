@@ -1,11 +1,10 @@
-name: Build Android APK
+name: Build ContactFlow Personal Android
 on:
   workflow_dispatch:
   push:
     branches: [ main ]
     paths:
-      - 'android/**'
-      - '.github/workflows/build-android.yml'
+      - 'personal2-trigger.txt'
 permissions:
   contents: read
   issues: write
@@ -27,20 +26,29 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
-      - name: Build universal cPanel APK
+      - name: Sync Personal 2.0 PWA assets
+        run: |
+          rm -rf android/app/src/main/assets
+          mkdir -p android/app/src/main/assets/icons
+          cp index.html app.js pro.js config.js styles.css manifest.webmanifest sw.js android/app/src/main/assets/
+          cp -r icons/* android/app/src/main/assets/icons/
+      - name: Build APK
         working-directory: android
         run: gradle --no-daemon :app:assembleDebug --stacktrace
-      - name: Verify APK compatibility
+      - name: Verify APK
         run: |
           APK=android/app/build/outputs/apk/debug/app-debug.apk
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | tee apk-badging.txt
           grep "sdkVersion:'21'" apk-badging.txt
           grep "targetSdkVersion:'36'" apk-badging.txt
+          unzip -p "$APK" assets/index.html | grep 'ContactFlow Personal 2.0'
+          unzip -p "$APK" assets/index.html | grep 'data-page="backup"'
+          ! unzip -p "$APK" assets/index.html | grep -q 'auth-gate'
           sha256sum "$APK" | tee apk-sha256.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: ContactFlow-Professional-cPanel-Android-1.3
+          name: ContactFlow-Personal-2.0-Android-Alpha1
           path: |
             android/app/build/outputs/apk/debug/app-debug.apk
             apk-sha256.txt
@@ -50,9 +58,9 @@ jobs:
         if: success()
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "✅ Android 1.3 cPanel wrapper build succeeded — Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} — commit ${GITHUB_SHA}"
+        run: gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "✅ ContactFlow Personal 2.0 Android Alpha 1 succeeded — Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} — commit ${GITHUB_SHA}"
       - name: Report failure
         if: failure()
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "❌ Android 1.3 cPanel wrapper build failed — Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} — commit ${GITHUB_SHA}"
+        run: gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "❌ ContactFlow Personal 2.0 Android Alpha 1 failed — Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} — commit ${GITHUB_SHA}"
