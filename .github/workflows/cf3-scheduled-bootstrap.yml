@@ -1,0 +1,131 @@
+name: ContactFlow 3.0 One-Shot Bootstrap
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/5 * * * *'
+
+permissions:
+  contents: write
+  actions: write
+  issues: write
+
+jobs:
+  bootstrap:
+    if: github.repository == 'meysam82003/contactflow-professional'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Stop if already activated
+        id: guard
+        shell: bash
+        run: |
+          if test -f .cf3-root-activated; then
+            echo 'done=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'done=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.guard.outputs.done != 'true'
+        with:
+          node-version: '22'
+
+      - name: Materialize canonical Personal Ultimate 3.0
+        if: steps.guard.outputs.done != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/cf3 && mkdir -p /tmp/cf3
+          cat .source-bundles/v3/web3.part* | base64 -d > /tmp/cf3.tgz
+          tar -xzf /tmp/cf3.tgz -C /tmp/cf3
+          node --check /tmp/cf3/app.js
+          node --check /tmp/cf3/ultimate.js
+          grep -q 'ContactFlow Personal Ultimate 3.0' /tmp/cf3/index.html
+          if grep -ERn 'auth-gate|auth-login|auth-register|Forgot Password|Server URL|127\.0\.0\.1:17654|pseudoQR' \
+            /tmp/cf3/index.html /tmp/cf3/app.js /tmp/cf3/ultimate.js /tmp/cf3/config.js /tmp/cf3/sw.js; then
+            echo 'Legacy account/server/fake QR code detected in canonical source.' >&2
+            exit 1
+          fi
+
+      - name: Replace legacy root and embedded assets
+        if: steps.guard.outputs.done != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp /tmp/cf3/index.html index.html
+          cp /tmp/cf3/app.js app.js
+          cp /tmp/cf3/ultimate.js ultimate.js
+          cp /tmp/cf3/config.js config.js
+          cp /tmp/cf3/styles.css styles.css
+          cp /tmp/cf3/manifest.webmanifest manifest.webmanifest
+          cp /tmp/cf3/sw.js sw.js
+          rm -rf icons
+          cp -R /tmp/cf3/icons icons
+          rm -f pro.js localplus.js localplus.css
+
+          rm -rf desktop/webapp
+          mkdir -p desktop/webapp
+          cp index.html app.js ultimate.js config.js styles.css manifest.webmanifest sw.js desktop/webapp/
+          cp -R icons desktop/webapp/icons
+
+          rm -rf android/app/src/main/assets
+          mkdir -p android/app/src/main/assets
+          cp index.html app.js ultimate.js config.js styles.css manifest.webmanifest sw.js android/app/src/main/assets/
+          cp -R icons android/app/src/main/assets/icons
+
+      - name: Validate synchronized source
+        if: steps.guard.outputs.done != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check app.js
+          node --check ultimate.js
+          for page in generator import contacts exports audience telegram campaign requests backup activity; do
+            grep -q "data-page=\"$page\"" index.html
+          done
+          ! grep -ERn 'auth-gate|auth-login|auth-register|Forgot Password|Server URL|127\.0\.0\.1:17654|pseudoQR' \
+            index.html app.js ultimate.js config.js sw.js desktop/webapp android/app/src/main/assets
+
+      - name: Commit 3.0 to main
+        if: steps.guard.outputs.done != 'true'
+        id: commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '3.0.0-alpha.1\n' > .cf3-root-activated
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'source: activate ContactFlow Personal Ultimate 3.0 on main'
+          git push origin HEAD:main
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch Release All Devices
+        if: steps.guard.outputs.done != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run release-all.yml --repo "$GITHUB_REPOSITORY" --ref main
+
+      - name: Report activation
+        if: steps.guard.outputs.done != 'true' && success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ steps.commit.outputs.sha }}
+        run: gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "✅ ContactFlow Personal Ultimate 3.0 is now active on main. Source commit: ${SOURCE_SHA}. All-device Release workflow dispatched. Bootstrap run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+      - name: Report bootstrap failure
+        if: steps.guard.outputs.done != 'true' && failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "❌ ContactFlow Personal Ultimate 3.0 one-shot bootstrap failed. Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+      - name: Disable this one-shot workflow after success
+        if: steps.guard.outputs.done != 'true' && success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow disable cf3-scheduled-bootstrap.yml --repo "$GITHUB_REPOSITORY" || true
