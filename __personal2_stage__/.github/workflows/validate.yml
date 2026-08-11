@@ -1,0 +1,32 @@
+name: Validate ContactFlow Personal 2.0
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'web/**'
+      - 'desktop/**'
+      - 'android/**'
+      - '.github/workflows/validate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: node --check web/app.js
+      - name: Assert account/server UI is absent
+        run: |
+          ! grep -RniE 'auth-gate|cloud-login|cloud-register|sync-push|sync-pull|/api/v1/auth|Server URL' web desktop android
+          test ! -e install.php
+          test ! -e api.php
+      - name: Version marker
+        run: grep -qx '2.0.0-alpha.1' VERSION
