@@ -2,7 +2,6 @@ package com.contactflow.pro;
 
 import android.Manifest;
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.os.Bundle;
 import android.os.Build;
 import android.os.Environment;
@@ -11,7 +10,6 @@ import android.content.*;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.webkit.*;
-import android.widget.EditText;
 import android.widget.Toast;
 import android.util.Base64;
 import java.io.*;
@@ -19,8 +17,7 @@ import java.io.*;
 public class MainActivity extends Activity {
     private static final int FILE_CHOOSER = 4201;
     private static final int STORAGE_PERMISSION = 4202;
-    private static final String PREFS = "contactflow";
-    private static final String KEY_URL = "server_url";
+    private static final String APP_URL = "file:///android_asset/index.html";
     private WebView webView;
     private ValueCallback<Uri[]> fileCallback;
     private String pendingName, pendingMime, pendingBase64;
@@ -30,8 +27,7 @@ public class MainActivity extends Activity {
         webView = new WebView(this);
         setContentView(webView);
         configureWebView();
-        String url = getServerUrl();
-        if (url.length() == 0) showServerDialog(true); else loadServer(url);
+        webView.loadUrl(APP_URL);
     }
 
     private void configureWebView() {
@@ -39,10 +35,14 @@ public class MainActivity extends Activity {
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
         s.setDatabaseEnabled(true);
-        s.setAllowFileAccess(false);
+        s.setAllowFileAccess(true);
         s.setAllowContentAccess(true);
-        s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
-        s.setUserAgentString(s.getUserAgentString() + " ContactFlowAndroid/1.3");
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+            s.setAllowFileAccessFromFileURLs(false);
+            s.setAllowUniversalAccessFromFileURLs(false);
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        s.setUserAgentString(s.getUserAgentString() + " ContactFlowPersonalUltimate/3.0");
         CookieManager.getInstance().setAcceptCookie(true);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) CookieManager.getInstance().setAcceptThirdPartyCookies(webView, false);
 
@@ -53,9 +53,6 @@ public class MainActivity extends Activity {
             }
             @Override @SuppressWarnings("deprecation") public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 return handleUrl(Uri.parse(url));
-            }
-            @Override public void onReceivedError(WebView view, WebResourceRequest req, WebResourceError err) {
-                if (Build.VERSION.SDK_INT >= 23 && req.isForMainFrame()) Toast.makeText(MainActivity.this, "اتصال به ContactFlow برقرار نشد.", Toast.LENGTH_LONG).show();
             }
         });
         webView.setWebChromeClient(new WebChromeClient() {
@@ -69,46 +66,16 @@ public class MainActivity extends Activity {
     }
 
     private boolean handleUrl(Uri uri) {
-        String base = getServerUrl();
+        if (uri == null) return false;
+        String scheme = uri.getScheme();
+        if (scheme == null || "file".equalsIgnoreCase(scheme)) return false;
         try {
-            Uri b = Uri.parse(base);
-            if ("https".equalsIgnoreCase(uri.getScheme()) && b.getHost()!=null && b.getHost().equalsIgnoreCase(uri.getHost())) return false;
             startActivity(new Intent(Intent.ACTION_VIEW, uri));
             return true;
-        } catch(Exception e) { return false; }
-    }
-
-    private String normalizeUrl(String raw) {
-        String x = raw == null ? "" : raw.trim();
-        while (x.endsWith("/")) x=x.substring(0,x.length()-1);
-        Uri u=Uri.parse(x);
-        if (!"https".equalsIgnoreCase(u.getScheme()) || u.getHost()==null || u.getHost().length()==0) return "";
-        return x;
-    }
-
-    private String getServerUrl() { return getSharedPreferences(PREFS,MODE_PRIVATE).getString(KEY_URL,""); }
-    private void setServerUrl(String url) { getSharedPreferences(PREFS,MODE_PRIVATE).edit().putString(KEY_URL,url).apply(); }
-    private void loadServer(String url) { webView.loadUrl(url + "/"); }
-
-    private void showServerDialog(final boolean required) {
-        final EditText input = new EditText(this);
-        input.setHint("https://example.ir/contactflow");
-        input.setSingleLine(true);
-        input.setText(getServerUrl());
-        AlertDialog.Builder b = new AlertDialog.Builder(this)
-            .setTitle("آدرس ContactFlow")
-            .setMessage("همان آدرسی را وارد کنید که install.php بعد از نصب نشان می‌دهد.")
-            .setView(input)
-            .setPositiveButton("ذخیره", null);
-        if (!required) b.setNegativeButton("انصراف", null);
-        final AlertDialog d=b.create();
-        d.setOnShowListener(v -> d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v2 -> {
-            String url=normalizeUrl(input.getText().toString());
-            if(url.length()==0){input.setError("آدرس باید HTTPS معتبر باشد");return;}
-            setServerUrl(url);d.dismiss();loadServer(url);
-        }));
-        d.setCancelable(!required);
-        d.show();
+        } catch(Exception e) {
+            Toast.makeText(this,"امکان باز کردن لینک وجود ندارد.",Toast.LENGTH_SHORT).show();
+            return true;
+        }
     }
 
     @Override protected void onActivityResult(int requestCode,int resultCode,Intent data) {
@@ -164,17 +131,29 @@ public class MainActivity extends Activity {
         } catch(Exception e) { Toast.makeText(this,"ذخیره ناموفق: "+e.getMessage(),Toast.LENGTH_LONG).show(); }
     }
 
+    private void saveFile(String name,String mime,String base64) {
+        if(Build.VERSION.SDK_INT>=29){saveModern(name,mime,base64);return;}
+        if(Build.VERSION.SDK_INT>=23 && checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)!=PackageManager.PERMISSION_GRANTED){
+            pendingName=name;pendingMime=mime;pendingBase64=base64;requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},STORAGE_PERMISSION);return;
+        }
+        saveLegacy(name,mime,base64);
+    }
+
     public class AndroidBridge {
-        @JavascriptInterface public String getServerUrl() { return MainActivity.this.getServerUrl(); }
-        @JavascriptInterface public void openServerSettings() { runOnUiThread(() -> showServerDialog(false)); }
+        @JavascriptInterface public String nativeCapabilities() {
+            return "{\"ok\":true,\"connector\":true,\"telegramQr\":false,\"reason\":\"tdlib_not_configured\",\"filePicker\":true,\"platform\":\"android\",\"version\":\"3.0.0-alpha.1\"}";
+        }
+
+        @JavascriptInterface public String startTelegramQr() {
+            return "{\"ok\":false,\"code\":\"not_configured\",\"error\":\"TDLib Native Connector / Telegram App credentials are not configured in this build. No fake QR is generated.\"}";
+        }
+
         @JavascriptInterface public void saveFile(final String name,final String mime,final String base64) {
-            runOnUiThread(() -> {
-                if(Build.VERSION.SDK_INT>=29){saveModern(name,mime,base64);return;}
-                if(Build.VERSION.SDK_INT>=23 && checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)!=PackageManager.PERMISSION_GRANTED){
-                    pendingName=name;pendingMime=mime;pendingBase64=base64;requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},STORAGE_PERMISSION);return;
-                }
-                saveLegacy(name,mime,base64);
-            });
+            runOnUiThread(() -> MainActivity.this.saveFile(name,mime,base64));
+        }
+
+        @JavascriptInterface public void saveDocument(final String name,final String mime,final String base64) {
+            runOnUiThread(() -> MainActivity.this.saveFile(name,mime,base64));
         }
     }
 }
