@@ -1,0 +1,56 @@
+name: Publish Flat Hosted Mini App
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'telegram-miniapp/**'
+      - 'docs/BUSINESS_CONNECTOR_FA.md'
+      - '.github/workflows/release-miniapp-flat.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  miniapp-flat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate hosted Mini App
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in telegram-miniapp/lib.php telegram-miniapp/setup.php telegram-miniapp/webhook.php telegram-miniapp/gateway.php telegram-miniapp/cron.php telegram-miniapp/health.php; do php -l "$f"; done
+          test -s telegram-miniapp/miniapp.html
+          grep -q 'X-Telegram-Init-Data' telegram-miniapp/miniapp.html
+          grep -q 'business_connection_id' telegram-miniapp/gateway.php
+      - name: Build flat cPanel ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf package dist
+          mkdir -p package dist
+          cp -R telegram-miniapp/. package/
+          cp docs/BUSINESS_CONNECTOR_FA.md package/BUSINESS_CONNECTOR_FA.md
+          rm -f package/storage/config.php package/storage/*.json package/storage/*.tmp.*
+          (cd package && zip -qr ../dist/ContactFlow_Personal_Ultimate_3.1.0-alpha.1_Telegram_MiniApp_cPanel.zip .)
+          unzip -l dist/ContactFlow_Personal_Ultimate_3.1.0-alpha.1_Telegram_MiniApp_cPanel.zip | tee miniapp-zip-list.txt
+          unzip -l dist/ContactFlow_Personal_Ultimate_3.1.0-alpha.1_Telegram_MiniApp_cPanel.zip | grep -q ' miniapp.html$'
+          ! unzip -l dist/ContactFlow_Personal_Ultimate_3.1.0-alpha.1_Telegram_MiniApp_cPanel.zip | grep -q ' telegram-miniapp/miniapp.html$'
+          sha256sum dist/* > dist/MINIAPP_SHA256.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cf31-release-miniapp-flat
+          path: dist/*
+          retention-days: 30
+      - name: Replace Mini App asset in existing release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: v3.1.0-alpha.1
+          prerelease: true
+          make_latest: false
+          overwrite_files: true
+          files: |
+            dist/ContactFlow_Personal_Ultimate_3.1.0-alpha.1_Telegram_MiniApp_cPanel.zip
+            dist/MINIAPP_SHA256.txt
