@@ -8,15 +8,21 @@ on:
       - 'telegram-miniapp/**'
       - 'docs/BUSINESS_CONNECTOR_FA.md'
       - '.github/workflows/release-miniapp-flat.yml'
+  workflow_run:
+    workflows: ['Release All Devices — Personal Ultimate 3.1']
+    types: [completed]
 
 permissions:
   contents: write
 
 jobs:
   miniapp-flat:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - name: Validate hosted Mini App
         shell: bash
         run: |
