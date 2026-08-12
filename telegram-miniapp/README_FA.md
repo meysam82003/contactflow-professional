@@ -1,98 +1,88 @@
-# ContactFlow Telegram Mini App — Hosted Workspace v2
+# ContactFlow Telegram Mini App — Workspace v3
 
-این نسخه برای همان مدل ساده هاست طراحی شده است: فایل‌های پوشه را داخل مسیر HTTPS خود Extract کنید و `miniapp.html` را به‌عنوان Main Mini App ثبت کنید.
+این نسخه، Workspace اصلی ContactFlow را داخل Telegram اجرا می‌کند. Bot در این معماری فقط Launcher است؛ مدیریت مخاطبین، شماره‌ساز، Import/Export، نام‌گذاری، Backup و Activity Log داخل خود Mini App و به‌صورت Local‑First انجام می‌شود.
 
-نمونه:
+نمونه URL:
 
 `https://domain/contactflow/miniapp.html`
 
-## چیزی که برای اجرای Workspace لازم نیست
+## اجرای Workspace
 
-خود Mini App برای شماره‌ساز، Import/Export، مدیریت مخاطبین و Backup به این موارد نیاز ندارد:
+برای قابلیت‌های اصلی Workspace به این موارد نیاز نیست:
 
 - `TELEGRAM_API_ID`
 - `TELEGRAM_API_HASH`
 - `GOOGLE_CLIENT_ID`
 - ContactFlow Login/Register
 - Server URL
+- Bot Gateway برای پردازش مخاطبین
 
-## قابلیت‌های Hosted Mini App
+## قابلیت‌های Mini App
 
-- دیتابیس محلی IndexedDB
+- IndexedDB محلی و سازگار با دیتابیس نسخه قبلی Mini App
 - شماره‌ساز ترتیبی و تصادفی تا 1,000,000 شماره در هر Job
-- Import همزمان TXT / CSV / VCF
+- Import چند فایل TXT / CSV / TSV / VCF
 - Paste مستقیم شماره‌ها
 - Normalize ایران و E.164 بین‌المللی
 - حذف Duplicate هنگام Import
-- نام پایه، شهر، بخش و Tag
-- جستجو و فیلتر مخاطبین
-- انتخاب و حذف گروهی
-- وضعیت‌های `Telegram Match / Needs Check / Not Returned / Retry`
-- Import نتیجه Checker با قالب `phone,status,telegram_id,username`
-- خروجی جداگانه هر وضعیت
+- قالب نام، شهر، بخش و Tag
+- جستجو و انتخاب مخاطبین
+- حذف گروهی
+- نام‌گذاری و ویرایش گروهی
 - CSV / TXT / VCF
-- Split Export بر اساس تعداد هر فایل
-- VCF مخصوص انتقال به Contacts گوشی
-- Share VCF به Contacts، Files یا Google Drive در Android
-- Backup کامل `.cfbackup`
-- Restore کامل
-- انتخاب فولدر Backup با File System Access API در Chrome/Edge
-- امکان انتخاب فولدر Google Drive Desktop برای Backup بدون OAuth
+- Split Export
+- Export همه، انتخاب‌شده‌ها یا نتیجه جستجو
+- VCF برای Contacts گوشی و Telegram Sync
+- Share VCF و Backup با Web Share API
+- Backup و Restore محلی `.cfbackup`
 - Activity Log
-- نمایش Telegram ID و Username کاربری که Mini App را باز کرده است
-- `requestContact` برای شماره همان کاربر، فقط با تأیید خودش
-- رابط واکنش‌گرا برای Telegram Android/Desktop/Web
+- نمایش Telegram ID و Username کاربر Mini App
+- `requestContact` برای شماره همان حساب با تأیید خود کاربر
+- باز کردن یک شماره انتخاب‌شده در Telegram با لینک رسمی شماره تلفن
+- رابط Responsive برای Telegram Android / Desktop / Web
 
-## Telegram Checker و افزودن مستقیم به Telegram Contacts
+## Telegram Integration
 
-طبق API رسمی Telegram، متد `contacts.importContacts` برای **User Session** است. JavaScript یک Mini App به Session داخلی اپ Telegram دسترسی ندارد؛ بنابراین Mini App به‌تنهایی و بدون User MTProto Session نمی‌تواند از طرف حساب شما شماره‌ها را به Telegram Contacts وارد کند یا Phone Lookup واقعی انجام دهد.
+Mini App به User Session داخلی Telegram دسترسی مستقیم ندارد. بنابراین قابلیت‌های MTProto سطح حساب را نمی‌توان از Session مخفی Telegram داخل WebView برداشت یا دور زد.
 
-این محدودیت را با نتیجه ساختگی دور نمی‌زنیم.
+برای کار عادی با مخاطبین دو مسیر داخل Workspace وجود دارد:
 
-### مسیر بدون API ID/HASH
+### 1) باز کردن یک مخاطب در Telegram
 
-برای اضافه‌کردن تعداد زیاد شماره به دفترچه مخاطبین خودتان:
+در جدول مخاطبین برای هر شماره دکمه `باز کردن` وجود دارد. Workspace لینک رسمی زیر را به Telegram می‌دهد:
 
-1. فایل‌ها را در Mini App Import کنید.
-2. Normalize/Dedupe را اجرا کنید.
-3. `ساخت VCF برای Telegram Sync` را بزنید.
-4. VCF را در Contacts گوشی Import کنید.
-5. در Telegram، `Sync Contacts` را روشن کنید.
+`t.me/+<phone>?profile`
 
-Telegram سپس دفترچه مخاطبین سیستم را با حساب شما Sync می‌کند.
+خود Telegram تصمیم می‌گیرد شماره قابل Resolve هست یا نه و Privacy مقصد را اعمال می‌کند.
 
-### نتیجه Checker از Connector
+### 2) انتقال گروهی مخاطبین
 
-اگر در آینده یک User Connector رسمی با App credentials خود برنامه فعال باشد، خروجی آن با این Header مستقیماً وارد Mini App می‌شود:
+1. شماره‌ها را Import و Normalize کنید.
+2. از تب Telegram فایل VCF همه یا مخاطبین انتخاب‌شده را بسازید.
+3. VCF را در Contacts گوشی یا سیستم Import کنید.
+4. در Telegram گزینه Sync Contacts را فعال کنید.
 
-`phone,status,telegram_id,username`
+## User Client / MTProto
 
-و Mini App می‌تواند نتیجه‌های `matched / not_returned / retry` را ذخیره، فیلتر و جداگانه Export کند.
+متدهای زیر فقط برای User Session واقعی هستند:
 
-نکته: `not_returned` همیشه اثبات قطعی «Telegram ندارد» نیست؛ Privacy و محدودیت‌های Telegram می‌تواند روی نتیجه اثر بگذارد.
+- `contacts.importContacts`
+- `contacts.resolvePhone`
+- `contacts.addContact`
 
-## Google Drive بدون GOOGLE_CLIENT_ID
+برای User Client مستقل، برنامه باید `api_id` و `api_hash` خودش را از `my.telegram.org` داشته باشد و Login رسمی کاربر را انجام دهد. QR Login رسمی هم این App credentials را نیاز دارد.
 
-دو مسیر بدون OAuth در Workspace فعال است:
-
-### Android / Telegram Mobile
-`Share Backup / Google Drive` یا `Share VCF` را بزنید و Google Drive را از Share Sheet انتخاب کنید.
-
-### Windows / Chrome / Edge
-اگر Google Drive for desktop نصب است، `انتخاب فولدر Backup` را بزنید و یکی از فولدرهای Drive خودتان را انتخاب کنید. Backup بعدی مستقیماً همان‌جا نوشته می‌شود.
-
-اگر هیچ‌کدام در دسترس نبود، فایل `.cfbackup` دانلود می‌شود و می‌توانید دستی در Drive قرار دهید.
+Hosted Mini App به‌تنهایی User Session داخلی Telegram را دریافت نمی‌کند و نتیجه ساختگی برای وضعیت شماره‌ها تولید نمی‌کند.
 
 ## نصب روی cPanel
 
-1. ZIP Hosted Mini App را Extract کنید.
-2. محتویات پوشه `telegram-miniapp` را در مسیر دلخواه، مثلاً `public_html/contactflow/` قرار دهید.
-3. تست کنید:
+1. پوشه `telegram-miniapp` را در مسیر HTTPS خود Upload/Extract کنید.
+2. این URL را تست کنید:
    `https://domain/contactflow/miniapp.html`
-4. همین URL را در BotFather به‌عنوان Main Mini App تنظیم کنید.
+3. همان URL را در BotFather به‌عنوان Main Mini App تنظیم کنید.
 
-Bot در این معماری فقط می‌تواند نقش Launcher داشته باشد؛ Workspace مدیریت مخاطبین و فایل‌ها به Gateway Bot وابسته نیست.
+Bot برای اجرای Workspace فقط نقش Launcher دارد و Gateway برای مدیریت فایل‌ها و مخاطبین الزامی نیست.
 
-## نکته درباره ارسال پیام
+## Backup و Google Drive
 
-عبارت `Opt-in` از رابط Hosted Mini App حذف شده است. با این حال ContactFlow نباید برای پیام تبلیغاتی خودکار به شماره‌های تصادفی یا افراد ناشناس استفاده شود. برای ارسال خصوصی، فهرست مخاطبان مجاز/شناخته‌شده را در موتور Campaign نگه دارید.
+روی Android می‌توانید Backup یا VCF را Share کنید و Google Drive را از Share Sheet انتخاب کنید. روی Desktop فایل دانلود می‌شود و قابل ذخیره در پوشه Google Drive Desktop است. OAuth Client ID برای این مسیر لازم نیست.
