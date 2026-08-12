@@ -1,49 +1,74 @@
 # ContactFlow Personal Ultimate 3.1
 
-ContactFlow یک مجموعه Local‑First برای مدیریت حجم زیاد مخاطب، Import/Export، شماره‌ساز، Campaign، Backup و Telegram Mini App است.
+ContactFlow یک مجموعه Local‑First برای مدیریت حجم زیاد مخاطب، Import/Export، شماره‌ساز، Backup و Telegram Mini App است.
 
-> نسخه پایه: `3.1.0-alpha.1` + Hosted Mini App Contact Workspace hotfix
+> نسخه پایه: `3.1.0-alpha.1` + Telegram Mini App Workspace refactor
 
 ## اصل معماری
 
-ContactFlow حساب داخلی، Login، Register، Forgot Password یا Server URL ندارد. داده‌های اصلی روی همان دستگاه در IndexedDB نگه‌داری می‌شوند و Backup دستی انتخابی است.
+ContactFlow حساب داخلی، Login، Register، Forgot Password یا Server URL اجباری ندارد. داده‌های اصلی روی همان دستگاه در IndexedDB نگه‌داری می‌شوند و Backup دستی انتخابی است.
 
-## دو حالت Telegram
+## Telegram Mini App به‌عنوان Workspace اصلی
 
-### 1) Hosted Mini App — بدون App credentials
-این حالت برای چیزی است که فقط با Upload روی هاست و URL کار کند:
+نسخه Hosted Mini App برای اجرای مستقیم داخل Telegram طراحی شده و Bot در مسیر اصلی فقط نقش Launcher دارد. شماره‌ساز، Import/Export، مخاطبین، نام‌گذاری، Backup و Activity Log داخل خود Mini App اجرا می‌شوند و به Bot Gateway وابسته نیستند.
+
+URL نمونه:
 
 `https://domain/contactflow/miniapp.html`
 
-Mini App در این حالت برای باز شدن و مدیریت شماره‌ها به `TELEGRAM_API_ID`، `TELEGRAM_API_HASH` یا `GOOGLE_CLIENT_ID` در Build نیاز ندارد.
+Mini App برای قابلیت‌های اصلی به `TELEGRAM_API_ID`، `TELEGRAM_API_HASH` یا `GOOGLE_CLIENT_ID` در Build نیاز ندارد.
 
-قابلیت‌ها:
-- Import چند فایل TXT/CSV
+قابلیت‌های Mini App:
+- Import چند فایل TXT/CSV/TSV/VCF
 - Paste شماره
 - Normalize ایران/بین‌المللی
 - حذف Duplicate
-- Preview و آمار معتبر/نامعتبر
-- CSV
-- VCF
-- Share VCF به Google Drive از Share Sheet سیستم در دستگاه‌های پشتیبانی‌شده
+- شماره‌ساز ترتیبی/تصادفی
+- نام‌گذاری و ویرایش گروهی
+- جستجو و انتخاب مخاطبین
+- CSV / TXT / VCF
+- خروجی انتخاب‌شده‌ها یا نتیجه جستجو
+- Share VCF و Backup
 - Backup/Restore محلی `.cfbackup`
 - Telegram ID/Username کاربر Mini App
 - `requestContact` برای شماره خود همان کاربر با تأیید خودش
+- باز کردن یک شماره انتخاب‌شده در Telegram با لینک رسمی شماره تلفن
+- رابط Responsive برای Telegram Android/Desktop/Web
 
-### 2) User MTProto Connector — قابلیت‌های سطح حساب
-Telegram متدهای `contacts.importContacts`، `contacts.resolvePhone` و `contacts.addContact` را فقط برای User Session ارائه می‌کند. بنابراین Phone Lookup واقعی و افزودن مستقیم مخاطب به حساب Telegram از داخل Bot/Mini App ممکن نیست مگر یک User Session رسمی وجود داشته باشد.
+## User MTProto Connector
 
-QR login رسمی User Session نیز در سطح پروتکل به App credentials نیاز دارد. اگر این credentials موجود نباشد، ContactFlow نباید QR یا نتیجه Checker ساختگی نمایش دهد.
+Telegram متدهای `contacts.importContacts`، `contacts.resolvePhone` و `contacts.addContact` را فقط برای User Session ارائه می‌کند. JavaScript یک Mini App به Session داخلی اپ Telegram دسترسی مستقیم ندارد.
+
+برای User Client مستقل، برنامه باید `api_id` و `api_hash` خودش را از `my.telegram.org` داشته باشد و Login رسمی کاربر را انجام دهد. QR Login رسمی هم App credentials لازم دارد.
+
+Hosted Mini App نتیجه ساختگی برای وضعیت شماره‌ها تولید نمی‌کند و Session داخلی Telegram را دور نمی‌زند.
+
+## مسیرهای Telegram در Workspace
+
+### باز کردن یک مخاطب در Telegram
+
+برای هر مخاطب می‌توان لینک رسمی شماره تلفن را به Telegram داد:
+
+`t.me/+<phone>?profile`
+
+Telegram خودش Resolve و Privacy را مدیریت می‌کند.
+
+### انتقال گروهی مخاطبین
+
+1. شماره‌ها را Import و Normalize کنید.
+2. VCF همه یا مخاطبین انتخاب‌شده را بسازید.
+3. VCF را داخل Contacts گوشی/سیستم Import کنید.
+4. اگر Sync Contacts در Telegram روشن باشد، Telegram دفترچه مخاطبین سیستم را Sync می‌کند.
 
 ## قابلیت‌های اصلی ContactFlow
 
 - شماره‌ساز ایران: ترتیبی/تصادفی، Prefix، شهر، بخش و نام‌گذاری سریالی
-- Import چندفایلی CSV/TSV/TXT/XLSX با تنظیمات مستقل هر فایل
+- Import چندفایلی CSV/TSV/TXT/XLSX در هسته اصلی
 - Normalize شماره ایران و بین‌المللی
 - حذف تکراری، Mapping ستون، Sequence و Bulk Edit
 - Contacts با فیلتر شهر/بخش/منبع
 - Export CSV/VCF/TXT و خروجی قطعه‌ای/ZIP در هسته اصلی
-- Suppression / مخاطبین مجاز برای جلوگیری از ارسال ناخواسته
+- کنترل‌های جلوگیری از اجرای ناخواسته Campaign
 - Campaign Composer
 - Dry Run، Duplicate Guard، سقف اجرا، Delay، Stop/Pause
 - توقف روی FloodWait / Restricted / Frozen
@@ -54,48 +79,22 @@ QR login رسمی User Session نیز در سطح پروتکل به App credenti
 - Activity/Audit Log
 - Windows Setup/Portable، Android، Linux، macOS و PWA
 
-## Telegram Checker — واقعیت API
-
-طبق API رسمی Telegram:
-
-- `contacts.resolvePhone` می‌تواند برای User Session شماره را Resolve کند.
-- `contacts.importContacts` می‌تواند لیست مخاطبین را وارد کند.
-- هر دو فقط برای کاربران (User Session) هستند، نه Bot/Mini App.
-- Privacy حساب مقصد می‌تواند باعث شود شماره‌ای با وجود داشتن Telegram برنگردد.
-
-بنابراین Hosted Mini App بدون User Session نمی‌تواند به‌طور رسمی بگوید هر شماره Telegram دارد یا ندارد. این نسخه به‌جای نتیجه جعلی، `VCF` و `needs-check.csv` تولید می‌کند.
-
-شماره‌ساز برای ساخت/پاک‌سازی دیتاست وجود دارد؛ خروجی شماره‌های تولیدشده به‌صورت خودکار برای کشف انبوه حساب‌های Telegram اسکن نمی‌شود.
-
-## افزودن مخاطبین بدون API_ID/HASH
-
-مسیر رسمی و بدون App credentials در Hosted Mini App:
-
-1. شماره‌ها را Import و Normalize کنید.
-2. VCF بگیرید.
-3. VCF را داخل Contacts گوشی/سیستم Import کنید.
-4. اگر Sync Contacts در Telegram روشن باشد، Telegram دفترچه مخاطبین سیستم را Sync می‌کند.
-
 ## Google Drive بدون GOOGLE_CLIENT_ID
 
-Hosted Mini App دیگر برای Backup پایه خطای `GOOGLE_CLIENT_ID در Build تنظیم نشده است` نمی‌دهد. Backup و VCF فایل واقعی می‌سازند. روی Android و دستگاه‌های دارای Web Share API، فایل را می‌توان به Share Sheet فرستاد و Google Drive را انتخاب کرد. روی Desktop فایل دانلود می‌شود و قابل Upload در Drive است.
+Hosted Mini App برای Backup پایه به `GOOGLE_CLIENT_ID` نیاز ندارد. Backup و VCF فایل واقعی می‌سازند. روی Android و دستگاه‌های دارای Web Share API، فایل را می‌توان به Share Sheet فرستاد و Google Drive را انتخاب کرد. روی Desktop فایل دانلود می‌شود و قابل ذخیره در Drive است.
 
-Direct Drive OAuth پیشرفته همچنان یک قابلیت جداگانه است و اگر فعال شود به Google Client ID نیاز دارد؛ نبود آن نباید مانع Backup محلی/Share شود.
-
-## درباره پیام‌رسانی
-
-عبارت `Opt-in` از رابط Hosted Mini App مخاطبین حذف شده است، اما کنترل جلوگیری از ارسال خودکار ناخواسته از موتور Campaign حذف نشده است. Public privacy یا قابل Resolve بودن شماره به معنی اجازه تبلیغ خصوصی محسوب نمی‌شود.
+Direct Drive OAuth پیشرفته همچنان یک قابلیت جداگانه است.
 
 ## Telegram Mini App
 
-کد cPanel در `telegram-miniapp/` است. نصب ساده Contact Workspace:
+کد cPanel در `telegram-miniapp/` است.
 
 1. پوشه `telegram-miniapp` را روی HTTPS Upload/Extract کنید.
-2. URL زیر را در BotFather به‌عنوان Main Mini App یا Menu Button ثبت کنید:
+2. URL زیر را در BotFather به‌عنوان Main Mini App ثبت کنید:
    `https://domain/contactflow/miniapp.html`
-3. صفحه بدون Build Secret باز می‌شود.
+3. Workspace بدون Build Secret اجباری باز می‌شود.
 
-`setup.php` و Gateway فقط برای قابلیت‌های Bot/Business اختیاری هستند و برای خود Contact Workspace لازم نیستند.
+`setup.php` و Gateway فقط برای قابلیت‌های اختیاری Bot/Business هستند و برای خود Workspace لازم نیستند.
 
 ## Build از GitHub
 
@@ -111,15 +110,15 @@ Workflow PWA، Windows، Linux، macOS، Android، Mini App و Source را Build
 - `.source-bundles/v31/` — augmentation نسخه 3.1
 - `enhancements/telegram-web-entry.js` — User MTProto connector اختیاری
 - `enhancements/drive-sync.js` — Direct Drive Sync اختیاری
-- `telegram-miniapp/miniapp.html` — Hosted Mini App بدون Build Secrets
+- `telegram-miniapp/miniapp.html` — Hosted Mini App Workspace
 - `telegram-miniapp/` — بسته cPanel
 - `desktop/` — Desktop shell
 - `android/` — Android shell
 
 ## Debug
 
-برای Hosted Mini App فقط این URL را مستقیم در مرورگر باز کنید:
+برای Hosted Mini App این URL را مستقیم در مرورگر باز کنید:
 
 `https://domain/contactflow/miniapp.html`
 
-اگر صفحه باز شد، بخش Contact Workspace مستقل از Bot Gateway سالم است. برای امکانات اختیاری Gateway از `telegram-miniapp/health.php` استفاده کنید.
+اگر صفحه باز شد، Workspace مستقل از Bot Gateway سالم است. برای امکانات اختیاری Gateway از `telegram-miniapp/health.php` استفاده کنید.
