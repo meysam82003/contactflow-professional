@@ -4,89 +4,94 @@ Local-first contact management, bulk import/export, Iranian number generator, Te
 
 Version: `3.1.0-alpha.1`
 
-## 🚀 Quick Access
+## 🚀 دانلود برنامه‌ها
 
-### Telegram Mini App
+### Android APK
 
-Source package:
-- `telegram-miniapp/miniapp.html`
+آخرین APK منتشرشده:
 
-Open source location:
-- https://github.com/meysam82003/contactflow-professional/tree/agent/miniapp-workspace-refactor/telegram-miniapp
+https://github.com/meysam82003/contactflow-professional/releases/download/v3.1.0-alpha.1/ContactFlow_Personal_Ultimate_3.1.0-alpha.1_Android_Alpha.apk
 
-### Downloads
+### همه نسخه‌های آماده دانلود
 
-Build files are published from GitHub Actions when a release build is completed:
+صفحه Release ها:
 
-- Actions:
-  https://github.com/meysam82003/contactflow-professional/actions
+https://github.com/meysam82003/contactflow-professional/releases
 
-- Releases:
-  https://github.com/meysam82003/contactflow-professional/releases
+شامل:
 
-## 📘 Installation Guide
-
-### Telegram Mini App Setup
-
-1. Create or select your Telegram Bot using BotFather.
-2. Configure the Mini App URL.
-3. Deploy the `telegram-miniapp` package.
-4. Open the Mini App from Telegram.
-
-### Android / Windows
-
-Project folders:
-
-- `android/` — Android wrapper
-- `desktop/` — Windows/Linux/macOS shell
-
-Build instructions and automation:
-
-- `.github/workflows/`
-- GitHub Actions page
-
-## Architecture
-
-ContactFlow uses a Local-First architecture:
-
-- Core contacts stay in local IndexedDB.
-- Backup/export works through local files.
-- Telegram Mini App is a full workspace, not only a bot panel.
-- Bot is used as launcher/integration layer.
-
-## Telegram Integration
-
-Supported flows:
-
-- Open selected contact in Telegram.
-- Export contacts as CSV/TXT/VCF.
-- Share VCF files.
-- Restore local backups.
-
-The Mini App does not bypass Telegram privacy or internal user sessions.
-
-## Main Components
-
-- `telegram-miniapp/` — Telegram Mini App package
-- `enhancements/` — runtime features
-- `desktop/` — desktop application shell
-- `android/` — Android application shell
-- `scripts/` — build scripts
-
-## Persian Documentation
-
-- `README_FA.md`
-- `docs/`
-
-## Release
-
-Run GitHub Actions release workflow to build:
-
-- Windows
 - Android APK
+- Windows Build (در صورت انتشار Release مربوطه)
 - Linux
 - macOS
 - PWA
-- Telegram Mini App package
+- فایل‌های checksum
 
-SHA256 checksums are generated during release builds.
+## 💻 سورس کامل پروژه
+
+Repository اصلی:
+
+https://github.com/meysam82003/contactflow-professional
+
+## 📱 Telegram Mini App Source
+
+مسیر سورس Mini App:
+
+https://github.com/meysam82003/contactflow-professional/tree/agent/miniapp-workspace-refactor/telegram-miniapp
+
+فایل اصلی:
+
+`telegram-miniapp/miniapp.html`
+
+## ⚙️ Build و CI/CD
+
+GitHub Actions:
+
+https://github.com/meysam82003/contactflow-professional/actions
+
+Workflow ها برای ساخت:
+
+- Android
+- Desktop
+- PWA
+- Telegram Mini App Package
+
+## 📘 راه‌اندازی Telegram Mini App
+
+1. ساخت یا انتخاب Bot در BotFather
+2. تنظیم Mini App URL
+3. Deploy کردن پوشه `telegram-miniapp`
+4. باز کردن Mini App داخل Telegram
+
+## 🖥️ نسخه Desktop و Android
+
+ساختار پروژه:
+
+- `android/` — Android wrapper
+- `desktop/` — Windows/Linux/macOS shell
+- `telegram-miniapp/` — Telegram Mini App
+- `enhancements/` — runtime features
+- `scripts/` — build scripts
+
+## 🏗️ معماری
+
+ContactFlow از معماری Local-First استفاده می‌کند:
+
+- اطلاعات مخاطبین در IndexedDB محلی نگهداری می‌شود.
+- Backup و Export به‌صورت فایل انجام می‌شود.
+- Telegram Mini App یک Workspace کامل است.
+- Bot فقط Launcher و لایه Integration است.
+
+## 🔗 قابلیت‌های Telegram
+
+- باز کردن مخاطب انتخاب‌شده در Telegram
+- خروجی CSV/TXT/VCF
+- Share فایل VCF
+- Backup و Restore
+
+Mini App حریم خصوصی Telegram یا Session داخلی کاربران را دور نمی‌زند.
+
+## 📚 مستندات فارسی
+
+- `README_FA.md`
+- پوشه `docs/`
