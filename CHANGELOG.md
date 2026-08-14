@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.2.0 — Telegram Contact Studio
+
+- Mini App واقعی برای Import چندفایلی CSV/TXT/VCF، Paste، Normalize ایران/E.164 و ادغام Duplicate.
+- خروجی CSV، VCF، TXT و JSON همراه با Restore/Merge، Web Share و Clipboard.
+- انتخاب، فیلتر کیفیت، مرتب‌سازی، جستجو و ویرایش گروهی نام، شهر و برچسب.
+- درخواست رسمی `requestContact` با رضایت کاربر و توضیح شفاف محدودیت دسترسی Mini App به دفترچه کامل Telegram.
+- یکسان‌سازی شماره نسخه Web/PWA، Windows، Android، connectorها و بسته cPanel روی `3.2.0`.
+
 ## Hosted Mini App Contact Workspace hotfix — 2026-08-12
 
 ### Mini App
@@ -22,7 +30,7 @@
 - نبود `GOOGLE_CLIENT_ID` دیگر مانع Backup پایه Hosted Mini App نیست.
 - فایل واقعی Backup/VCF ساخته می‌شود و در دستگاه‌های پشتیبانی‌شده می‌تواند از Share Sheet به Google Drive ارسال شود.
 
-## 3.1.0-alpha.1 — Web Telegram / Drive / Mini App restoration
+## 3.2.0 — Web Telegram / Drive / Mini App restoration
 
 ### Telegram Account Connector
 - مسیر QR قدیمی Native/HTTP 501 از مسیر اصلی حذف شد.

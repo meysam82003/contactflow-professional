@@ -13,6 +13,7 @@ android/.gradle/
 android/app/build/
 build/
 dist/
+node_modules/
 *.log
 .DS_Store
 

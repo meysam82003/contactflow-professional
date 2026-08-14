@@ -1,4 +1,4 @@
-name: Release All Devices — Personal Ultimate 3.1
+name: Release All Devices — Personal Ultimate 3.2
 
 on:
   workflow_dispatch:
@@ -41,7 +41,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(cat VERSION)" = '3.1.0-alpha.1'
+          test "$(cat VERSION)" = '3.2.0'
           rm -rf /tmp/cf31 /tmp/cf31aug /tmp/cf3.tgz /tmp/cf31aug.tgz
           mkdir -p /tmp/cf31 /tmp/cf31aug
           cat .source-bundles/v3/web3.part* | base64 -d > /tmp/cf3.tgz
@@ -81,7 +81,7 @@ jobs:
           fs.appendFileSync(process.env.GITHUB_OUTPUT,`telegram_configured=${j.telegramConfigured}\ngoogle_configured=${j.googleConfigured}\nminiapp_configured=${j.miniAppConfigured}\n`);
           NODE
 
-      - name: Validate 3.1 web core
+      - name: Validate 3.2 web core
         shell: bash
         run: |
           set -euo pipefail
@@ -91,7 +91,7 @@ jobs:
           node --check /tmp/cf31/drive-sync.js
           node --check /tmp/cf31/business-connect.js
           node --check scripts/apply-v31.mjs
-          grep -q 'Personal Ultimate 3.1' /tmp/cf31/index.html
+          grep -q 'Personal Ultimate 3.2' /tmp/cf31/index.html
           for page in generator import contacts exports audience telegram campaign requests backup activity; do
             grep -q "data-page=\"$page\"" /tmp/cf31/index.html
           done
@@ -113,8 +113,8 @@ jobs:
           cp -R /tmp/cf31/. build/pwa/
           cp README.md README_FA.md CHANGELOG.md build/pwa/
           cp -R docs build/pwa/docs
-          (cd build/pwa && zip -qr ../ContactFlow_Personal_Ultimate_3.1.0-alpha.1_PWA.zip .)
-          test -s build/ContactFlow_Personal_Ultimate_3.1.0-alpha.1_PWA.zip
+          (cd build/pwa && zip -qr ../ContactFlow_Personal_Ultimate_3.2.0_PWA.zip .)
+          test -s build/ContactFlow_Personal_Ultimate_3.2.0_PWA.zip
 
       - uses: actions/upload-artifact@v4
         with:
@@ -125,7 +125,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: cf31-release-pwa
-          path: build/ContactFlow_Personal_Ultimate_3.1.0-alpha.1_PWA.zip
+          path: build/ContactFlow_Personal_Ultimate_3.2.0_PWA.zip
           retention-days: 30
 
   desktop:
@@ -150,6 +150,7 @@ jobs:
           tar -xzf /tmp/cf31aug.tgz -C /tmp/cf31aug
           cp /tmp/cf31aug/desktop-main.go desktop/main.go
           cp /tmp/cf31aug/desktop-installer.go desktop/installer/main.go
+          sed -i 's/3\.1\.0-alpha\.1/3.2.0/g; s/Ultimate 3\.1/Ultimate 3.2/g' desktop/main.go desktop/installer/main.go
           rm -rf desktop/webapp
           mkdir -p desktop/webapp
           cp -R webcore/. desktop/webapp/
@@ -210,6 +211,8 @@ jobs:
           tar -xzf /tmp/cf31aug.tgz -C /tmp/cf31aug
           cp /tmp/cf31aug/MainActivity.java android/app/src/main/java/com/contactflow/pro/MainActivity.java
           cp /tmp/cf31aug/android-build.gradle android/app/build.gradle
+          sed -i "s/versionCode 30101/versionCode 30200/; s/versionName '3\.1\.0-alpha\.1'/versionName '3.2.0'/" android/app/build.gradle
+          sed -i 's/Ultimate\/3\.1/Ultimate\/3.2/g; s/3\.1\.0-alpha\.1/3.2.0/g' android/app/src/main/java/com/contactflow/pro/MainActivity.java
           rm -rf android/app/src/main/assets
           mkdir -p android/app/src/main/assets
           cp -R webcore/. android/app/src/main/assets/
@@ -228,11 +231,11 @@ jobs:
           grep "sdkVersion:'21'" apk-badging.txt
           grep "targetSdkVersion:'36'" apk-badging.txt
           unzip -p "$APK" assets/index.html > /tmp/apk-index.html
-          grep -q 'Personal Ultimate 3.1' /tmp/apk-index.html
+          grep -q 'Personal Ultimate 3.2' /tmp/apk-index.html
           grep -q 'business-connect.js' /tmp/apk-index.html
           ! grep -E 'auth-gate|auth-login|auth-register|Server URL|127\.0\.0\.1:17654|QR Connector not configured' /tmp/apk-index.html
           mkdir -p dist
-          cp "$APK" dist/ContactFlow_Personal_Ultimate_3.1.0-alpha.1_Android_Alpha.apk
+          cp "$APK" dist/ContactFlow_Personal_Ultimate_3.2.0_Android_Alpha.apk
           sha256sum dist/*.apk > dist/APK_SHA256.txt
 
       - uses: actions/upload-artifact@v4
@@ -259,8 +262,8 @@ jobs:
         shell: bash
         run: |
           mkdir -p dist
-          zip -qr dist/ContactFlow_Personal_Ultimate_3.1.0-alpha.1_Telegram_MiniApp_cPanel.zip telegram-miniapp docs/BUSINESS_CONNECTOR_FA.md
-          test -s dist/ContactFlow_Personal_Ultimate_3.1.0-alpha.1_Telegram_MiniApp_cPanel.zip
+          zip -qr dist/ContactFlow_Personal_Ultimate_3.2.0_Telegram_MiniApp_cPanel.zip telegram-miniapp docs/BUSINESS_CONNECTOR_FA.md
+          test -s dist/ContactFlow_Personal_Ultimate_3.2.0_Telegram_MiniApp_cPanel.zip
       - uses: actions/upload-artifact@v4
         with:
           name: cf31-release-miniapp
@@ -288,11 +291,11 @@ jobs:
           cp -R /tmp/cf31aug dist/source/v31-augmentation
           cp -R desktop android docs .github enhancements telegram-miniapp scripts dist/source/
           cp README.md README_FA.md CHANGELOG.md VERSION SECURITY.md DEPLOY_3_1_FA.md dist/source/ 2>/dev/null || true
-          (cd dist/source && zip -qr ../ContactFlow_Personal_Ultimate_3.1.0-alpha.1_Source.zip .)
+          (cd dist/source && zip -qr ../ContactFlow_Personal_Ultimate_3.2.0_Source.zip .)
       - uses: actions/upload-artifact@v4
         with:
           name: cf31-release-source
-          path: dist/ContactFlow_Personal_Ultimate_3.1.0-alpha.1_Source.zip
+          path: dist/ContactFlow_Personal_Ultimate_3.2.0_Source.zip
           retention-days: 30
 
   release:
@@ -315,8 +318,8 @@ jobs:
         run: |
           set -euo pipefail
           cd release
-          cat > ContactFlow_Personal_Ultimate_3.1.0-alpha.1_RELEASE_INFO_FA.txt <<EOF
-          ContactFlow Personal Ultimate 3.1.0-alpha.1 — Business/MiniApp/Backup Hotfix
+          cat > ContactFlow_Personal_Ultimate_3.2.0_RELEASE_INFO_FA.txt <<EOF
+          ContactFlow Personal Ultimate 3.2.0 — Business/MiniApp/Backup Hotfix
           Source commit: ${GITHUB_SHA}
           Workflow run: ${GITHUB_RUN_ID}
           Telegram Business Bot connector ready without API ID/Hash: ${TG_READY}
@@ -328,22 +331,22 @@ jobs:
           Mini App deployment: unzip on HTTPS hosting and register https://domain/path/miniapp.html at runtime.
           Backup: Android System Picker, desktop Sync Folder/file fallback, optional Google OAuth if Client ID exists.
           EOF
-          find . -maxdepth 1 -type f ! -name 'ContactFlow_Personal_Ultimate_3.1.0-alpha.1_SHA256.txt' -print0 | sort -z | xargs -0 sha256sum > ContactFlow_Personal_Ultimate_3.1.0-alpha.1_SHA256.txt
+          find . -maxdepth 1 -type f ! -name 'ContactFlow_Personal_Ultimate_3.2.0_SHA256.txt' -print0 | sort -z | xargs -0 sha256sum > ContactFlow_Personal_Ultimate_3.2.0_SHA256.txt
           ls -lh
 
       - name: Publish GitHub prerelease
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: v3.1.0-alpha.1
+          tag_name: v3.2.0
           target_commitish: main
-          name: ContactFlow Personal Ultimate 3.1.0-alpha.1
+          name: ContactFlow Personal Ultimate 3.2.0
           prerelease: true
           make_latest: false
           overwrite_files: true
           preserve_order: true
           files: release/*
           body: |
-            # ContactFlow Personal Ultimate 3.1.0-alpha.1 — Hotfix
+            # ContactFlow Personal Ultimate 3.2.0 — Hotfix
 
             - Primary Telegram connector is Bot Pair + Telegram Business Connection; no TELEGRAM_API_ID / TELEGRAM_API_HASH required for this path.
             - Up to 10 local account pairings with manual sender selection, connection labels, known-chat list and test-send.
@@ -372,8 +375,8 @@ jobs:
         shell: bash
         run: |
           if [[ "$WEB" == success && "$DESKTOP" == success && "$ANDROID" == success && "$MINIAPP" == success && "$SOURCE" == success && "$RELEASE" == success ]]; then
-            gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "✅ ContactFlow 3.1 hotfix release succeeded — web=$WEB desktop=$DESKTOP android=$ANDROID miniapp=$MINIAPP source=$SOURCE release=$RELEASE — Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" || true
+            gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "✅ ContactFlow 3.2 hotfix release succeeded — web=$WEB desktop=$DESKTOP android=$ANDROID miniapp=$MINIAPP source=$SOURCE release=$RELEASE — Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" || true
           else
-            gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "❌ ContactFlow 3.1 hotfix release needs attention — web=$WEB desktop=$DESKTOP android=$ANDROID miniapp=$MINIAPP source=$SOURCE release=$RELEASE — Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" || true
+            gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "❌ ContactFlow 3.2 hotfix release needs attention — web=$WEB desktop=$DESKTOP android=$ANDROID miniapp=$MINIAPP source=$SOURCE release=$RELEASE — Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" || true
             exit 1
           fi

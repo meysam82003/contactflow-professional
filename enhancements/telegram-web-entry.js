@@ -240,7 +240,7 @@ async function sendCampaign(accountId,phones,campaign,{delayMs=1800,dailyCap=80,
 async function exportState(){return {accounts:await listAccounts(),checks:await all('checks'),history:await all('history'),activeAccountId:await activeAccountId()};}
 async function diagnostics(){
   const a=await listAccounts(), active=await activeAccountId();
-  return {version:'3.1.0-alpha.1',mode:'browser-mtproto',maxAccounts:MAX_ACCOUNTS,configured:!!(cfg().telegramApiId&&cfg().telegramApiHash),secureContext:window.isSecureContext,accounts:a.length,activeAccountId:active,checks:(await all('checks')).length,userAgent:navigator.userAgent};
+  return {version:'3.2.0',mode:'browser-mtproto',maxAccounts:MAX_ACCOUNTS,configured:!!(cfg().telegramApiId&&cfg().telegramApiHash),secureContext:window.isSecureContext,accounts:a.length,activeAccountId:active,checks:(await all('checks')).length,userAgent:navigator.userAgent};
 }
 
 window.ContactFlowTelegramWeb={MAX_ACCOUNTS,renderQr,connectQr,cancelQr,listAccounts,setActiveAccount,activeAccountId,disconnectAccount,accountHealth,checkContacts,listChecks,clearChecks,loadDialogs,sendCampaign,exportState,diagnostics};

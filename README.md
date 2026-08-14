@@ -1,8 +1,8 @@
-# ContactFlow Personal Ultimate 3.1
+# ContactFlow Personal Ultimate 3.2
 
 Local-first contact management, bulk import/export, Iranian number generator, consent-aware audiences, Telegram QR user-account connector, campaign composer, Google Drive backup/sync, and Telegram Mini App.
 
-Version: `3.1.0-alpha.1`
+Version: `3.2.0`
 
 ## Architecture
 
@@ -37,4 +37,4 @@ Telegram API credentials belong to this app and are never requested from end use
 
 ## Release
 
-Run **Release All Devices — Personal Ultimate 3.1** in GitHub Actions. It validates and publishes Windows Setup/Portable, Android APK, Linux, macOS, PWA, Mini App cPanel package, source, release info, and SHA256 checksums.
+Run **Release All Devices — Personal Ultimate 3.2** in GitHub Actions. It validates and publishes Windows Setup/Portable, Android APK, Linux, macOS, PWA, Mini App cPanel package, source, release info, and SHA256 checksums.
