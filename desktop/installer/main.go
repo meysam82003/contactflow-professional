@@ -16,7 +16,7 @@ import (
 var payload embed.FS
 
 const appName = "ContactFlow Personal Ultimate"
-const appVersion = "3.1.0-alpha.1"
+const appVersion = "3.2.0"
 
 var (
 	user32          = syscall.NewLazyDLL("user32.dll")

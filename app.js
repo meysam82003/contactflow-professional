@@ -1,6 +1,6 @@
 'use strict';
 
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '3.2.0';
 const DB_NAME = 'contactflow_pwa_v2';
 const DB_VERSION = 2;
 const PAGE_SIZE = 50;

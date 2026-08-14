@@ -8,8 +8,8 @@ android {
         applicationId 'com.contactflow.pro'
         minSdk 21
         targetSdk 36
-        versionCode 30101
-        versionName '3.1.0-alpha.1'
+        versionCode 30200
+        versionName '3.2.0'
     }
 }
 

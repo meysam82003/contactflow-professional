@@ -1,8 +1,8 @@
-# ContactFlow Personal Ultimate 3.1
+# ContactFlow Personal Ultimate 3.2
 
 ContactFlow یک مجموعه Local‑First برای مدیریت حجم زیاد مخاطب، Import/Export، شماره‌ساز، Campaign، Backup و Telegram Mini App است.
 
-> نسخه پایه: `3.1.0-alpha.1` + Hosted Mini App Contact Workspace hotfix
+> نسخه پایه: `3.2.0` + Hosted Mini App Contact Workspace hotfix
 
 ## اصل معماری
 

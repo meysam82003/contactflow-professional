@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-const VERSION='3.1.0-alpha.1-business-hotfix';
+const VERSION='3.2.0-business-hotfix';
 const MAX_PAIRS=10;
 const LS_GATEWAY='cf_business_gateway_url';
 const LS_PAIRS='cf_business_pairs_v1';
