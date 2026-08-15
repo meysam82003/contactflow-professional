@@ -1,8 +1,14 @@
-# ContactFlow Personal Ultimate 3.4
+# ContactFlow Personal Ultimate 3.5
 
-ContactFlow یک نرم‌افزار Local‑First برای Import، پاک‌سازی، Merge، Backup، بررسی وضعیت Telegram و خروجی مخاطبین است. نسخه ۳.۴ از یک Web Core مشترک برای Telegram Mini App، PWA، Android، Windows، Linux و macOS استفاده می‌کند.
+ContactFlow یک نرم‌افزار Local‑First برای Import، پاک‌سازی، Merge، Backup، بررسی وضعیت Telegram و خروجی مخاطبین است. نسخه ۳.۵ از یک Web Core مشترک برای Telegram Mini App، PWA، Android، Windows، Linux و macOS استفاده می‌کند.
 
-## تغییر اصلی ۳.۴
+## تغییرهای اصلی ۳.۵
+
+تشخیص شهر و استان از متن فارسی، انگلیسی و فینگلیش به موتور Import اضافه شده است؛ برای مثال `customers_BandarAbbas.csv` به شهر «بندرعباس» و استان «هرمزگان» می‌رسد. اپراتور اولیه شماره نیز تشخیص داده می‌شود و کاربر می‌تواند یک‌بار قانون منبع را روی حالت خودکار، ثابت یا حفظ منبع فایل قرار دهد.
+
+مرکز کانال‌ها برای Telegram، WhatsApp، Rubika، Bale و Soroush Plus صف رضایت‌محور، قالب پیام، خروجی CSV و VCF و تحویل دستی به اپ فراهم می‌کند. این بخش Session داخلی برنامه‌ها را نمی‌خواند و ارسال بدون تأیید یا دورزدن ضداسپم انجام نمی‌دهد.
+
+## موتور Import/Merge حفظ‌شده از ۳.۴
 
 مرکز «Import و Merge هوشمند» چند فایل CSV/TSV/TXT/VCF/JSON/XLS/XLSX یا ZIP را هم‌زمان تحلیل می‌کند؛ XLS باینری OLE/BIFF نیز با Parser نسخه‌پین‌شده پشتیبانی می‌شود. تشخیص `Qom.txt → قم`، ترانویسی فارسی، E.164، کشور، شهر تلفن ثابت، نوع و اعتبار شماره، تفکیک شرکت، گزارش تکراری شهر/فامیل/دامنه و نمودار شهرها روی دستگاه انجام می‌شود.
 
@@ -44,7 +50,7 @@ Session و Snapshot در IndexedDB همان Origin نگه‌داری می‌شو
 - `scripts/build-miniapp.mjs` — ساخت Mini App کامل از همان `web/`
 - `.github/workflows/release-all.yml` — Build و Release همه دستگاه‌ها
 
-موتور `web/import-merge.js` و رابط `web/v34.js` Source of Truth منطق Merge نسخه ۳.۴ هستند.
+موتورهای `web/import-merge.js` و `web/location-operator.js`، رابط Merge در `web/v34.js` و رابط کانال‌ها در `web/v35.js` Source of Truth نسخه ۳.۵ هستند.
 
 ## اجرای PWA محلی
 
@@ -62,14 +68,14 @@ cp enhancements/dist/telegram-web.bundle.js web/
 
 ```bash
 node --test tests/*.test.cjs
-node scripts/verify-v34.mjs
+node scripts/verify-v35.mjs
 ```
 
 ## Mini App
 
 Release با نام زیر یک بسته Flat و آماده cPanel می‌سازد:
 
-`ContactFlow_Personal_Ultimate_3.4.0_Telegram_MiniApp_cPanel.zip`
+`ContactFlow_Personal_Ultimate_3.5.0_Telegram_MiniApp_cPanel.zip`
 
 محتویات ZIP را روی HTTPS Extract و `https://domain/path/miniapp.html` را در BotFather ثبت کنید. این فایل همان رابط کامل برنامه را بارگذاری می‌کند، نه صفحه Placeholder نسخه قبلی.
 
@@ -81,4 +87,4 @@ Release با نام زیر یک بسته Flat و آماده cPanel می‌ساز
 - ارسال تبلیغاتی باید فقط به مخاطب دارای رضایت صریح انجام شود.
 - استفاده Flood/Spam می‌تواند باعث محدودیت یا مسدودشدن حساب Telegram شود.
 
-فهرست قابلیت‌ها و مرزهای واقعی پلتفرم‌ها: [FEATURES_3_4_FA.md](docs/FEATURES_3_4_FA.md)
+فهرست قابلیت‌ها و مرزهای واقعی پلتفرم‌ها: [FEATURES_3_4_FA.md](docs/FEATURES_3_4_FA.md) و [FEATURES_3_5_FA.md](docs/FEATURES_3_5_FA.md)

@@ -309,7 +309,7 @@ async function exportState(){return {accounts:await listAccounts(),checks:await 
 async function diagnostics(){
   const a=await listAccounts(), active=await activeAccountId();
   const creds=credentialStatus(),contacts=await all('contacts');
-  return {version:'3.4.0',mode:'browser-mtproto-user-session',maxAccounts:MAX_ACCOUNTS,configured:creds.configured,credentialSource:creds.source,secureContext:window.isSecureContext,accounts:a.length,activeAccountId:active,checks:(await all('checks')).length,cachedContacts:contacts.length,userAgent:navigator.userAgent};
+  return {version:'3.5.0',mode:'browser-mtproto-user-session',maxAccounts:MAX_ACCOUNTS,configured:creds.configured,credentialSource:creds.source,secureContext:window.isSecureContext,accounts:a.length,activeAccountId:active,checks:(await all('checks')).length,cachedContacts:contacts.length,userAgent:navigator.userAgent};
 }
 
 window.ContactFlowSpreadsheet={version:'SheetJS CE 0.20.3',readRows:readSpreadsheetRows};

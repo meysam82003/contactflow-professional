@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-const VERSION='3.4.0';
+const VERSION='3.5.0';
 const E={stopSignal:{stopped:false},lastCheckResults:[],selectedCampaignId:null};
 const q=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -116,7 +116,7 @@ async function refreshDiagnostics(){
   const out={appVersion:VERSION,time:new Date().toISOString(),location:location.href,online:navigator.onLine,secureContext:window.isSecureContext,telegram:d,drive:window.ContactFlowDrive?.diagnostics?.()||null,features:features.map(x=>x[1])};q('cf-diag-json').textContent=JSON.stringify(out,null,2);return out;
 }
 async function fullBackup(){
-  const stores=['contacts','imports','meta','settings','artifacts','contact_flags','campaigns','ad_requests','telegram_accounts','templates','activity','merge_runs','contact_images','watch_state'],data={format:'ContactFlowBackup',version:6,appVersion:VERSION,createdAt:new Date().toISOString(),stores:{},connectors:{}};
+  const stores=['contacts','imports','meta','settings','artifacts','contact_flags','campaigns','ad_requests','telegram_accounts','templates','activity','merge_runs','contact_images','watch_state'],data={format:'ContactFlowBackup',version:7,appVersion:VERSION,createdAt:new Date().toISOString(),stores:{},connectors:{}};
   for(const s of stores){try{data.stores[s]=await coreAll(s)}catch{data.stores[s]=[]}}
   const tg=await connector().catch(()=>null);if(tg)data.connectors.telegram=await tg.exportState();return data;
 }

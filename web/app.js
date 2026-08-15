@@ -1,8 +1,8 @@
 'use strict';
 
-const APP_VERSION = '3.4.0';
+const APP_VERSION = '3.5.0';
 const DB_NAME = 'contactflow_pwa_v2';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 const PAGE_SIZE = 50;
 const $ = (id) => document.getElementById(id);
 const fmt = new Intl.NumberFormat('fa-IR');
@@ -58,7 +58,7 @@ function openDB(){return new Promise((resolve,reject)=>{
     let contacts;
     if(!db.objectStoreNames.contains('contacts')) contacts=db.createObjectStore('contacts',{keyPath:'phone'});
     else contacts=req.transaction.objectStore('contacts');
-    for(const [name,key,options] of [['city','city'],['section','section'],['name','name'],['createdAt','createdAt'],['source','source'],['telegramStatus','telegramStatus'],['country','country'],['phoneType','phoneType'],['sourceFiles','sourceFiles',{multiEntry:true}],['importIds','importIds',{multiEntry:true}]]){if(!contacts.indexNames.contains(name))contacts.createIndex(name,key,{unique:false,...(options||{})});}
+    for(const [name,key,options] of [['city','city'],['province','province'],['operator','operator'],['section','section'],['name','name'],['createdAt','createdAt'],['source','source'],['telegramStatus','telegramStatus'],['country','country'],['phoneType','phoneType'],['sourceFiles','sourceFiles',{multiEntry:true}],['importIds','importIds',{multiEntry:true}]]){if(!contacts.indexNames.contains(name))contacts.createIndex(name,key,{unique:false,...(options||{})});}
     let imports;
     if(!db.objectStoreNames.contains('imports')){imports=db.createObjectStore('imports',{keyPath:'id',autoIncrement:true});imports.createIndex('createdAt','createdAt',{unique:false});}
     else imports=req.transaction.objectStore('imports');

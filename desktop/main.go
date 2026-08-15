@@ -21,7 +21,7 @@ import (
 //go:embed webapp/* webapp/icons/*
 var content embed.FS
 
-const appVersion = "3.4.0"
+const appVersion = "3.5.0"
 const defaultPort = 17655
 
 func dataDir() string {

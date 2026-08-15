@@ -7,7 +7,7 @@
 
   const FORMATS = Object.freeze(['csv', 'vcf', 'txt', 'json', 'xls']);
   const DEFAULT_FIELDS = Object.freeze(['name', 'phone', 'username', 'telegramId', 'city', 'section', 'source']);
-  const EXTRA_FIELDS = Object.freeze(['firstName', 'lastName', 'email', 'country', 'countryCode', 'phoneType', 'company', 'note', 'importNote', 'telegramStatus', 'telegramUsername', 'rowNumber']);
+  const EXTRA_FIELDS = Object.freeze(['firstName', 'lastName', 'email', 'province', 'country', 'countryCode', 'phoneType', 'operator', 'company', 'note', 'importNote', 'telegramStatus', 'telegramUsername', 'rowNumber']);
 
   const text = value => String(value == null ? '' : value).trim();
   const lower = value => text(value).toLocaleLowerCase('fa-IR');
@@ -41,9 +41,9 @@
     return {
       key: text(input.key) || (telegramId ? `tg:${telegramId}` : phone ? `phone:${phone}` : username ? `user:${lower(username)}` : `name:${lower(name)}`),
       name, firstName, lastName, phone, username, telegramId,
-      city: text(input.city), section: text(input.section), source: text(input.source) || source,
+      city: text(input.city), province: text(input.province), section: text(input.section), source: text(input.source) || source,
       email: text(input.email), country: text(input.country), countryCode: text(input.countryCode), phoneType: text(input.phoneType),
-      company: text(input.company), note: text(input.note), importNote: text(input.importNote),telegramStatus:text(input.telegramStatus),telegramUsername:text(input.telegramUsername),rowNumber:Number(input.rowNumber)||'',
+      operator:text(input.operator),company: text(input.company), note: text(input.note), importNote: text(input.importNote),telegramStatus:text(input.telegramStatus),telegramUsername:text(input.telegramUsername),rowNumber:Number(input.rowNumber)||'',
       isMutual: Boolean(input.isMutual || input.mutualContact || input.mutual_contact),
       isPremium: Boolean(input.isPremium || input.premium),
       isBot: Boolean(input.isBot || input.bot),
