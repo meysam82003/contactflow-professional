@@ -16,6 +16,7 @@ if(!read('enhancements/telegram-web-entry.js').includes('Api.contacts.GetContact
 if(!read('enhancements/telegram-web-entry.js').includes('Api.contacts.ImportContacts'))throw new Error('Telegram checker missing');
 if(!read('enhancements/telegram-web-entry.js').includes('ContactFlowSpreadsheet'))throw new Error('full XLS/XLSX bridge missing');
 if(!JSON.parse(read('enhancements/package.json')).dependencies.xlsx?.includes('cdn.sheetjs.com/xlsx-0.20.3'))throw new Error('pinned SheetJS CE dependency missing');
+for(const marker of ["'process/browser$'",'fullySpecified: false'])if(!read('enhancements/webpack.config.cjs').includes(marker))throw new Error(`Webpack ESM compatibility missing ${marker}`);
 if(read('telegram-miniapp/miniapp.html').includes('Workspace اصلی ContactFlow</p>'))throw new Error('placeholder Mini App still present');
 if(read('VERSION').trim()!=='3.4.0')throw new Error('VERSION must be 3.4.0');
 for(const [file,marker] of [['desktop/main.go','appVersion = "3.4.0"'],['android/app/build.gradle',"versionName '3.4.0'"],['telegram-miniapp/lib.php',"CF_VERSION = '3.4.0'"],['.github/workflows/release-all.yml','tag_name: v3.4.0']])if(!read(file).includes(marker))throw new Error(`${file} is not on 3.4.0`);

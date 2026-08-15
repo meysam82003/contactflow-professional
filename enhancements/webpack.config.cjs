@@ -6,6 +6,9 @@ module.exports = {
   output: { path: path.resolve(__dirname, 'dist'), filename: 'telegram-web.bundle.js' },
   resolve: {
     preferRelative: true,
+    alias: {
+      'process/browser$': require.resolve('process/browser.js')
+    },
     fallback: {
       buffer: require.resolve('buffer/'),
       process: require.resolve('process/browser'),
@@ -27,8 +30,11 @@ module.exports = {
       fs: false, net: false, tls: false, child_process: false, worker_threads: false
     }
   },
+  module: {
+    rules: [{ test: /\.m?js$/, resolve: { fullySpecified: false } }]
+  },
   plugins: [
-    new webpack.ProvidePlugin({ Buffer: ['buffer', 'Buffer'], process: 'process/browser' }),
+    new webpack.ProvidePlugin({ Buffer: ['buffer', 'Buffer'], process: require.resolve('process/browser.js') }),
     new webpack.DefinePlugin({ 'process.env.NODE_ENV': JSON.stringify('production') })
   ],
   performance: { hints: false },

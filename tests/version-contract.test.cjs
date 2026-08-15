@@ -26,6 +26,8 @@ test('shared web core includes smart merge and Telegram contact modules',()=>{
   assert.match(read('enhancements/telegram-web-entry.js'),/Api\.contacts\.GetContacts/);
   assert.match(read('enhancements/telegram-web-entry.js'),/ContactFlowSpreadsheet/);
   assert.match(JSON.parse(read('enhancements/package.json')).dependencies.xlsx,/cdn\.sheetjs\.com\/xlsx-0\.20\.3/);
+  assert.match(read('enhancements/webpack.config.cjs'),/process\/browser\$/);
+  assert.match(read('enhancements/webpack.config.cjs'),/fullySpecified: false/);
 });
 
 test('3.4 publishes more than fifty shared feature contracts',()=>{
