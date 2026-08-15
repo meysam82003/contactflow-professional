@@ -1,5 +1,28 @@
 # Changelog
 
+## 3.4.0 — Smart import, reversible merge and Telegram status — 2026-08-15
+
+### Smart Import/Merge shared core
+- موتور خالص `web/import-merge.js` برای تشخیص شهر/کشور/نوع شماره، E.164، ترانویسی فارسی، Dedupe و Smart Fill اضافه شد.
+- مرکز مشترک `web/v34.js` برای Multi-file Drag & Drop، مقایسه، Dry-run، تصمیم دستی تعارض و گزارش یک‌صفحه‌ای اضافه شد.
+- CSV/TSV/TXT/VCF/JSON/XLSX/SpreadsheetML-XLS و ZIP داده+عکس پشتیبانی می‌شوند؛ فایل خراب، حجم غیرمجاز و Zip Bomb رد می‌شود.
+- گزارش به‌تفکیک فایل، شهر، نام خانوادگی و دامنه ایمیل، نمودار شهر، خروجی فقط جدید و Excel/Print-to-PDF اضافه شد.
+
+### Reversible local data operations
+- IndexedDB به نسخه ۴ و Backup به نسخه ۶ ارتقا یافت.
+- Storeهای `merge_runs`، `contact_images` و `watch_state` و Indexهای منبع/Import/Telegram/کشور/نوع شماره اضافه شدند.
+- Undo مستقل هر Import، Rollback کامل آخرین Merge، حذف Dry-run منبع و Re-numbering اضافه شد.
+
+### Device and Telegram integration
+- Android Runtime Permission برای دفترچه مخاطبین و OCR محلی کارت ویزیت با ML Kit اضافه شد.
+- Contact Picker انتخابی، Watch Folder هنگام باز بودن اپ و Web Share در محیط‌های پشتیبانی‌شده فعال شد.
+- Checker User Session با سقف ۵۰۰ شماره در هر اجرا، Cleanup مخاطب موقت، ثبت `matched/not_returned/retry`، فیلتر، آمار و خروجی جدا اضافه شد.
+- UI عمداً `not_returned` را «برنگشته/نامشخص» نمایش می‌دهد چون Privacy مانع نتیجه قطعی می‌شود.
+
+### Release and verification
+- قرارداد نسخه، تست موتور Merge/Parser/گزارش، بررسی پل Android و Verify مستقل ۳.۴ اضافه شد.
+- Pipeline همه پوسته‌ها و بسته Mini App را از Web Core مشترک می‌سازد و Release پایدار `v3.4.0` منتشر می‌کند.
+
 ## 3.3.0 — Shared core and Telegram contact export — 2026-08-15
 
 ### Shared application core

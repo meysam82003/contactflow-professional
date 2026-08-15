@@ -1,8 +1,8 @@
-# Android / APK — ContactFlow 3.3
+# Android / APK — ContactFlow 3.4
 
 Android یک پوسته WebViewAssetLoader روی همان Web Core پوشه `web/` است. بنابراین UI، مخاطبین Telegram و موتور خروجی با PWA، Mini App و Desktop یکسان‌اند و Assets درون APK قرار می‌گیرند.
 
-ساخت رسمی از workflow واحد `.github/workflows/release-all.yml` انجام می‌شود و فایل `ContactFlow_Personal_Ultimate_3.3.0_Android.apk` را تولید می‌کند.
+ساخت رسمی از workflow واحد `.github/workflows/release-all.yml` انجام می‌شود و فایل `ContactFlow_Personal_Ultimate_3.4.0_Android.apk` را تولید می‌کند. حداقل نسخه Android 6 / API 23 است؛ دفترچه دستگاه فقط پس از Runtime Permission و OCR کارت ویزیت با ML Kit روی دستگاه پردازش می‌شود.
 
 مشخصات نسخه ۳.۳:
 

@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-const VERSION='3.3.0';
+const VERSION='3.4.0';
 const SYNC_NAME='ContactFlow-Ultimate-sync.cfbackup';
 const MANIFEST_NAME='ContactFlow-Ultimate-sync.json';
 const VISIBLE_PREFIX='ContactFlow-Ultimate-Backup';

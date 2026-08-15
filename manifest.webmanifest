@@ -2,7 +2,7 @@
   "id": "./",
   "name": "ContactFlow Personal Ultimate",
   "short_name": "ContactFlow",
-  "description": "ContactFlow Personal Ultimate 3.0 — Local-First contact workflow without account server",
+  "description": "ContactFlow Personal Ultimate 3.4 — Local-First smart import and Telegram contact workflow",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

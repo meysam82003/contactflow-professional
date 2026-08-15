@@ -1,10 +1,10 @@
-# ContactFlow Telegram Mini App 3.3
+# ContactFlow Telegram Mini App 3.4
 
 بسته Release مینی‌اپ از همان Web Core نسخه‌های PWA، Android و Desktop ساخته می‌شود. فایل شروع `miniapp.html` است و دیگر صفحه Placeholder یا Workspace جداگانه‌ای وجود ندارد.
 
 ## نصب روی cPanel
 
-1. فایل `ContactFlow_Personal_Ultimate_3.3.0_Telegram_MiniApp_cPanel.zip` را دانلود و در یک مسیر HTTPS Extract کنید.
+1. فایل `ContactFlow_Personal_Ultimate_3.4.0_Telegram_MiniApp_cPanel.zip` را دانلود و در یک مسیر HTTPS Extract کنید.
 2. مطمئن شوید `miniapp.html` و فایل‌های JavaScript/CSS در یک پوشه هستند.
 3. آدرس `https://domain/path/miniapp.html` را باز کنید.
 4. همان URL را در BotFather به‌عنوان Main Mini App ثبت کنید.
@@ -41,4 +41,4 @@
 
 اگر Gateway هم لازم است، پس از Extract کردن فایل‌ها `setup.php` را باز و Bot Token را وارد کنید. Admin Key نمایش‌داده‌شده را همان لحظه در Password Manager نگه دارید؛ صفحه Setup پس از نصب با همان کلید قفل می‌شود و تلاش Pair نیز Rate Limit دارد. Gateway برای نمایش دفترچه مخاطبین Telegram استفاده نمی‌شود و جای User Session را نمی‌گیرد.
 
-فایل `health.php` باید نسخه `3.3.0` و وضعیت تنظیم Gateway را برگرداند. دسترسی نوشتن پوشه `storage/` را محدود نگه دارید و فایل‌های `.htaccess` بسته را حذف نکنید.
+فایل `health.php` باید نسخه `3.4.0` و وضعیت تنظیم Gateway را برگرداند. دسترسی نوشتن پوشه `storage/` را محدود نگه دارید و فایل‌های `.htaccess` بسته را حذف نکنید.

@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "ContactFlow Personal Ultimate 3.3",
+  "name": "ContactFlow Personal Ultimate 3.4",
   "short_name": "ContactFlow",
-  "description": "Local-First ContactFlow 3.3 with shared Telegram Mini App, PWA, Android and Desktop core",
+  "description": "Local-First ContactFlow 3.4 with smart multi-file merge, device contacts and Telegram status",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -13,6 +13,7 @@
   "dir": "rtl",
   "categories": ["productivity", "utilities"],
   "shortcuts": [
+    {"name":"Import و Merge هوشمند","short_name":"Smart Merge","url":"./#smart-import"},
     {"name":"مخاطبین تلگرام","short_name":"Telegram","url":"./#telegram-contacts"},
     {"name":"خروجی","short_name":"Export","url":"./#exports"},
     {"name":"Backup","short_name":"Backup","url":"./#backup"}

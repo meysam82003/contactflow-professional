@@ -9,4 +9,7 @@ node --check web/ultimate.js
 node --check web/contact-export.js
 node --check web/runtime-patch.js
 node --check web/v33.js
-echo "ContactFlow Personal Ultimate 3.3 verification PASS"
+node --check web/import-merge.js
+node --check web/v34.js
+node scripts/verify-v34.mjs
+echo "ContactFlow Personal Ultimate 3.4 verification PASS"

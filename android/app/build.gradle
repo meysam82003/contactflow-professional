@@ -6,14 +6,15 @@ android {
 
     defaultConfig {
         applicationId 'com.contactflow.pro'
-        minSdk 21
+        minSdk 23
         targetSdk 36
-        versionCode 30300
-        versionName '3.3.0'
+        versionCode 30400
+        versionName '3.4.0'
     }
 }
 
 dependencies {
-    // 1.14.0 keeps minSdk 21 compatibility and provides WebViewAssetLoader.
+    // WebViewAssetLoader plus bundled on-device ML Kit OCR (ML Kit requires API 23+).
     implementation "androidx.webkit:webkit:1.14.0"
+    implementation "com.google.mlkit:text-recognition:16.0.1"
 }

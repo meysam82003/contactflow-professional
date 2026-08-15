@@ -1,8 +1,8 @@
-# معماری ContactFlow Personal Ultimate 3.3
+# معماری ContactFlow Personal Ultimate 3.4
 
 ## هسته مشترک
 
-پوشه `web/` Source of Truth رابط نسخه ۳.۳ است. Workflow انتشار Connector را Build می‌کند و همان خروجی را بدون Fork شدن منطق در همه پوسته‌ها قرار می‌دهد:
+پوشه `web/` Source of Truth رابط نسخه ۳.۴ است. `import-merge.js` موتور خالص و تست‌پذیر و `v34.js` هماهنگ‌کننده UI/IndexedDB/Device API است. Workflow انتشار Connector را Build می‌کند و همان خروجی را بدون Fork شدن منطق در همه پوسته‌ها قرار می‌دهد:
 
 - Telegram Mini App / cPanel
 - PWA و مرورگر
@@ -28,6 +28,9 @@
 - `telegram_accounts` برای Metadata قدیمی و غیرحساس
 - `templates`
 - `activity`
+- `merge_runs`: Delta لازم برای Undo/Rollback و گزارش Merge
+- `contact_images`: عکس‌های ZIP/OCR مرتبط با Import
+- `watch_state`: Handle و آخرین وضعیت پوشه انتخاب‌شده
 
 ### دیتابیس Telegram
 

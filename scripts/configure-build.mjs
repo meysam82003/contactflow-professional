@@ -8,7 +8,7 @@ const apiId=Number(String(process.env.TELEGRAM_API_ID||'').trim())||0;
 const apiHash=String(process.env.TELEGRAM_API_HASH||'').trim();
 if((apiId||apiHash)&&(!Number.isInteger(apiId)||apiId<=0||!/^[a-f0-9]{32}$/i.test(apiHash)))throw new Error('TELEGRAM_API_ID/HASH must be a valid pair; API hash must be 32 hexadecimal characters');
 const config={
-  edition:'Personal Ultimate 3.3',version:'3.3.0',
+  edition:'Personal Ultimate 3.4',version:'3.4.0',
   telegramApiId:apiId,telegramApiHash:apiHash,
   googleClientId:String(process.env.GOOGLE_CLIENT_ID||'').trim(),
   miniAppUrl:String(process.env.MINIAPP_URL||'').trim(),

@@ -1,8 +1,14 @@
-# ContactFlow Personal Ultimate 3.3
+# ContactFlow Personal Ultimate 3.4
 
-ContactFlow یک نرم‌افزار Local‑First برای مدیریت، پاک‌سازی، نام‌گذاری، Backup و خروجی مخاطبین است. نسخه ۳.۳ از یک Web Core مشترک برای Telegram Mini App، PWA، Android، Windows، Linux و macOS استفاده می‌کند.
+ContactFlow یک نرم‌افزار Local‑First برای Import، پاک‌سازی، Merge، Backup، بررسی وضعیت Telegram و خروجی مخاطبین است. نسخه ۳.۴ از یک Web Core مشترک برای Telegram Mini App، PWA، Android، Windows، Linux و macOS استفاده می‌کند.
 
-## تغییر اصلی 3.3
+## تغییر اصلی ۳.۴
+
+مرکز «Import و Merge هوشمند» چند فایل CSV/TSV/TXT/VCF/JSON/XLS/XLSX یا ZIP را هم‌زمان تحلیل می‌کند؛ XLS باینری OLE/BIFF نیز با Parser نسخه‌پین‌شده پشتیبانی می‌شود. تشخیص `Qom.txt → قم`، ترانویسی فارسی، E.164، کشور، شهر تلفن ثابت، نوع و اعتبار شماره، تفکیک شرکت، گزارش تکراری شهر/فامیل/دامنه و نمودار شهرها روی دستگاه انجام می‌شود.
+
+Merge ابتدا Dry-run است. کاربر می‌تواند نسخه قدیمی، جدید یا Smart Fill را برای تعارض انتخاب کند؛ سپس Undo مستقل هر فایل یا Rollback کامل آخرین Merge در دسترس است. Android دفترچه کامل را فقط با مجوز صریح می‌خواند و OCR کارت ویزیت را محلی اجرا می‌کند. در وب Contact Picker فقط موارد انتخاب‌شده کاربر را تحویل می‌دهد.
+
+## قابلیت Telegram از ۳.۳، یکپارچه‌شده در ۳.۴
 
 صفحه «مخاطبین تلگرام» می‌تواند پس از ورود رسمی User Session، فهرست واقعی مخاطبین حساب را با `contacts.getContacts` دریافت کند و با تنظیمات کامل خروجی بگیرد:
 
@@ -14,10 +20,12 @@ ContactFlow یک نرم‌افزار Local‑First برای مدیریت، پا�
 - پروفایل‌های ذخیره‌شده خروجی
 - Snapshot آفلاین و پاک‌سازی مستقل Cache
 - Import به ContactFlow و Undo محدود به رکوردهای جدید
+- بررسی شماره‌های دیتابیس با User Session در Batch حداکثر ۵۰۰تایی
+- ثبت `matched / not_returned / retry`، فیلتر، درصد و دو خروجی جدا
 
 ## محدودیت رسمی Telegram
 
-Bot API و `Telegram.WebApp` مستقیماً فهرست مخاطبین حساب را نمی‌دهند. `requestContact` فقط درخواست شماره خود کاربر را به Bot می‌فرستد. مشاهده همه مخاطبین به User Session رسمی و API ID/Hash نیاز دارد.
+Bot API و `Telegram.WebApp` مستقیماً فهرست مخاطبین حساب یا گوشی را نمی‌دهند. `requestContact` فقط درخواست شماره خود کاربر را به Bot می‌فرستد. مشاهده همه مخاطبین حساب به User Session رسمی و API ID/Hash نیاز دارد. `not_returned` نیز به‌دلیل Privacy معادل قطعی «تلگرام ندارد» نیست.
 
 ContactFlow دو روش دارد:
 
@@ -31,12 +39,12 @@ Session و Snapshot در IndexedDB همان Origin نگه‌داری می‌شو
 - `web/` — هسته قابل ممیزی و مشترک همه دستگاه‌ها
 - `enhancements/telegram-web-entry.js` — Connector رسمی MTProto/User Session
 - `desktop/` — پوسته Go برای Windows/Linux/macOS
-- `android/` — پوسته WebView با System Document Picker
+- `android/` — پوسته WebView با System Document Picker، دفترچه مجوزمحور و OCR محلی
 - `telegram-miniapp/` — Gateway اختیاری Bot/Business و ورودی توسعه
 - `scripts/build-miniapp.mjs` — ساخت Mini App کامل از همان `web/`
 - `.github/workflows/release-all.yml` — Build و Release همه دستگاه‌ها
 
-فایل‌های `.source-bundles/` فقط برای سابقه نسخه‌های قدیمی نگه‌داری شده‌اند و Source of Truth نسخه ۳.۳ نیستند.
+موتور `web/import-merge.js` و رابط `web/v34.js` Source of Truth منطق Merge نسخه ۳.۴ هستند.
 
 ## اجرای PWA محلی
 
@@ -54,14 +62,14 @@ cp enhancements/dist/telegram-web.bundle.js web/
 
 ```bash
 node --test tests/*.test.cjs
-node scripts/verify-v33.mjs
+node scripts/verify-v34.mjs
 ```
 
 ## Mini App
 
 Release با نام زیر یک بسته Flat و آماده cPanel می‌سازد:
 
-`ContactFlow_Personal_Ultimate_3.3.0_Telegram_MiniApp_cPanel.zip`
+`ContactFlow_Personal_Ultimate_3.4.0_Telegram_MiniApp_cPanel.zip`
 
 محتویات ZIP را روی HTTPS Extract و `https://domain/path/miniapp.html` را در BotFather ثبت کنید. این فایل همان رابط کامل برنامه را بارگذاری می‌کند، نه صفحه Placeholder نسخه قبلی.
 
@@ -73,4 +81,4 @@ Release با نام زیر یک بسته Flat و آماده cPanel می‌ساز
 - ارسال تبلیغاتی باید فقط به مخاطب دارای رضایت صریح انجام شود.
 - استفاده Flood/Spam می‌تواند باعث محدودیت یا مسدودشدن حساب Telegram شود.
 
-فهرست قابلیت‌های جدید: [FEATURES_3_3_FA.md](docs/FEATURES_3_3_FA.md)
+فهرست قابلیت‌ها و مرزهای واقعی پلتفرم‌ها: [FEATURES_3_4_FA.md](docs/FEATURES_3_4_FA.md)

@@ -7,6 +7,7 @@
 
   const FORMATS = Object.freeze(['csv', 'vcf', 'txt', 'json', 'xls']);
   const DEFAULT_FIELDS = Object.freeze(['name', 'phone', 'username', 'telegramId', 'city', 'section', 'source']);
+  const EXTRA_FIELDS = Object.freeze(['firstName', 'lastName', 'email', 'country', 'countryCode', 'phoneType', 'company', 'note', 'importNote', 'telegramStatus', 'telegramUsername', 'rowNumber']);
 
   const text = value => String(value == null ? '' : value).trim();
   const lower = value => text(value).toLocaleLowerCase('fa-IR');
@@ -41,6 +42,8 @@
       key: text(input.key) || (telegramId ? `tg:${telegramId}` : phone ? `phone:${phone}` : username ? `user:${lower(username)}` : `name:${lower(name)}`),
       name, firstName, lastName, phone, username, telegramId,
       city: text(input.city), section: text(input.section), source: text(input.source) || source,
+      email: text(input.email), country: text(input.country), countryCode: text(input.countryCode), phoneType: text(input.phoneType),
+      company: text(input.company), note: text(input.note), importNote: text(input.importNote),telegramStatus:text(input.telegramStatus),telegramUsername:text(input.telegramUsername),rowNumber:Number(input.rowNumber)||'',
       isMutual: Boolean(input.isMutual || input.mutualContact || input.mutual_contact),
       isPremium: Boolean(input.isPremium || input.premium),
       isBot: Boolean(input.isBot || input.bot),
@@ -76,7 +79,7 @@
 
   function sortRecords(records, field = 'name', direction = 'asc') {
     const dir = direction === 'desc' ? -1 : 1;
-    const allowed = new Set(['name', 'phone', 'username', 'telegramId', 'updatedAt']);
+    const allowed = new Set(['name', 'phone', 'username', 'telegramId', 'updatedAt', 'city', 'country', 'source', 'rowNumber']);
     const key = allowed.has(field) ? field : 'name';
     return [...(records || [])].sort((a, b) => {
       if (key === 'updatedAt') return ((Number(a[key]) || 0) - (Number(b[key]) || 0)) * dir;
@@ -93,7 +96,8 @@
 
   function selectedFields(fields) {
     const list = Array.isArray(fields) && fields.length ? fields : DEFAULT_FIELDS;
-    return list.filter((field, index) => DEFAULT_FIELDS.includes(field) && list.indexOf(field) === index);
+    const allowed=new Set([...DEFAULT_FIELDS,...EXTRA_FIELDS]);
+    return list.filter((field, index) => allowed.has(field) && list.indexOf(field) === index);
   }
 
   function serializeCSV(records, options = {}) {
@@ -168,7 +172,7 @@
   }
 
   return {
-    FORMATS, DEFAULT_FIELDS, safeFilename, normalizeRecord, dedupeRecords, filterRecords,
+    FORMATS, DEFAULT_FIELDS, EXTRA_FIELDS, safeFilename, normalizeRecord, dedupeRecords, filterRecords,
     sortRecords, chunkRecords, serializeCSV, serializeTXT, serializeJSON, serializeVCF,
     serializeXLS, serialize, mimeFor, buildExportPlan
   };

@@ -6,20 +6,30 @@ import android.os.Bundle;
 import android.os.Build;
 import android.os.Environment;
 import android.provider.MediaStore;
+import android.provider.ContactsContract;
 import android.content.*;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.net.Uri;
 import android.webkit.*;
 import android.widget.Toast;
 import android.util.Base64;
 import androidx.webkit.WebViewAssetLoader;
+import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.text.TextRecognition;
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import java.io.*;
+import java.util.HashSet;
 
 public class MainActivity extends Activity {
     private static final int FILE_CHOOSER = 4201;
     private static final int STORAGE_PERMISSION = 4202;
     private static final int SAVE_DOCUMENT = 4203;
     private static final int OPEN_BACKUP = 4204;
+    private static final int OCR_IMAGE = 4205;
+    private static final int CONTACTS_PERMISSION = 4206;
     private static final String APP_URL = "https://appassets.androidplatform.net/assets/index.html";
     private WebView webView;
     private ValueCallback<Uri[]> fileCallback;
@@ -50,7 +60,7 @@ public class MainActivity extends Activity {
             s.setAllowUniversalAccessFromFileURLs(false);
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
-        s.setUserAgentString(s.getUserAgentString() + " ContactFlowPersonalUltimate/3.3");
+        s.setUserAgentString(s.getUserAgentString() + " ContactFlowPersonalUltimate/3.4");
         CookieManager.getInstance().setAcceptCookie(true);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) CookieManager.getInstance().setAcceptThirdPartyCookies(webView, false);
 
@@ -101,6 +111,7 @@ public class MainActivity extends Activity {
             pendingName=pendingMime=pendingBase64=null; return;
         }
         if(requestCode==OPEN_BACKUP && resultCode==RESULT_OK && data!=null && data.getData()!=null) readBackupDocument(data.getData());
+        if(requestCode==OCR_IMAGE && resultCode==RESULT_OK && data!=null && data.getData()!=null) recognizeImage(data.getData());
     }
 
     private void writePendingDocument(Uri uri) {
@@ -125,7 +136,7 @@ public class MainActivity extends Activity {
         } catch(Exception e) { Toast.makeText(this,"خواندن Backup ناموفق: "+e.getMessage(),Toast.LENGTH_LONG).show(); }
     }
 
-    private String jsString(String s){return "\""+s.replace("\\","\\\\").replace("\"","\\\"").replace("\n","\\n").replace("\r","\\r")+"\"";}
+    private String jsString(String s){return "\""+s.replace("\\","\\\\").replace("\"","\\\"").replace("\n","\\n").replace("\r","\\r").replace("\u2028","\\u2028").replace("\u2029","\\u2029")+"\"";}
 
     @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] results) {
         super.onRequestPermissionsResult(requestCode,permissions,results);
@@ -133,6 +144,10 @@ public class MainActivity extends Activity {
             if(results.length>0 && results[0]==PackageManager.PERMISSION_GRANTED) saveLegacy(pendingName,pendingMime,pendingBase64);
             else Toast.makeText(this,"مجوز ذخیره فایل داده نشد.",Toast.LENGTH_LONG).show();
             pendingName=pendingMime=pendingBase64=null;
+        }
+        if(requestCode==CONTACTS_PERMISSION) {
+            if(results.length>0 && results[0]==PackageManager.PERMISSION_GRANTED) deliverDeviceContacts();
+            else Toast.makeText(this,"مجوز خواندن مخاطبین داده نشد.",Toast.LENGTH_LONG).show();
         }
     }
 
@@ -149,11 +164,47 @@ public class MainActivity extends Activity {
     private void chooseSaveDocument(String name,String mime,String base64) {pendingName=safeFileName(name);pendingMime=(mime==null||mime.length()==0)?"application/octet-stream":mime;pendingBase64=base64;Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType(pendingMime);i.putExtra(Intent.EXTRA_TITLE,pendingName);startActivityForResult(i,SAVE_DOCUMENT);}
     private void chooseOpenBackup() {Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType("*/*");startActivityForResult(i,OPEN_BACKUP);}
 
+    private void requestContactsAccess() {
+        if(Build.VERSION.SDK_INT>=23 && checkSelfPermission(Manifest.permission.READ_CONTACTS)!=PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.READ_CONTACTS},CONTACTS_PERMISSION);
+            return;
+        }
+        deliverDeviceContacts();
+    }
+
+    private void deliverDeviceContacts() {
+        JSONArray rows=new JSONArray();HashSet<String> seen=new HashSet<>();
+        String[] projection={ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,ContactsContract.CommonDataKinds.Phone.NUMBER};
+        try(Cursor cursor=getContentResolver().query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI,projection,null,null,ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME+" COLLATE LOCALIZED ASC")) {
+            if(cursor!=null)while(cursor.moveToNext()) {
+                String name=cursor.getString(0),phone=cursor.getString(1);if(phone==null||phone.trim().length()==0||!seen.add(phone))continue;
+                JSONObject row=new JSONObject();row.put("name",name==null?"":name);row.put("phone",phone);row.put("source","دفترچه Android");rows.put(row);
+            }
+            final String js="window.ContactFlow34&&window.ContactFlow34.onDeviceContacts(JSON.parse("+jsString(rows.toString())+"))";
+            webView.post(() -> webView.evaluateJavascript(js,null));
+        } catch(Exception e) {Toast.makeText(this,"خواندن مخاطبین ناموفق: "+e.getMessage(),Toast.LENGTH_LONG).show();}
+    }
+
+    private void chooseBusinessCard() {
+        Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType("image/*");startActivityForResult(i,OCR_IMAGE);
+    }
+
+    private void recognizeImage(Uri uri) {
+        try {
+            InputImage image=InputImage.fromFilePath(this,uri);
+            TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS).process(image)
+                .addOnSuccessListener(result -> {String text=result.getText();String js="window.ContactFlow34&&window.ContactFlow34.onOcrText("+jsString(text)+")";webView.post(() -> webView.evaluateJavascript(js,null));})
+                .addOnFailureListener(error -> Toast.makeText(this,"OCR ناموفق: "+error.getMessage(),Toast.LENGTH_LONG).show());
+        } catch(Exception e) {Toast.makeText(this,"خواندن تصویر ناموفق: "+e.getMessage(),Toast.LENGTH_LONG).show();}
+    }
+
     public class AndroidBridge {
-        @JavascriptInterface public String nativeCapabilities() {return "{\"ok\":true,\"connector\":true,\"telegramQr\":true,\"telegramContacts\":true,\"telegramMode\":\"user_session_optional\",\"secureAssetOrigin\":true,\"systemDrivePicker\":true,\"filePicker\":true,\"platform\":\"android\",\"version\":\"3.3.0\"}";}
+        @JavascriptInterface public String nativeCapabilities() {return "{\"ok\":true,\"connector\":true,\"telegramQr\":true,\"telegramContacts\":true,\"deviceContacts\":true,\"businessCardOcr\":true,\"telegramMode\":\"user_session_optional\",\"secureAssetOrigin\":true,\"systemDrivePicker\":true,\"filePicker\":true,\"platform\":\"android\",\"version\":\"3.4.0\"}";}
         @JavascriptInterface public String startTelegramQr() {return "{\"ok\":true,\"mode\":\"user_session_optional\",\"message\":\"QR and contacts.getContacts are handled by the shared Web connector\"}";}
         @JavascriptInterface public void saveFile(final String name,final String mime,final String base64) {runOnUiThread(() -> MainActivity.this.saveFile(name,mime,base64));}
         @JavascriptInterface public void saveDocument(final String name,final String mime,final String base64) {runOnUiThread(() -> MainActivity.this.chooseSaveDocument(name,mime,base64));}
         @JavascriptInterface public void openBackupDocument() {runOnUiThread(() -> MainActivity.this.chooseOpenBackup());}
+        @JavascriptInterface public void requestDeviceContacts() {runOnUiThread(() -> MainActivity.this.requestContactsAccess());}
+        @JavascriptInterface public void recognizeBusinessCard() {runOnUiThread(() -> MainActivity.this.chooseBusinessCard());}
     }
 }

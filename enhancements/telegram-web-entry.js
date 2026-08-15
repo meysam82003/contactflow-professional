@@ -2,6 +2,7 @@ import { TelegramClient, Api } from 'telegram';
 import { StringSession } from 'telegram/sessions/StringSession';
 import bigInt from 'big-integer';
 import QRCode from 'qrcode';
+import { read as readWorkbook, utils as sheetUtils } from 'xlsx';
 
 const DB_NAME = 'contactflow_telegram_web_v1';
 const DB_VERSION = 2;
@@ -9,6 +10,15 @@ const MAX_ACCOUNTS = 10;
 const clients = new Map();
 let dbPromise;
 let qrCancelToken = null;
+
+function readSpreadsheetRows(data,{sheet=0,maxRows=500000}={}){
+  const workbook=readWorkbook(data,{type:'array',cellDates:false,cellNF:false,cellStyles:false,dense:false});
+  const name=workbook.SheetNames[Math.max(0,Math.min(workbook.SheetNames.length-1,Number(sheet)||0))];
+  if(!name)throw new Error('Spreadsheet هیچ Worksheet قابل خواندنی ندارد.');
+  const rows=sheetUtils.sheet_to_json(workbook.Sheets[name],{header:1,raw:false,defval:'',blankrows:false});
+  if(rows.length>maxRows)throw new Error(`Spreadsheet بیش از سقف امن ${maxRows} ردیف دارد.`);
+  return rows.map(row=>row.map(value=>value==null?'':String(value)));
+}
 
 function now(){ return Date.now(); }
 function id(){ return (crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`); }
@@ -299,8 +309,9 @@ async function exportState(){return {accounts:await listAccounts(),checks:await 
 async function diagnostics(){
   const a=await listAccounts(), active=await activeAccountId();
   const creds=credentialStatus(),contacts=await all('contacts');
-  return {version:'3.3.0',mode:'browser-mtproto-user-session',maxAccounts:MAX_ACCOUNTS,configured:creds.configured,credentialSource:creds.source,secureContext:window.isSecureContext,accounts:a.length,activeAccountId:active,checks:(await all('checks')).length,cachedContacts:contacts.length,userAgent:navigator.userAgent};
+  return {version:'3.4.0',mode:'browser-mtproto-user-session',maxAccounts:MAX_ACCOUNTS,configured:creds.configured,credentialSource:creds.source,secureContext:window.isSecureContext,accounts:a.length,activeAccountId:active,checks:(await all('checks')).length,cachedContacts:contacts.length,userAgent:navigator.userAgent};
 }
 
+window.ContactFlowSpreadsheet={version:'SheetJS CE 0.20.3',readRows:readSpreadsheetRows};
 window.ContactFlowTelegramWeb={MAX_ACCOUNTS,renderQr,connectQr,cancelQr,listAccounts,setActiveAccount,activeAccountId,disconnectAccount,accountHealth,configureCredentials,clearCredentials,credentialStatus,listTelegramContacts,getCachedContacts,clearContactCache,checkContacts,listChecks,clearChecks,loadDialogs,sendCampaign,exportState,diagnostics};
 window.dispatchEvent(new CustomEvent('contactflow:telegram-web-ready'));

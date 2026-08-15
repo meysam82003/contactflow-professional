@@ -1,4 +1,4 @@
-# Security Policy — ContactFlow Personal Ultimate 3.3
+# Security Policy — ContactFlow Personal Ultimate 3.4
 
 ## Supported branch
 
@@ -23,7 +23,15 @@ TELEGRAM_API_HASH
 
 A public build can instead let a user enter credentials created for that user at `my.telegram.org/apps`. ContactFlow stores that choice only in browser storage for the current origin. Because every script running on an origin can access its storage, only install or open the Mini App from an HTTPS origin you control and trust.
 
-Do not inject Telegram API credentials into a public GitHub Release: browser artifacts expose embedded configuration. The official public `v3.3.0` workflow intentionally leaves the Telegram credential pair empty and uses the per-device setup path.
+Do not inject Telegram API credentials into a public GitHub Release: browser artifacts expose embedded configuration. The official public `v3.4.0` workflow intentionally leaves the Telegram credential pair empty and uses the per-device setup path.
+
+## Device contacts and imported files
+
+- Android requests `READ_CONTACTS` only after the user presses the address-book button. Denying it must leave the rest of the app usable.
+- Browser Contact Picker results are user-selected and permission is not treated as persistent.
+- Watch Folder requires an explicit directory picker and runs only while the app is open.
+- Business-card OCR is local/capability-gated; imported images and extracted text can contain sensitive personal data.
+- ZIP inputs are bounded by entry count, expanded size and compression ratio. Binary XLS/XLSX fallback uses the pinned SheetJS CE parser; row and input-size limits still apply before merge.
 
 A real connector must use Telegram's official authorization flow. A build without credentials must report `not configured`; it must never display a fake QR code or claim that Bot API can read the account address book.
 

@@ -1,8 +1,13 @@
-# چک‌لیست Release — ContactFlow 3.3
+# چک‌لیست Release — ContactFlow 3.4
 
 ## قرارداد نسخه و سورس
 
-- [ ] `VERSION`، `package.json`، Android، Desktop، Manifest، Service Worker و PHP Gateway روی `3.3.0` هستند.
+- [ ] `VERSION`، `package.json`، Android، Desktop، Manifest، Service Worker و PHP Gateway روی `3.4.0` هستند.
+- [ ] `node scripts/verify-v34.mjs` و همه تست‌های `node --test` موفق‌اند.
+- [ ] Dry-run، Commit، Undo فایل و Rollback آخرین Merge روی دیتابیس آزمایشی بررسی شده‌اند.
+- [ ] APK فقط پس از کلیک کاربر مجوز `READ_CONTACTS` می‌خواهد و OCR تصویر را محلی اجرا می‌کند.
+- [ ] Mini App در نبود Contact Picker ادعای خواندن دفترچه کامل گوشی ندارد.
+- [ ] Checker بیش از ۵۰۰ شماره در یک اجرا نمی‌پذیرد و `not_returned` را قطعی معرفی نمی‌کند.
 - [ ] `web/` Source of Truth است و Mini App/PWA/Desktop/Android از همان Artifact استفاده می‌کنند.
 - [ ] `npm test` و `npm run verify` موفق‌اند.
 - [ ] Placeholder قبلی Mini App در Release وجود ندارد.
@@ -37,13 +42,13 @@
 
 - [ ] PWA روی HTTPS نصب و Offline باز می‌شود.
 - [ ] Mini App از `miniapp.html` با Telegram theme و safe area باز می‌شود.
-- [ ] Android با `minSdk 21` و Assets نسخه ۳.۳ ساخته می‌شود.
+- [ ] Android با `minSdk 23` و Assets نسخه ۳.۴ ساخته می‌شود.
 - [ ] Windows Portable/Setup، Linux x64 و هر دو macOS shell ساخته می‌شوند.
-- [ ] PHP فایل‌های cPanel بدون Syntax error هستند و `health.php` نسخه ۳.۳ را برمی‌گرداند.
+- [ ] PHP فایل‌های cPanel بدون Syntax error هستند و `health.php` نسخه ۳.۴ را برمی‌گرداند.
 
 ## GitHub Release
 
-- [ ] Tag پایدار `v3.3.0` به Commit مورد نظر اشاره می‌کند.
+- [ ] Tag پایدار `v3.4.0` به Commit مورد نظر اشاره می‌کند.
 - [ ] همه Artifactها، Source ZIP، Release info و SHA-256 پیوست‌اند.
 - [ ] Release به‌صورت latest و non-prerelease منتشر شده است.
 - [ ] توضیح Release محدودیت رسمی WebApp/Bot API و نیاز User Session را بیان می‌کند.

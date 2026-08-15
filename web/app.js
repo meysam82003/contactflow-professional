@@ -1,8 +1,8 @@
 'use strict';
 
-const APP_VERSION = '3.3.0';
+const APP_VERSION = '3.4.0';
 const DB_NAME = 'contactflow_pwa_v2';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 const PAGE_SIZE = 50;
 const $ = (id) => document.getElementById(id);
 const fmt = new Intl.NumberFormat('fa-IR');
@@ -58,8 +58,11 @@ function openDB(){return new Promise((resolve,reject)=>{
     let contacts;
     if(!db.objectStoreNames.contains('contacts')) contacts=db.createObjectStore('contacts',{keyPath:'phone'});
     else contacts=req.transaction.objectStore('contacts');
-    for(const [name,key] of [['city','city'],['section','section'],['name','name'],['createdAt','createdAt']]){if(!contacts.indexNames.contains(name))contacts.createIndex(name,key,{unique:false});}
-    if(!db.objectStoreNames.contains('imports')){const imports=db.createObjectStore('imports',{keyPath:'id',autoIncrement:true});imports.createIndex('createdAt','createdAt',{unique:false});}
+    for(const [name,key,options] of [['city','city'],['section','section'],['name','name'],['createdAt','createdAt'],['source','source'],['telegramStatus','telegramStatus'],['country','country'],['phoneType','phoneType'],['sourceFiles','sourceFiles',{multiEntry:true}],['importIds','importIds',{multiEntry:true}]]){if(!contacts.indexNames.contains(name))contacts.createIndex(name,key,{unique:false,...(options||{})});}
+    let imports;
+    if(!db.objectStoreNames.contains('imports')){imports=db.createObjectStore('imports',{keyPath:'id',autoIncrement:true});imports.createIndex('createdAt','createdAt',{unique:false});}
+    else imports=req.transaction.objectStore('imports');
+    for(const [name,key] of [['filename','filename'],['source','source'],['mergeId','mergeId']])if(!imports.indexNames.contains(name))imports.createIndex(name,key,{unique:false});
     if(!db.objectStoreNames.contains('meta'))db.createObjectStore('meta',{keyPath:'key'});
     if(!db.objectStoreNames.contains('settings'))db.createObjectStore('settings',{keyPath:'key'});
     if(!db.objectStoreNames.contains('artifacts')){const artifacts=db.createObjectStore('artifacts',{keyPath:'id',autoIncrement:true});artifacts.createIndex('createdAt','createdAt',{unique:false});artifacts.createIndex('type','type',{unique:false});}
@@ -69,6 +72,9 @@ function openDB(){return new Promise((resolve,reject)=>{
     if(!db.objectStoreNames.contains('telegram_accounts'))db.createObjectStore('telegram_accounts',{keyPath:'id'});
     if(!db.objectStoreNames.contains('templates'))db.createObjectStore('templates',{keyPath:'id'});
     if(!db.objectStoreNames.contains('activity')){const a=db.createObjectStore('activity',{keyPath:'id'});a.createIndex('createdAt','createdAt',{unique:false});}
+    if(!db.objectStoreNames.contains('merge_runs')){const runs=db.createObjectStore('merge_runs',{keyPath:'id'});runs.createIndex('createdAt','createdAt',{unique:false});runs.createIndex('status','status',{unique:false});}
+    if(!db.objectStoreNames.contains('contact_images')){const images=db.createObjectStore('contact_images',{keyPath:'id'});images.createIndex('phone','phone',{unique:false});images.createIndex('importId','importId',{unique:false});}
+    if(!db.objectStoreNames.contains('watch_state'))db.createObjectStore('watch_state',{keyPath:'key'});
   };
   req.onsuccess=()=>resolve(req.result); req.onerror=()=>reject(req.error);
 });}
@@ -95,7 +101,7 @@ async function addContactsBatch(records){
     tx.onerror=()=>reject(tx.error||fatal); tx.onabort=()=>reject(tx.error||fatal||new Error('Import transaction aborted'));
   });
 }
-async function addImportHistory(row){const tx=state.db.transaction('imports','readwrite'); tx.objectStore('imports').add(row); await txDone(tx);}
+async function addImportHistory(row){const tx=state.db.transaction('imports','readwrite'),id=await reqP(tx.objectStore('imports').add(row));await txDone(tx);return id;}
 async function listImports(limit=20){
   const tx=state.db.transaction('imports','readonly'); const idx=tx.objectStore('imports').index('createdAt'); const out=[];
   return new Promise((resolve,reject)=>{const r=idx.openCursor(null,'prev');r.onsuccess=()=>{const c=r.result;if(!c||out.length>=limit)return resolve(out);out.push(c.value);c.continue();};r.onerror=()=>reject(r.error);});
@@ -107,6 +113,8 @@ async function listArtifacts(limit=100){const tx=state.db.transaction('artifacts
 const digitMap={'۰':'0','۱':'1','۲':'2','۳':'3','۴':'4','۵':'5','۶':'6','۷':'7','۸':'8','۹':'9','٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'};
 function latinDigits(v){return String(v??'').replace(/[۰-۹٠-٩]/g,c=>digitMap[c]||c);}
 function normalizePhone(raw){
+  const advanced=globalThis.ContactFlowImportMerge?.normalizePhone?.(raw);
+  if(advanced?.e164&&advanced.valid)return advanced.e164;
   let s=latinDigits(raw).trim(); if(!s) return null;
   s=s.replace(/[^\d+]/g,''); if(s.startsWith('00')) s='+'+s.slice(2);
   if(s.startsWith('+98')) s=s.slice(3); else if(s.startsWith('98')&&s.length>=12) s=s.slice(2); else if(s.startsWith('0')) s=s.slice(1);

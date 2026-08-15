@@ -1,0 +1,27 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
+const root=path.resolve(new URL('..',import.meta.url).pathname);
+const read=file=>fs.readFileSync(path.join(root,file),'utf8');
+const required=['web/index.html','web/app.js','web/import-merge.js','web/v34.js','web/v34.css','web/v33.js','web/contact-export.js','web/runtime-patch.js','enhancements/telegram-web-entry.js','.github/workflows/release-all.yml'];
+for(const file of required)if(!fs.existsSync(path.join(root,file)))throw new Error(`missing ${file}`);
+const html=read('web/index.html');
+for(const asset of ['import-merge.js','v34.js','v34.css','contact-export.js','telegram-web.bundle.js','runtime-patch.js'])if(!html.includes(asset))throw new Error(`index missing ${asset}`);
+for(const page of ['generator','import','contacts','exports','audience','telegram','campaign','requests','backup','activity'])if(!html.includes(`data-page="${page}"`))throw new Error(`base page missing ${page}`);
+const v34=read('web/v34.js');
+for(const marker of ['data-page="smart-import"','rollbackLast','undoImport','checkTelegram','contactPicker','chooseWatchFolder','onOcrText','MAX_CHECK_PER_RUN'])if(!v34.includes(marker))throw new Error(`v34 missing ${marker}`);
+for(const marker of ['planMerge','inferCityFromFilename','normalizePhone','parseVCard','parseSpreadsheetXml'])if(!read('web/import-merge.js').includes(marker))throw new Error(`import engine missing ${marker}`);
+if(!read('web/v33.js').includes('data-page="telegram-contacts"'))throw new Error('Telegram contacts page missing');
+if(!read('enhancements/telegram-web-entry.js').includes('Api.contacts.GetContacts'))throw new Error('contacts.getContacts connector missing');
+if(!read('enhancements/telegram-web-entry.js').includes('Api.contacts.ImportContacts'))throw new Error('Telegram checker missing');
+if(!read('enhancements/telegram-web-entry.js').includes('ContactFlowSpreadsheet'))throw new Error('full XLS/XLSX bridge missing');
+if(!JSON.parse(read('enhancements/package.json')).dependencies.xlsx?.includes('cdn.sheetjs.com/xlsx-0.20.3'))throw new Error('pinned SheetJS CE dependency missing');
+if(read('telegram-miniapp/miniapp.html').includes('Workspace اصلی ContactFlow</p>'))throw new Error('placeholder Mini App still present');
+if(read('VERSION').trim()!=='3.4.0')throw new Error('VERSION must be 3.4.0');
+for(const [file,marker] of [['desktop/main.go','appVersion = "3.4.0"'],['android/app/build.gradle',"versionName '3.4.0'"],['telegram-miniapp/lib.php',"CF_VERSION = '3.4.0'"],['.github/workflows/release-all.yml','tag_name: v3.4.0']])if(!read(file).includes(marker))throw new Error(`${file} is not on 3.4.0`);
+for(const marker of ['android.permission.READ_CONTACTS','requestDeviceContacts','recognizeBusinessCard'])if(!read(marker.startsWith('android.permission')?'android/app/src/main/AndroidManifest.xml':'android/app/src/main/java/com/contactflow/pro/MainActivity.java').includes(marker))throw new Error(`Android missing ${marker}`);
+const block=v34.match(/const FEATURES=\[([\s\S]*?)\];/)?.[1]||'',featureCount=(block.match(/'[^']+'/g)||[]).length;
+if(featureCount<50)throw new Error(`expected at least 50 shared features, found ${featureCount}`);
+if(!read('web/sw.js').includes("'./v34.js'"))throw new Error('service worker missing v34 assets');
+if(!/telegramApiHash:''/.test(read('web/config.js')))throw new Error('public config must not embed Telegram API hash');
+console.log(`ContactFlow 3.4 source verification PASS (${featureCount} shared features)`);
