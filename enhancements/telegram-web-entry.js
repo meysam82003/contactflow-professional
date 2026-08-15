@@ -1,10 +1,10 @@
 import { TelegramClient, Api } from 'telegram';
-import { StringSession } from 'telegram/sessions';
+import { StringSession } from 'telegram/sessions/StringSession';
 import bigInt from 'big-integer';
 import QRCode from 'qrcode';
 
 const DB_NAME = 'contactflow_telegram_web_v1';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const MAX_ACCOUNTS = 10;
 const clients = new Map();
 let dbPromise;
@@ -14,10 +14,27 @@ function now(){ return Date.now(); }
 function id(){ return (crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`); }
 function asString(v){ return v == null ? '' : String(v); }
 function cfg(){ return window.CONTACTFLOW_CONFIG || {}; }
+function validCredentials(apiId,apiHash){return Number.isInteger(Number(apiId))&&Number(apiId)>0&&/^[a-f0-9]{32}$/i.test(String(apiHash||''))}
+function storedCredentials(){
+  try{return {apiId:Number(localStorage.getItem('cf_tg_api_id')||0),apiHash:String(localStorage.getItem('cf_tg_api_hash')||'')}}catch{return {apiId:0,apiHash:''}}
+}
+function credentialStatus(){
+  const local=storedCredentials(),build={apiId:Number(cfg().telegramApiId||0),apiHash:String(cfg().telegramApiHash||'')};
+  const source=validCredentials(local.apiId,local.apiHash)?'local':validCredentials(build.apiId,build.apiHash)?'build':'none',active=source==='local'?local:source==='build'?build:{apiId:0,apiHash:''};
+  return {configured:source!=='none',source,apiId:active.apiId||0};
+}
+function configureCredentials(apiId,apiHash,{persist=true}={}){
+  apiId=Number(apiId);apiHash=String(apiHash||'').trim();
+  if(!validCredentials(apiId,apiHash))throw new Error('API ID یا API Hash معتبر نیست؛ API Hash باید ۳۲ نویسه hexadecimal باشد.');
+  if(persist){localStorage.setItem('cf_tg_api_id',String(apiId));localStorage.setItem('cf_tg_api_hash',apiHash)}
+  return credentialStatus();
+}
+function clearCredentials(){try{localStorage.removeItem('cf_tg_api_id');localStorage.removeItem('cf_tg_api_hash')}catch{}return credentialStatus()}
 function credentials(){
-  const apiId = Number(cfg().telegramApiId || 0);
-  const apiHash = String(cfg().telegramApiHash || '');
-  if(!Number.isInteger(apiId) || apiId <= 0 || !apiHash) throw new Error('Telegram App credentials در Build تنظیم نشده است.');
+  const local=storedCredentials();
+  const apiId = Number(local.apiId || cfg().telegramApiId || 0);
+  const apiHash = String(local.apiHash || cfg().telegramApiHash || '');
+  if(!validCredentials(apiId,apiHash)) throw new Error('برای User Session باید API ID و API Hash رسمی Telegram را در همین دستگاه تنظیم کنید.');
   return { apiId, apiHash };
 }
 function openDB(){
@@ -33,6 +50,9 @@ function openDB(){
       }
       if(!db.objectStoreNames.contains('history')) {
         const s=db.createObjectStore('history',{keyPath:'id'}); s.createIndex('createdAt','createdAt',{unique:false}); s.createIndex('campaignId','campaignId',{unique:false});
+      }
+      if(!db.objectStoreNames.contains('contacts')) {
+        const s=db.createObjectStore('contacts',{keyPath:'key'}); s.createIndex('accountId','accountId',{unique:false}); s.createIndex('updatedAt','updatedAt',{unique:false});
       }
       if(!db.objectStoreNames.contains('meta')) db.createObjectStore('meta',{keyPath:'key'});
     };
@@ -150,11 +170,49 @@ async function disconnectAccount(accountId,{logout=false}={}){
   const c=clients.get(accountId);
   if(c){ try{ if(logout) await c.invoke(new Api.auth.LogOut()); else await c.disconnect(); }catch{} clients.delete(accountId); }
   await del('accounts',accountId);
+  await clearContactCache(accountId);
   if(await activeAccountId()===accountId) await setActiveAccount(null);
 }
 async function accountHealth(accountId){
   try{const c=await getClient(accountId), me=await c.getMe();return {ok:true,id:accountId,telegramId:asString(me.id),username:me.username||''};}
   catch(e){return {ok:false,id:accountId,error:e.message};}
+}
+
+async function getCachedContacts(accountId){
+  accountId=accountId||await activeAccountId();
+  if(!accountId)return [];
+  return (await req('contacts','readonly',store=>store.index('accountId').getAll(accountId))||[]).sort((a,b)=>(a.name||'').localeCompare(b.name||'','fa',{sensitivity:'base'}));
+}
+async function clearContactCache(accountId){
+  accountId=accountId||await activeAccountId();
+  if(!accountId)return 0;const db=await openDB();let count=0;
+  await new Promise((resolve,reject)=>{const tx=db.transaction('contacts','readwrite'),index=tx.objectStore('contacts').index('accountId'),cursor=index.openCursor(IDBKeyRange.only(accountId));cursor.onsuccess=()=>{const item=cursor.result;if(!item)return;item.delete();count++;item.continue()};cursor.onerror=()=>reject(cursor.error);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});
+  await del('meta',`contacts-sync:${accountId}`);return count;
+}
+async function replaceContactCache(accountId,rows){
+  const db=await openDB();
+  await new Promise((resolve,reject)=>{const tx=db.transaction('contacts','readwrite'),store=tx.objectStore('contacts'),cursor=store.index('accountId').openCursor(IDBKeyRange.only(accountId));cursor.onsuccess=()=>{const item=cursor.result;if(item){item.delete();item.continue();return}for(const row of rows)store.put(row)};cursor.onerror=()=>reject(cursor.error);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});
+}
+async function listTelegramContacts(accountId,{force=false,maxAgeMs=300000,onProgress}={}){
+  accountId=accountId||await activeAccountId();
+  if(!accountId)throw new Error('ابتدا یک حساب Telegram را انتخاب کنید.');
+  const sync=await get('meta',`contacts-sync:${accountId}`),cached=await getCachedContacts(accountId);
+  if(!force&&cached.length&&sync?.value?.updatedAt&&now()-sync.value.updatedAt<Math.max(0,Number(maxAgeMs)||0))return {contacts:cached,cached:true,updatedAt:sync.value.updatedAt};
+  const client=await getClient(accountId);onProgress?.({state:'loading',done:0,total:0});
+  const response=await client.invoke(new Api.contacts.GetContacts({hash:bigInt(0)}));
+  if(response instanceof Api.contacts.ContactsNotModified||response?.className==='ContactsNotModified')return {contacts:cached,cached:true,updatedAt:sync?.value?.updatedAt||0};
+  const allowed=new Set((response.contacts||[]).map(item=>toKey(item.userId)));
+  const users=(response.users||[]).filter(user=>!allowed.size||allowed.has(toKey(user.id)));
+  const updatedAt=now(),rows=[];
+  for(let i=0;i<users.length;i++){
+    const user=users[i],telegramId=toKey(user.id),firstName=user.firstName||'',lastName=user.lastName||'',name=[firstName,lastName].filter(Boolean).join(' ')||user.username||user.phone||telegramId;
+    const row={key:`${accountId}:${telegramId}`,accountId,telegramId,userId:telegramId,accessHash:user.accessHash?toKey(user.accessHash):'',name,firstName,lastName,phone:user.phone?`+${String(user.phone).replace(/^\+/, '')}`:'',username:user.username||'',isMutual:!!user.mutualContact,isPremium:!!user.premium,isBot:!!user.bot,isDeleted:!!user.deleted,source:'telegram-contacts',updatedAt};
+    rows.push(row);if(i%100===0)onProgress?.({state:'preparing',done:i,total:users.length});
+  }
+  onProgress?.({state:'saving',done:0,total:rows.length});await replaceContactCache(accountId,rows);
+  await put('meta',{key:`contacts-sync:${accountId}`,value:{updatedAt,count:rows.length,savedCount:Number(response.savedCount||0)}});
+  onProgress?.({state:'done',done:rows.length,total:rows.length});
+  return {contacts:rows,cached:false,updatedAt,savedCount:Number(response.savedCount||0)};
 }
 
 function normalizePhoneLocal(v){
@@ -237,11 +295,12 @@ async function sendCampaign(accountId,phones,campaign,{delayMs=1800,dailyCap=80,
   }
   return {campaignId,sent,failed,skipped,total:unique.length};
 }
-async function exportState(){return {accounts:await listAccounts(),checks:await all('checks'),history:await all('history'),activeAccountId:await activeAccountId()};}
+async function exportState(){return {accounts:await listAccounts(),checks:await all('checks'),history:await all('history'),contacts:await all('contacts'),activeAccountId:await activeAccountId()};}
 async function diagnostics(){
   const a=await listAccounts(), active=await activeAccountId();
-  return {version:'3.1.0-alpha.1',mode:'browser-mtproto',maxAccounts:MAX_ACCOUNTS,configured:!!(cfg().telegramApiId&&cfg().telegramApiHash),secureContext:window.isSecureContext,accounts:a.length,activeAccountId:active,checks:(await all('checks')).length,userAgent:navigator.userAgent};
+  const creds=credentialStatus(),contacts=await all('contacts');
+  return {version:'3.3.0',mode:'browser-mtproto-user-session',maxAccounts:MAX_ACCOUNTS,configured:creds.configured,credentialSource:creds.source,secureContext:window.isSecureContext,accounts:a.length,activeAccountId:active,checks:(await all('checks')).length,cachedContacts:contacts.length,userAgent:navigator.userAgent};
 }
 
-window.ContactFlowTelegramWeb={MAX_ACCOUNTS,renderQr,connectQr,cancelQr,listAccounts,setActiveAccount,activeAccountId,disconnectAccount,accountHealth,checkContacts,listChecks,clearChecks,loadDialogs,sendCampaign,exportState,diagnostics};
+window.ContactFlowTelegramWeb={MAX_ACCOUNTS,renderQr,connectQr,cancelQr,listAccounts,setActiveAccount,activeAccountId,disconnectAccount,accountHealth,configureCredentials,clearCredentials,credentialStatus,listTelegramContacts,getCachedContacts,clearContactCache,checkContacts,listChecks,clearChecks,loadDialogs,sendCampaign,exportState,diagnostics};
 window.dispatchEvent(new CustomEvent('contactflow:telegram-web-ready'));

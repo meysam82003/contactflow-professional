@@ -1,4 +1,4 @@
-# Security Policy — ContactFlow Personal Ultimate 3.0
+# Security Policy — ContactFlow Personal Ultimate 3.3
 
 ## Supported branch
 
@@ -12,20 +12,24 @@ Contact data is intended to remain local to the user's device unless the user ex
 - No central ContactFlow account server is required.
 - `.cfbackup` files may contain sensitive contact and campaign data; store them securely.
 
-## Telegram credentials
+## Telegram User API credentials
 
-Telegram `api_id` and `api_hash` are application credentials. They must not be requested from the end user by the ContactFlow UI and must not be committed to public JavaScript.
-
-For native builds use protected build configuration / GitHub Secrets such as:
+Telegram `api_id` and `api_hash` are application credentials required by the official User API. Never commit private production credentials to the public repository. A private deployment can inject its own credentials at build time through protected configuration such as:
 
 ```text
 TELEGRAM_API_ID
 TELEGRAM_API_HASH
 ```
 
-A real Telegram QR connector must use the official Telegram authorization flow. A build without configured TDLib/application credentials must report `not_configured`; it must not display a fake QR code.
+A public build can instead let a user enter credentials created for that user at `my.telegram.org/apps`. ContactFlow stores that choice only in browser storage for the current origin. Because every script running on an origin can access its storage, only install or open the Mini App from an HTTPS origin you control and trust.
 
-Telegram authorization/session data must be kept in native private application storage and must not be copied into normal PWA IndexedDB backups.
+Do not inject Telegram API credentials into a public GitHub Release: browser artifacts expose embedded configuration. The official public `v3.3.0` workflow intentionally leaves the Telegram credential pair empty and uses the per-device setup path.
+
+A real connector must use Telegram's official authorization flow. A build without credentials must report `not configured`; it must never display a fake QR code or claim that Bot API can read the account address book.
+
+User sessions are encrypted at rest with a non-extractable WebCrypto key stored by the same origin. This is defense in depth, not protection from malicious JavaScript already executing on that origin. Telegram session data and Telegram contact snapshots are kept in a separate IndexedDB database and are intentionally excluded from normal `.cfbackup` files.
+
+Use Telegram Settings → Devices to revoke a session if a device or deployment may be compromised.
 
 ## Google Drive
 
@@ -45,6 +49,8 @@ Do not commit OAuth client secrets to browser JavaScript. A browser OAuth Client
 The official ContactFlow build is not intended for random-number Telegram account discovery, unsolicited cold-DM automation, account rotation to evade Telegram limits, or anti-spam/ban evasion.
 
 Audience states such as Opt-in, Existing Chat and Suppressed must be respected by any native sender implementation.
+
+The contact-export workspace reads only the authenticated user's existing Telegram contacts through `contacts.getContacts`. It must not be changed into bulk phone-number discovery, unsolicited messaging, or a mechanism to evade Telegram limits.
 
 ## Reporting a security issue
 

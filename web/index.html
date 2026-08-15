@@ -1,0 +1,142 @@
+<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b1020"><meta name="color-scheme" content="dark light"><meta name="application-name" content="ContactFlow 3.3"><meta name="description" content="ContactFlow Personal Ultimate 3.3 — Local‑First contact workflow"><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg" type="image/svg+xml"><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./enhancements.css"><link rel="stylesheet" href="./v33.css"><title>ContactFlow Personal Ultimate 3.3</title></head><body>
+<div class="app-shell"><aside class="sidebar" id="sidebar"><div class="brand"><div class="brand-mark">CF</div><div><strong>ContactFlow</strong><span>Personal Ultimate 3.3</span></div></div><nav id="nav">
+<button class="nav-item active" data-page="dashboard">⌂ <span>داشبورد</span></button><button class="nav-item" data-page="generator"># <span>شماره‌ساز</span></button><button class="nav-item" data-page="import">⇩ <span>ورود فایل</span></button><button class="nav-item" data-page="contacts">◎ <span>مخاطبین</span></button><button class="nav-item" data-page="rename">✎ <span>نام‌ساز</span></button><button class="nav-item" data-page="exports">⇧ <span>خروجی</span></button><button class="nav-item" data-page="audience">✓ <span>Audience</span></button><button class="nav-item" data-page="telegram">➤ <span>تلگرام QR</span></button><button class="nav-item" data-page="campaign">◈ <span>کمپین</span></button><button class="nav-item" data-page="requests">▤ <span>درخواست تبلیغ</span></button><button class="nav-item" data-page="backup">☁ <span>Backup</span></button><button class="nav-item" data-page="activity">≡ <span>گزارش فعالیت</span></button><button class="nav-item" data-page="guide">? <span>راهنما</span></button><button class="nav-item" data-page="settings">⚙ <span>تنظیمات</span></button></nav><div class="sidebar-foot"><div class="privacy-pill"><i></i> Local‑First</div><small>بدون ثبت‌نام، ورود، Recovery و Server Account.</small></div></aside>
+<main class="main"><header class="topbar"><button id="mobile-menu" class="icon-btn mobile-only">☰</button><div class="title-wrap"><h1 id="page-title">داشبورد</h1><p id="page-subtitle">مدیریت محلی مخاطبین</p></div><div class="top-actions"><span class="status-badge"><i></i><span>Local Only</span></span><button id="install-app" class="ghost-btn hidden">نصب اپ</button><span id="online-badge" class="status-badge"><i></i><span>Online</span></span><button id="theme-toggle" class="icon-btn">◐</button></div></header><div id="toast-root" class="toast-root"></div>
+<section class="page active" data-page="dashboard">
+<div class="metrics-grid">
+<article class="metric-card"><div class="metric-icon">◎</div><div><span>کل مخاطبین</span><strong id="metric-total">0</strong><small>IndexedDB محلی</small></div></article>
+<article class="metric-card"><div class="metric-icon">⌘</div><div><span>شهرها</span><strong id="metric-cities">0</strong><small>سگمنت فعال</small></div></article>
+<article class="metric-card"><div class="metric-icon">⇩</div><div><span>Importها</span><strong id="metric-imports">0</strong><small>تاریخچه دستگاه</small></div></article>
+<article class="metric-card"><div class="metric-icon">✓</div><div><span>فضای ذخیره</span><strong id="metric-storage">—</strong><small>برآورد مرورگر</small></div></article>
+</div>
+<div class="layout-2">
+<article class="panel">
+<div class="panel-head"><div><h2>سگمنت‌ها</h2><p>تعداد مخاطب بر اساس شهر</p></div><button class="ghost-btn" data-go="contacts">مشاهده</button></div>
+<div class="segment-list" id="segment-list"><div class="empty-state compact">هنوز داده‌ای ندارید.</div></div>
+</article>
+<article class="panel">
+<div class="panel-head"><div><h2>آخرین Import</h2><p>کیفیت آخرین فایل پردازش‌شده</p></div><button class="primary-soft" data-go="import">+ فایل جدید</button></div>
+<div class="empty-state compact" id="last-import">هنوز فایلی وارد نشده است.</div>
+</article>
+</div>
+<article class="panel callout">
+<div><strong>Personal Ultimate 3.3 — بدون Python</strong><p>هسته مخاطبین، Import/Export، کمپین و Backup کاملاً Local‑First است؛ هیچ حساب ContactFlow یا Server Login وجود ندارد.</p></div>
+<span class="pill active">Local‑First Ready</span>
+</article>
+</section><section class="page" data-page="generator">
+<div class="layout-2 wide-left">
+<article class="panel form-panel"><div class="panel-head"><div><h2>شماره‌ساز حرفه‌ای ایران</h2><p>رنج ترتیبی / تصادفی، بدون تکرار در Batch</p></div><span class="pill active">تا 1,000,000</span></div>
+<div class="form-grid"><label><span>پیش‌شماره</span><select id="gen-prefix"><option>0912</option><option>0910</option><option>0911</option><option>0913</option><option>0914</option><option>0915</option><option>0916</option><option>0917</option><option>0918</option><option>0919</option><option>0901</option><option>0902</option><option>0903</option><option>0905</option><option>0920</option><option>0921</option><option>0922</option></select></label>
+<label><span>تعداد</span><input id="gen-count" type="number" min="1" max="1000000" value="10000"></label><label><span>شروع بخش 7 رقمی</span><input id="gen-start" type="number" min="0" max="9999999" value="0"></label><label><span>حالت</span><select id="gen-mode"><option value="seq">ترتیبی</option><option value="rand">تصادفی</option></select></label>
+<label><span>شهر / عنوان</span><input id="gen-city" value="تهران"></label><label><span>بخش</span><input id="gen-section" placeholder="مثلاً VIP"></label><label><span>منبع</span><input id="gen-source" value="شماره‌ساز"></label><label><span>قالب نام</span><input id="gen-template" value="{city} {n:000000}" dir="ltr"></label></div>
+<div class="button-row"><button id="gen-preview-btn" class="ghost-btn">پیش‌نمایش</button><button id="gen-add-btn" class="primary-btn">افزودن به مخاطبین</button><button id="gen-csv-btn" class="primary-soft">CSV</button><button id="gen-txt-btn" class="ghost-btn">TXT</button></div><div id="gen-progress" class="hint"></div></article>
+<article class="panel"><div class="panel-head"><div><h2>پیش‌نمایش</h2><p>۵۰۰ شماره اول</p></div></div><textarea id="gen-preview" rows="24" readonly dir="ltr"></textarea></article>
+</div></section><section class="page" data-page="import">
+<div class="layout-2 wide-left">
+<article class="panel">
+<div class="panel-head"><div><h2>ورود فایل</h2><p>CSV / TSV / TXT / XLSX — پردازش محلی</p></div></div>
+<label class="dropzone" id="dropzone">
+<input accept=".csv,.tsv,.txt,.xlsx" id="import-file" multiple="" type="file"/>
+<div class="drop-icon">⇩</div><strong>فایل را اینجا رها کنید</strong><span>یا برای انتخاب کلیک کنید</span>
+<small id="file-meta">برای فایل‌های Excel بسیار بزرگ، CSV سریع‌تر و کم‌حافظه‌تر است.</small>
+</label>
+<div class="progress-block hidden" id="upload-progress-wrap">
+<div class="progress-line"><span id="upload-label">در حال پردازش…</span><strong id="upload-pct">0%</strong></div>
+<div class="progress-track"><i id="upload-bar"></i></div>
+<div class="live-stats" id="live-stats"></div>
+</div>
+</article>
+<article class="panel form-panel">
+<div class="panel-head"><div><h2>تنظیمات Import</h2><p>نام‌گذاری و تشخیص شماره</p></div></div>
+<div class="form-grid">
+<label><span>شهر / عنوان</span><input id="import-city" placeholder="تهران" value="تهران"/></label>
+<label><span>بخش</span><input id="import-section" placeholder="مثلاً غرب / VIP / فروش"/></label>
+<label><span>منبع</span><input id="import-source" placeholder="مثلاً فایل مرداد"/></label>
+<label class="full"><span>قالب نام</span><input dir="ltr" id="import-template" value="{city} {n}"/></label>
+<label><span>شروع شماره</span><input id="import-start" min="1" type="number" value="1"/></label>
+<label><span>ستون شماره</span><input id="import-phone-column" placeholder="خودکار / نام ستون / شماره ستون"/></label>
+</div>
+<div class="template-help"><code>{city}</code><code>{n}</code><code>{n:000000}</code><code>{phone}</code><code>{source}</code></div>
+<label class="switch-row"><input checked="" id="import-continue" type="checkbox"/><span class="switch"></span><div><strong>ادامه Sequence قبلی</strong><small>اگر تهران قبلاً وجود دارد، شماره‌گذاری ادامه پیدا کند.</small></div></label>
+<button class="primary-btn full-btn" id="start-import">اجرای صف ورود فایل‌ها</button>
+</article>
+</div>
+<article class="panel"><div class="panel-head"><div><h2>صف ورود فایل‌ها</h2><p>هر فایل تنظیمات مستقل خودش را دارد و به‌ترتیب اجرا می‌شود.</p></div></div><div class="exports-list" id="import-queue"><div class="empty-state compact">فایلی در صف نیست.</div></div></article>
+<article class="panel"><div class="panel-head"><div><h2>تاریخچه ورود</h2><p>آخرین فایل‌ها</p></div></div><div class="table-wrap"><table><thead><tr><th>فایل</th><th>شهر</th><th>جدید</th><th>تکراری</th><th>نامعتبر</th><th>تاریخ</th></tr></thead><tbody id="imports-table"></tbody></table></div></article>
+</section><section class="page" data-page="contacts">
+<article class="panel">
+<div class="panel-head responsive"><div><h2>مخاطبین</h2><p id="contacts-count">0 مخاطب</p></div><div class="filters"><input id="contact-search" placeholder="شروع نام یا شماره…"/><select id="contact-city"><option value="">همه شهرها</option></select><select id="contact-section"><option value="">همه بخش‌ها</option></select><button class="ghost-btn" id="refresh-contacts">بروزرسانی</button></div></div>
+<div class="table-wrap contact-table"><table><thead><tr><th>نام</th><th>شماره استاندارد</th><th>شهر</th><th>بخش</th><th>منبع</th></tr></thead><tbody id="contacts-table"></tbody></table></div>
+<div class="pagination"><button class="ghost-btn" id="prev-page">قبلی</button><span id="page-indicator">صفحه 1</span><button class="ghost-btn" id="next-page">بعدی</button></div>
+</article>
+</section><section class="page" data-page="rename">
+<div class="layout-2">
+<article class="panel form-panel">
+<div class="panel-head"><div><h2>تغییر نام</h2><p>نام‌گذاری سریالی بر اساس شهر</p></div></div>
+<div class="form-grid">
+<label><span>شهر هدف</span><select id="rename-city"><option value="">همه مخاطبین</option></select></label>
+<label><span>شروع</span><input id="rename-start" min="1" type="number" value="1"/></label>
+<label class="full"><span>Template</span><input dir="ltr" id="rename-template" value="{city} {n:000000}"/></label>
+</div>
+<button class="primary-btn full-btn" id="start-rename">اجرای تغییر نام</button>
+</article>
+<article class="panel preview-card"><div class="panel-head"><div><h2>Preview</h2><p>نمونه نام‌ها</p></div></div><div class="preview-list" id="rename-preview"></div></article>
+</div>
+<article class="panel form-panel">
+<div class="panel-head"><div><h2>تغییر شهر، بخش و نام</h2><p>ویرایش گروهی مستقل یا ترکیبی؛ فیلد خالی یعنی بدون تغییر.</p></div></div>
+<div class="form-grid">
+<label><span>شهر فعلی</span><select id="edit-city-from"><option value="">همه شهرها</option></select></label>
+<label><span>شهر جدید</span><input id="edit-city-to" placeholder="مثلاً کرج"/></label>
+<label><span>بخش فعلی</span><select id="edit-section-from"><option value="">همه بخش‌ها</option></select></label>
+<label><span>بخش جدید</span><input id="edit-section-to" placeholder="مثلاً VIP"/></label>
+<label><span>شروع نام</span><input id="edit-name-start" min="1" type="number" value="1"/></label>
+<label><span>قالب نام جدید</span><input dir="ltr" id="edit-name-template" placeholder="{city} {n:000000}"/></label>
+</div>
+<button class="primary-btn full-btn" id="apply-bulk-edit">اعمال ویرایش گروهی</button>
+</article>
+</section><section class="page" data-page="exports">
+<div class="layout-2">
+<article class="panel form-panel">
+<div class="panel-head"><div><h2>Export Center</h2><p>VCF / CSV</p></div></div>
+<div class="form-grid">
+<label><span>فرمت</span><select id="export-format"><option value="vcf">VCF / vCard</option><option value="csv">CSV</option><option value="txt">TXT</option><option value="xls">Excel / XLS</option></select></label>
+<label><span>شهر</span><select id="export-city"><option value="">همه مخاطبین</option></select></label><label><span>بخش</span><select id="export-section"><option value="">همه بخش‌ها</option></select></label>
+<label><span>تعداد هر فایل</span><input id="export-chunk" max="100000" min="100" type="number" value="10000"/></label>
+<label><span>نام فایل</span><input id="export-name" value="contacts"/></label>
+</div>
+<label class="switch-row"><input id="export-zip" type="checkbox"/><span class="switch"></span><div><strong>قرار دادن همه قطعه‌ها داخل ZIP</strong><small>مثلاً 10,000 شماره با اندازه 1,000 → ده فایل + یک ZIP</small></div></label>
+<div class="button-row"><button class="primary-btn" id="start-export">ساخت همین خروجی</button><button class="ghost-btn" id="add-export-queue">+ افزودن به صف</button><button class="primary-soft" id="run-export-queue">اجرای صف خروجی</button></div>
+<div class="exports-list" id="export-queue"><div class="empty-state compact">خروجی‌ای در صف نیست.</div></div>
+</article>
+<article class="panel info-card"><div class="info-symbol">⇧</div><h3>خروجی Chunked</h3><p>برای حجم بالا چند فایل تولید می‌شود. هر فایل را مستقل می‌توانید دانلود کنید.</p><div class="code-sample">Tehran_0001.vcf<br/>Tehran_0002.vcf<br/>Tehran_0003.vcf</div></article>
+</div>
+<article class="panel"><div class="panel-head"><div><h2>فایل‌های آماده</h2><p>لینک‌ها تا زمان باز بودن این صفحه معتبرند.</p></div><button class="ghost-btn" id="clear-exports">پاک کردن</button></div><div class="exports-list" id="exports-list"><div class="empty-state compact">هنوز خروجی ساخته نشده است.</div></div></article>
+</section><section class="page" data-page="audience"><div class="layout-2"><article class="panel form-panel"><div class="panel-head"><div><h2>Consent / Suppression</h2><p>وضعیت تبلیغات مستقل از فایل مخاطب</p></div></div><label><span>شماره</span><input id="aud-phone" dir="ltr" placeholder="0912..."></label><label><span>وضعیت</span><select id="aud-status"><option value="optin">Opt‑in</option><option value="existing_chat">Existing Chat</option><option value="suppressed">Suppressed</option><option value="unverified">Unverified</option></select></label><div class="button-row"><button id="aud-set" class="primary-btn">ثبت وضعیت</button><button id="aud-import-optin" class="ghost-btn">Opt‑in از فایل</button><input id="aud-file" class="hidden" type="file" accept=".csv,.txt"></div></article><article class="panel"><div class="metrics-grid mini"><article class="metric-card"><span>Opt‑in</span><strong id="aud-opt">0</strong></article><article class="metric-card"><span>Existing Chat</span><strong id="aud-chat">0</strong></article><article class="metric-card"><span>Suppressed</span><strong id="aud-sup">0</strong></article></div><button id="aud-export-suppressed" class="ghost-btn">خروجی Suppression CSV</button></article></div><article class="panel"><div class="panel-head"><div><h2>Audience Table</h2><p id="aud-count">0 رکورد</p></div><div class="filters"><select id="aud-filter"><option value="">همه</option><option value="optin">Opt‑in</option><option value="existing_chat">Existing Chat</option><option value="suppressed">Suppressed</option><option value="unverified">Unverified</option></select><button id="aud-refresh" class="ghost-btn">بروزرسانی</button></div></div><div class="table-wrap"><table><thead><tr><th>شماره</th><th>وضعیت</th><th>منبع</th><th>آخرین تغییر</th><th>عملیات</th></tr></thead><tbody id="aud-table"></tbody></table></div></article></section><section class="page" data-page="telegram">
+<article class="panel callout"><div><strong>اتصال Telegram با QR رسمی</strong><p>این User Session مستقل از Session داخلی Mini App است. API ID/Hash می‌تواند در Build تنظیم شود یا فقط روی Origin همین دستگاه ذخیره شود.</p></div><span id="tg-native-pill" class="pill queued">Connector</span></article>
+<div class="layout-2">
+<article class="panel form-panel"><div class="panel-head"><div><h2>حساب‌های Telegram</h2><p>Session رمزگذاری‌شده فقط روی Origin همین دستگاه نگه داشته می‌شود</p></div><button id="tg-add-account" class="primary-btn">+ اتصال با QR</button></div><div id="tg-qr-wrap" class="qr-wrap hidden"><div id="tg-qr-box" class="qr-box"></div><strong>این QR را با Telegram اسکن کنید</strong><small id="tg-qr-state">در انتظار Connector…</small><button id="tg-qr-cancel" class="ghost-btn">لغو</button></div><div id="tg-account-list" class="exports-list"><div class="empty-state compact">حسابی متصل نشده است.</div></div></article>
+<article class="panel"><div class="panel-head"><div><h2>وضعیت Connector مشترک</h2><p>Mini App / PWA / Windows / Android / macOS / Linux</p></div><button id="tg-native-check" class="ghost-btn">بررسی</button></div><ul class="security-list" id="tg-native-caps"><li><b>QR Login</b><span>در حال بررسی…</span></li></ul><p class="hint">Session به Backend ContactFlow ارسال نمی‌شود و در Backup معمولی برنامه قرار نمی‌گیرد.</p></article>
+</div>
+<div class="layout-2"><article class="panel form-panel"><div class="panel-head"><div><h2>Checker مخاطبان مجاز</h2><p>فقط Opt‑in / Existing Chat؛ نتیجه Privacy ممکن است قطعی نباشد.</p></div></div><div class="form-grid"><label><span>منبع</span><select id="tg-check-source"><option value="allowed">Opt‑in + Existing Chat</option><option value="existing_chat">Existing Chat</option><option value="optin">Opt‑in</option></select></label><label><span>اندازه Batch</span><input id="tg-check-batch" type="number" min="10" max="1000" value="200"></label></div><div class="button-row"><button id="tg-prepare-check" class="primary-btn">آماده‌سازی برای Connector</button><button id="tg-export-check" class="ghost-btn">CSV لیست مجاز</button></div><textarea id="tg-check-preview" rows="12" readonly dir="ltr"></textarea></article>
+<article class="panel"><div class="panel-head"><div><h2>چت‌های موجود</h2><p>برای Forward کمپین‌های مجاز</p></div></div><div id="tg-chat-list" class="empty-state compact">بعد از اتصال Native، چت‌های موجود اینجا نمایش داده می‌شوند.</div></article></div>
+</section><section class="page" data-page="campaign">
+<div class="layout-2 wide-left"><article class="panel form-panel"><div class="panel-head"><div><h2>Campaign Composer</h2><p>متن، عکس، ویدیو، فایل، پیام مرجع و اکشن‌ها</p></div><span class="pill active">Local Draft</span></div>
+<div class="form-grid"><label><span>عنوان</span><input id="camp-title" placeholder="کمپین مرداد"></label><label><span>Audience</span><select id="camp-audience"><option value="optin">Opt‑in</option><option value="existing_chat">Existing Chat</option><option value="allowed">هر دو</option></select></label><label class="full"><span>متن</span><textarea id="camp-text" rows="7" placeholder="متن پیام…"></textarea></label><label class="full"><span>پیام مرجع کانال برای Forward</span><input id="camp-ref" dir="ltr" placeholder="https://t.me/channel/123"></label><label><span>لینک اصلی</span><input id="camp-main" dir="ltr" placeholder="https://..."></label><label><span>دیگه تبلیغ نبینم</span><input id="camp-stop" dir="ltr" placeholder="https://..."></label><label><span>تبلیغ ببینم</span><input id="camp-on" dir="ltr" placeholder="https://..."></label><label><span>می‌خوام برام تبلیغ کنی</span><input id="camp-request" dir="ltr" placeholder="https://..."></label><label class="full"><span>رسانه</span><input id="camp-media" type="file" accept="image/*,video/*,.pdf,.zip,.doc,.docx"></label></div>
+<div class="button-row"><button id="camp-preview-btn" class="ghost-btn">پیش‌نمایش</button><button id="camp-save-btn" class="primary-btn">ذخیره Draft</button><button id="camp-template-save" class="primary-soft">ذخیره Template</button></div></article>
+<article class="panel"><div class="panel-head"><div><h2>پیش‌نمایش Telegram</h2><p>نمایش قبل از Forward</p></div></div><div id="camp-media-preview"></div><div id="camp-preview" class="message-preview">هنوز چیزی وارد نشده.</div></article></div>
+<div class="layout-2"><article class="panel"><div class="panel-head"><div><h2>کمپین‌ها</h2><p>Draft و وضعیت اجرا</p></div></div><div id="campaign-list" class="exports-list"></div></article><article class="panel"><div class="panel-head"><div><h2>Template Library</h2><p>پیام‌های تکرارشونده</p></div></div><div id="template-list" class="exports-list"></div></article></div>
+</section><section class="page" data-page="requests"><div class="layout-2"><article class="panel form-panel"><div class="panel-head"><div><h2>ثبت درخواست تبلیغ</h2><p>قفل روی Telegram Numeric ID</p></div></div><div class="form-grid"><label><span>Numeric ID</span><input id="req-tgid" inputmode="numeric" dir="ltr"></label><label><span>Username</span><input id="req-user" dir="ltr" placeholder="@username"></label><label><span>تعداد</span><input id="req-count" type="number" min="1" value="1000"></label><label><span>عنوان تبلیغ</span><input id="req-title"></label></div><button id="req-add" class="primary-btn full-btn">ثبت درخواست</button></article><article class="panel"><div class="panel-head"><div><h2>خلاصه</h2><p>پیشرفت لحظه‌ای محلی</p></div></div><div id="req-summary" class="stats-grid"></div></article></div><article class="panel"><div class="table-wrap"><table><thead><tr><th>ID</th><th>Username</th><th>عنوان</th><th>درخواست</th><th>انجام</th><th>باقی</th><th>وضعیت</th><th>عملیات</th></tr></thead><tbody id="req-table"></tbody></table></div></article></section><section class="page" data-page="backup"><div class="layout-2"><article class="panel form-panel"><div class="panel-head"><div><h2>Backup دستی</h2><p>کل دیتابیس محلی، کمپین‌ها، Audience و تنظیمات</p></div></div><div class="button-row"><button id="backup-create" class="primary-btn">ساخت .cfbackup</button><label class="dropzone mini-drop"><input id="backup-restore-file" type="file" accept=".cfbackup,.json"><strong>Restore</strong><span>Backup را انتخاب کنید</span></label></div><label><span>یادداشت Backup</span><input id="backup-note" placeholder="مثلاً قبل از Import مرداد"></label><div id="backup-state" class="hint"></div></article><article class="panel form-panel"><div class="panel-head"><div><h2>Google Drive</h2><p>بدون حساب ContactFlow</p></div><span id="drive-pill" class="pill queued">Drive</span></div><p>در Android دکمه ذخیره، File Picker سیستم را باز می‌کند و Google Drive می‌تواند به‌عنوان مقصد انتخاب شود. در PWA/Windows اتصال مستقیم Drive با OAuth Client داخلی برنامه فعال می‌شود.</p><div class="button-row"><button id="drive-backup" class="primary-soft">Backup به Google Drive</button><button id="drive-restore" class="ghost-btn">Restore از Google Drive</button><button id="drive-connect" class="ghost-btn">اتصال Google</button></div><input id="drive-restore-file" type="file" class="hidden" accept=".cfbackup,.json"><div id="drive-state" class="hint"></div></article></div><article class="panel"><div class="panel-head"><div><h2>Backup History</h2><p>فایل‌های ساخته‌شده روی این دستگاه</p></div></div><div id="backup-history" class="exports-list"></div></article></section><section class="page" data-page="activity"><article class="panel"><div class="panel-head"><div><h2>Activity Log</h2><p>رویدادهای مهم محلی</p></div><div class="button-row"><button id="activity-export" class="ghost-btn">CSV</button><button id="activity-clear" class="danger-btn">پاک کردن Log</button></div></div><div id="activity-list" class="exports-list"></div></article></section><section class="page" data-page="guide">
+<article class="panel callout">
+<div><strong>نصب ContactFlow مثل یک اپ واقعی</strong><p>برای فعال شدن نصب PWA، برنامه باید از HTTPS یا localhost باز شود. باز کردن مستقیم index.html با file:// برای تست هسته مناسب است، اما نصب PWA و Service Worker را فعال نمی‌کند.</p></div>
+<span class="pill active">PWA Install</span>
+</article>
+<div class="device-grid">
+<article class="panel guide-card"><div class="guide-icon">▣</div><h2>Windows / macOS / Linux</h2><ol><li>لینک HTTPS برنامه را با Chrome یا Edge باز کنید.</li><li>در Chrome از منوی سه‌نقطه، Cast, save, and share → Install page as app را بزنید؛ در Edge روی آیکون App available یا Install کلیک کنید.</li><li>بعد از نصب، ContactFlow از منوی Apps/Start مثل یک برنامه مستقل اجرا می‌شود.</li></ol></article>
+<article class="panel guide-card"><div class="guide-icon">◆</div><h2>Android</h2><ol><li>لینک برنامه را در Chrome باز کنید.</li><li>منوی سه‌نقطه → Add to home screen → Install را بزنید.</li><li>آیکون ContactFlow روی صفحه اصلی قرار می‌گیرد.</li></ol></article>
+<article class="panel guide-card"><div class="guide-icon">●</div><h2>iPhone / iPad</h2><ol><li>سایت را در Safari باز کنید.</li><li>Share → Add to Home Screen را انتخاب کنید.</li><li>Open as Web App را روشن کنید و Add را بزنید.</li></ol></article>
+<article class="panel guide-card"><div class="guide-icon">↥</div><h2>انتشار روی اینترنت</h2><ol><li>کل فایل‌های همین پوشه را روی یک Static Host دارای HTTPS قرار دهید.</li><li>فایل شروع index.html است و Build Step لازم نیست.</li><li>پس از Deploy، لینک HTTPS را روی هر دستگاه باز و نصب کنید.</li></ol></article>
+</div>
+<article class="panel"><div class="panel-head"><div><h2>روش استفاده پیشنهادی</h2><p>برای دیتاست‌های حجیم</p></div></div><div class="guide-flow"><span>1. Import روی کامپیوتر</span><b>←</b><span>2. پاک‌سازی و نام‌گذاری</span><b>←</b><span>3. Export VCF/CSV</span><b>←</b><span>4. مدیریت روزمره روی موبایل</span></div><p class="hint">برای انتقال بین دستگاه‌ها از Backup دستی یا Google Drive استفاده کنید؛ هیچ حساب ContactFlow یا Sync Server لازم نیست.</p></article>
+</section><section class="page" data-page="settings"><div class="layout-2"><article class="panel"><div class="panel-head"><div><h2>داده محلی</h2><p>مدیریت دیتابیس این دستگاه</p></div></div><div class="setting-box"><span>نام دیتابیس</span><code>contactflow_pwa_v2</code></div><div class="button-row"><button id="backup-json" class="ghost-btn">Backup تنظیمات</button><button class="primary-soft" data-go="backup">Backup کامل</button><button id="wipe-db" class="danger-btn">حذف همه مخاطبین</button></div><div class="setting-box"><span>نسخه</span><code>3.3.0 Ultimate</code></div><div class="setting-box"><span>Account Server</span><code>حذف شده — Local‑First</code></div></article><article class="panel"><div class="panel-head"><div><h2>قابلیت دستگاه</h2><p>وضعیت APIهای مورد نیاز</p></div></div><ul class="security-list" id="capability-list"></ul></article></div></section>
+</main></div><nav class="bottom-nav mobile-only" id="bottom-nav"><button data-page="dashboard" class="active">⌂<span>خانه</span></button><button data-page="generator">#<span>شماره</span></button><button data-page="import">⇩<span>ورود</span></button><button data-page="exports">⇧<span>خروجی</span></button><button data-page="backup">☁<span>Backup</span></button></nav>
+<script src="./config.js"></script><script src="./app.js" defer></script><script src="./ultimate.js" defer></script><script src="./contact-export.js" defer></script><script src="./telegram-web.bundle.js" defer></script><script src="./drive-sync.js" defer></script><script src="./business-connect.js" defer></script><script src="./runtime-patch.js" defer></script><script src="./v33.js" defer></script></body></html>

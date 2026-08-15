@@ -13,11 +13,14 @@ android/.gradle/
 android/app/build/
 build/
 dist/
+enhancements/dist/
+enhancements/node_modules/
+node_modules/
 *.log
 .DS_Store
 
 desktop/installer/payload/
 
-# generated PWA copies (source of truth is repository root)
+# generated device copies (source of truth is web/)
 desktop/webapp/
 android/app/src/main/assets/

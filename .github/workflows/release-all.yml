@@ -1,131 +1,103 @@
-name: Release All Devices — Personal Ultimate 3.1
+name: Release All Devices — ContactFlow 3.3
 
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [main]
     paths:
-      - '.source-bundles/v3/**'
-      - '.source-bundles/v31/**'
+      - 'web/**'
       - 'enhancements/**'
       - 'telegram-miniapp/**'
-      - 'scripts/apply-v31.mjs'
       - 'desktop/**'
       - 'android/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'docs/**'
       - 'VERSION'
+      - 'package.json'
       - 'README.md'
       - 'README_FA.md'
-      - 'docs/**'
       - 'CHANGELOG.md'
       - '.github/workflows/release-all.yml'
-      - 'release-trigger.txt'
 
 permissions:
   contents: write
-  issues: write
+
+concurrency:
+  group: contactflow-release-3.3
+  cancel-in-progress: false
+
+env:
+  VERSION: 3.3.0
+  PREFIX: ContactFlow_Personal_Ultimate_3.3.0
 
 jobs:
   webcore:
     runs-on: ubuntu-latest
     outputs:
-      telegram_configured: ${{ steps.cfg.outputs.telegram_configured }}
-      google_configured: ${{ steps.cfg.outputs.google_configured }}
-      miniapp_configured: ${{ steps.cfg.outputs.miniapp_configured }}
+      telegram_configured: ${{ steps.configure.outputs.telegram_configured }}
+      google_configured: ${{ steps.configure.outputs.google_configured }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      - name: Verify source version and materialize 3.0 canonical core
-        shell: bash
+      - name: Verify source and unit tests
         run: |
           set -euo pipefail
-          test "$(cat VERSION)" = '3.1.0-alpha.1'
-          rm -rf /tmp/cf31 /tmp/cf31aug /tmp/cf3.tgz /tmp/cf31aug.tgz
-          mkdir -p /tmp/cf31 /tmp/cf31aug
-          cat .source-bundles/v3/web3.part* | base64 -d > /tmp/cf3.tgz
-          tar -xzf /tmp/cf3.tgz -C /tmp/cf31
-          cat .source-bundles/v31/augment.part* | base64 -d > /tmp/cf31aug.tgz
-          echo 'acb866bdc9fb1610729f441dd572ec5da3e9a4901addcd9d5666cc80a9ef214e  /tmp/cf31aug.tgz' | sha256sum -c -
-          tar -xzf /tmp/cf31aug.tgz -C /tmp/cf31aug
+          test "$(cat VERSION)" = "$VERSION"
+          npm test
+          npm run verify
+          node --check web/app.js
+          node --check web/ultimate.js
+          node --check web/contact-export.js
+          node --check web/runtime-patch.js
+          node --check web/v33.js
 
-      - name: Build optional legacy Web-MTProto bundle
-        shell: bash
+      - name: Build Telegram User API connector
         run: |
           set -euo pipefail
-          cp "$GITHUB_WORKSPACE/enhancements/package.json" "$GITHUB_WORKSPACE/enhancements/webpack.config.cjs" "$GITHUB_WORKSPACE/enhancements/telegram-web-entry.js" /tmp/cf31aug/enhancements/
-          sed -i "s#from 'telegram/sessions';#from 'telegram/sessions/StringSession';#" /tmp/cf31aug/enhancements/telegram-web-entry.js
-          cd /tmp/cf31aug/enhancements
-          npm install --no-audit --no-fund
-          npm run build
-          test -s dist/telegram-web.bundle.js
+          npm --prefix enhancements install --no-audit --no-fund
+          npm --prefix enhancements run build
+          test -s enhancements/dist/telegram-web.bundle.js
 
-      - name: Apply Business Bot, hosted Mini App and backup hotfix
-        id: cfg
-        shell: bash
+      - name: Assemble shared web core
+        id: configure
         env:
-          TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
-          TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           MINIAPP_URL: ${{ secrets.MINIAPP_URL }}
           TELEGRAM_BOT_USERNAME: ${{ secrets.TELEGRAM_BOT_USERNAME }}
         run: |
           set -euo pipefail
-          cp /tmp/cf31aug/enhancements/dist/telegram-web.bundle.js /tmp/cf31/
-          cp /tmp/cf31aug/enhancements/runtime-patch.js /tmp/cf31/
-          cp "$GITHUB_WORKSPACE/enhancements/drive-sync.js" "$GITHUB_WORKSPACE/enhancements/business-connect.js" "$GITHUB_WORKSPACE/enhancements/enhancements.css" /tmp/cf31/
-          node "$GITHUB_WORKSPACE/scripts/apply-v31.mjs" /tmp/cf31 | tee /tmp/cf31-config.json
+          mkdir -p build/webcore build/pwa
+          cp -R web/. build/webcore/
+          cp enhancements/dist/telegram-web.bundle.js build/webcore/
+          node scripts/configure-build.mjs build/webcore > build/config-summary.json
+          cp -R build/webcore/. build/pwa/
+          cp README.md README_FA.md CHANGELOG.md SECURITY.md build/pwa/
+          mkdir -p build/pwa/docs
+          cp docs/ARCHITECTURE_FA.md docs/FEATURES_3_3_FA.md docs/RELEASE_CHECKLIST_FA.md docs/TELEGRAM_CONTACT_EXPORT_3_3_FA.md build/pwa/docs/
+          (cd build/pwa && zip -qr "../${PREFIX}_PWA.zip" .)
+          grep -q 'telegram-web.bundle.js' build/webcore/index.html
+          grep -q 'data-page="telegram-contacts"' build/webcore/v33.js
+          grep -q 'Api.contacts.GetContacts' enhancements/telegram-web-entry.js
+          node --check build/webcore/telegram-web.bundle.js
+          test -s "build/${PREFIX}_PWA.zip"
           node - <<'NODE'
-          const fs=require('fs');const j=JSON.parse(fs.readFileSync('/tmp/cf31-config.json','utf8'));
-          fs.appendFileSync(process.env.GITHUB_OUTPUT,`telegram_configured=${j.telegramConfigured}\ngoogle_configured=${j.googleConfigured}\nminiapp_configured=${j.miniAppConfigured}\n`);
+          const fs=require('fs');const data=JSON.parse(fs.readFileSync('build/config-summary.json','utf8'));
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,`telegram_configured=${data.telegramConfigured}\ngoogle_configured=${data.googleConfigured}\n`);
           NODE
 
-      - name: Validate 3.1 web core
-        shell: bash
-        run: |
-          set -euo pipefail
-          node --check /tmp/cf31/app.js
-          node --check /tmp/cf31/ultimate.js
-          node --check /tmp/cf31/runtime-patch.js
-          node --check /tmp/cf31/drive-sync.js
-          node --check /tmp/cf31/business-connect.js
-          node --check scripts/apply-v31.mjs
-          grep -q 'Personal Ultimate 3.1' /tmp/cf31/index.html
-          for page in generator import contacts exports audience telegram campaign requests backup activity; do
-            grep -q "data-page=\"$page\"" /tmp/cf31/index.html
-          done
-          grep -q 'business-connect.js' /tmp/cf31/index.html
-          grep -q 'drive-sync.js' /tmp/cf31/index.html
-          grep -q 'runtime-patch.js' /tmp/cf31/index.html
-          grep -q '"telegramMode":"business_bot"' /tmp/cf31/config.js
-          grep -q '"googleMode":"oauth_or_system_folder"' /tmp/cf31/config.js
-          ! grep -ER 'QR Connector not configured in this build|GOOGLE_CLIENT_ID در Build تنظیم نشده است|Google OAuth Client ID داخلی Build تنظیم نشده' /tmp/cf31/index.html /tmp/cf31/ultimate.js /tmp/cf31/drive-sync.js /tmp/cf31/business-connect.js
-          ! grep -E 'native/telegram/qr' /tmp/cf31/ultimate.js
-          ! grep -E 'contactflow-professional-v1\.2|pro\.js' /tmp/cf31/sw.js
-
-      - name: Package augmented web core and PWA
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -rf build && mkdir -p build/webcore build/pwa
-          cp -R /tmp/cf31/. build/webcore/
-          cp -R /tmp/cf31/. build/pwa/
-          cp README.md README_FA.md CHANGELOG.md build/pwa/
-          cp -R docs build/pwa/docs
-          (cd build/pwa && zip -qr ../ContactFlow_Personal_Ultimate_3.1.0-alpha.1_PWA.zip .)
-          test -s build/ContactFlow_Personal_Ultimate_3.1.0-alpha.1_PWA.zip
-
       - uses: actions/upload-artifact@v4
         with:
-          name: cf31-webcore
+          name: cf33-webcore
           path: build/webcore
           retention-days: 30
-
       - uses: actions/upload-artifact@v4
         with:
-          name: cf31-release-pwa
-          path: build/ContactFlow_Personal_Ultimate_3.1.0-alpha.1_PWA.zip
+          name: cf33-release-pwa
+          path: build/${{ env.PREFIX }}_PWA.zip
           retention-days: 30
 
   desktop:
@@ -138,45 +110,25 @@ jobs:
           go-version: '1.23.x'
       - uses: actions/download-artifact@v4
         with:
-          name: cf31-webcore
-          path: webcore
-
-      - name: Sync exact 3.1 assets into desktop shell
-        shell: bash
+          name: cf33-webcore
+          path: desktop/webapp
+      - name: Build Windows, Linux and macOS shells
         run: |
           set -euo pipefail
-          rm -rf /tmp/cf31aug && mkdir -p /tmp/cf31aug
-          cat .source-bundles/v31/augment.part* | base64 -d > /tmp/cf31aug.tgz
-          tar -xzf /tmp/cf31aug.tgz -C /tmp/cf31aug
-          cp /tmp/cf31aug/desktop-main.go desktop/main.go
-          cp /tmp/cf31aug/desktop-installer.go desktop/installer/main.go
-          rm -rf desktop/webapp
-          mkdir -p desktop/webapp
-          cp -R webcore/. desktop/webapp/
-          ! grep -ERn 'auth-gate|auth-login|auth-register|Server URL|127\.0\.0\.1:17654' desktop/webapp/index.html
-          grep -q 'business-connect.js' desktop/webapp/index.html
-
-      - name: Build Windows Linux macOS
-        shell: bash
-        run: |
-          set -euo pipefail
-          VERSION="$(cat VERSION)"; PREFIX="ContactFlow_Personal_Ultimate_${VERSION}"
-          rm -rf dist && mkdir -p dist
-          cd desktop
-          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags='-s -w -H=windowsgui' -o "../dist/${PREFIX}_Windows_Portable.exe" .
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o "../dist/${PREFIX}_Linux_x64" .
-          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o "../dist/${PREFIX}_macOS_Intel" .
-          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags='-s -w' -o "../dist/${PREFIX}_macOS_AppleSilicon" .
-          rm -rf installer/payload && mkdir -p installer/payload
-          cp "../dist/${PREFIX}_Windows_Portable.exe" installer/payload/ContactFlow.exe
-          cd installer
-          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags='-s -w -H=windowsgui' -o "../../dist/${PREFIX}_Windows_Setup.exe" .
-          cd ../..
-          for f in "${PREFIX}_Windows_Portable.exe" "${PREFIX}_Windows_Setup.exe" "${PREFIX}_Linux_x64" "${PREFIX}_macOS_Intel" "${PREFIX}_macOS_AppleSilicon"; do test -s "dist/$f"; done
-
+          test "$(cat VERSION)" = "$VERSION"
+          grep -q 'const appVersion = "3.3.0"' desktop/main.go
+          mkdir -p dist
+          (cd desktop && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags='-s -w -H=windowsgui' -o "../dist/${PREFIX}_Windows_Portable.exe" .)
+          (cd desktop && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o "../dist/${PREFIX}_Linux_x64" .)
+          (cd desktop && CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o "../dist/${PREFIX}_macOS_Intel" .)
+          (cd desktop && CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags='-s -w' -o "../dist/${PREFIX}_macOS_AppleSilicon" .)
+          mkdir -p desktop/installer/payload
+          cp "dist/${PREFIX}_Windows_Portable.exe" desktop/installer/payload/ContactFlow.exe
+          (cd desktop/installer && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags='-s -w -H=windowsgui' -o "../../dist/${PREFIX}_Windows_Setup.exe" .)
+          for file in Windows_Portable.exe Windows_Setup.exe Linux_x64 macOS_Intel macOS_AppleSilicon; do test -s "dist/${PREFIX}_${file}"; done
       - uses: actions/upload-artifact@v4
         with:
-          name: cf31-release-desktop
+          name: cf33-release-desktop
           path: dist/*
           retention-days: 30
 
@@ -191,79 +143,63 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
-      - name: Install Android SDK
-        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
       - uses: actions/download-artifact@v4
         with:
-          name: cf31-webcore
-          path: webcore
-
-      - name: Sync exact 3.1 assets into Android
-        shell: bash
+          name: cf33-webcore
+          path: android/app/src/main/assets
+      - name: Build and verify APK
         run: |
           set -euo pipefail
-          rm -rf /tmp/cf31aug && mkdir -p /tmp/cf31aug
-          cat .source-bundles/v31/augment.part* | base64 -d > /tmp/cf31aug.tgz
-          tar -xzf /tmp/cf31aug.tgz -C /tmp/cf31aug
-          cp /tmp/cf31aug/MainActivity.java android/app/src/main/java/com/contactflow/pro/MainActivity.java
-          cp /tmp/cf31aug/android-build.gradle android/app/build.gradle
-          rm -rf android/app/src/main/assets
-          mkdir -p android/app/src/main/assets
-          cp -R webcore/. android/app/src/main/assets/
-
-      - name: Build APK
-        working-directory: android
-        run: gradle --no-daemon :app:assembleDebug --stacktrace
-
-      - name: Verify APK
-        shell: bash
-        run: |
-          set -euo pipefail
+          (cd android && gradle --no-daemon :app:assembleDebug --stacktrace)
           APK=android/app/build/outputs/apk/debug/app-debug.apk
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | tee apk-badging.txt
           grep "sdkVersion:'21'" apk-badging.txt
           grep "targetSdkVersion:'36'" apk-badging.txt
-          unzip -p "$APK" assets/index.html > /tmp/apk-index.html
-          grep -q 'Personal Ultimate 3.1' /tmp/apk-index.html
-          grep -q 'business-connect.js' /tmp/apk-index.html
-          ! grep -E 'auth-gate|auth-login|auth-register|Server URL|127\.0\.0\.1:17654|QR Connector not configured' /tmp/apk-index.html
+          unzip -p "$APK" assets/v33.js | grep -q 'telegram-contacts'
           mkdir -p dist
-          cp "$APK" dist/ContactFlow_Personal_Ultimate_3.1.0-alpha.1_Android_Alpha.apk
-          sha256sum dist/*.apk > dist/APK_SHA256.txt
-
+          cp "$APK" "dist/${PREFIX}_Android.apk"
+          sha256sum "dist/${PREFIX}_Android.apk" > dist/APK_SHA256.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: cf31-release-android
+          name: cf33-release-android
           path: dist/*
           retention-days: 30
 
   miniapp:
+    needs: webcore
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate hosted Mini App and Business Bot Gateway
-        shell: bash
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          name: cf33-webcore
+          path: build/webcore
+      - name: Build full shared-core Mini App package
         run: |
           set -euo pipefail
-          for f in telegram-miniapp/lib.php telegram-miniapp/setup.php telegram-miniapp/webhook.php telegram-miniapp/gateway.php telegram-miniapp/cron.php telegram-miniapp/health.php; do php -l "$f"; done
-          test -s telegram-miniapp/miniapp.html
-          grep -q 'X-Telegram-Init-Data' telegram-miniapp/miniapp.html
-          grep -q 'business_connection' telegram-miniapp/webhook.php
-          grep -q 'business_connection_id' telegram-miniapp/gateway.php
-          grep -q 'miniapp.html' telegram-miniapp/setup.php
-      - name: Package cPanel Mini App
-        shell: bash
-        run: |
+          mkdir -p build/miniapp
+          node scripts/build-miniapp.mjs build/webcore build/miniapp
+          cp telegram-miniapp/.htaccess telegram-miniapp/*.php telegram-miniapp/README_FA.md build/miniapp/
+          mkdir -p build/miniapp/storage
+          cp telegram-miniapp/storage/.htaccess telegram-miniapp/storage/index.html build/miniapp/storage/
+          for file in build/miniapp/*.php; do php -l "$file"; done
+          grep -q 'telegram.org/js/telegram-web-app.js' build/miniapp/miniapp.html
+          grep -q 'v33.js' build/miniapp/miniapp.html
+          grep -q 'telegram-contacts' build/miniapp/v33.js
           mkdir -p dist
-          zip -qr dist/ContactFlow_Personal_Ultimate_3.1.0-alpha.1_Telegram_MiniApp_cPanel.zip telegram-miniapp docs/BUSINESS_CONNECTOR_FA.md
-          test -s dist/ContactFlow_Personal_Ultimate_3.1.0-alpha.1_Telegram_MiniApp_cPanel.zip
+          (cd build/miniapp && zip -qr "../../dist/${PREFIX}_Telegram_MiniApp_cPanel.zip" .)
+          test -s "dist/${PREFIX}_Telegram_MiniApp_cPanel.zip"
       - uses: actions/upload-artifact@v4
         with:
-          name: cf31-release-miniapp
+          name: cf33-release-miniapp
           path: dist/*
           retention-days: 30
 
@@ -272,27 +208,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          name: cf31-webcore
-          path: webapp
-      - name: Package full source
-        shell: bash
+      - name: Package auditable source
         run: |
           set -euo pipefail
-          mkdir -p dist/source
-          cp -R webapp dist/source/webapp
-          rm -rf /tmp/cf31aug && mkdir -p /tmp/cf31aug
-          cat .source-bundles/v31/augment.part* | base64 -d > /tmp/cf31aug.tgz
-          tar -xzf /tmp/cf31aug.tgz -C /tmp/cf31aug
-          cp -R /tmp/cf31aug dist/source/v31-augmentation
-          cp -R desktop android docs .github enhancements telegram-miniapp scripts dist/source/
-          cp README.md README_FA.md CHANGELOG.md VERSION SECURITY.md DEPLOY_3_1_FA.md dist/source/ 2>/dev/null || true
-          (cd dist/source && zip -qr ../ContactFlow_Personal_Ultimate_3.1.0-alpha.1_Source.zip .)
+          mkdir -p dist
+          git archive --format=zip --output="dist/${PREFIX}_Source.zip" HEAD
+          test -s "dist/${PREFIX}_Source.zip"
       - uses: actions/upload-artifact@v4
         with:
-          name: cf31-release-source
-          path: dist/ContactFlow_Personal_Ultimate_3.1.0-alpha.1_Source.zip
+          name: cf33-release-source
+          path: dist/*
           retention-days: 30
 
   release:
@@ -302,78 +227,50 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          pattern: cf31-release-*
+          pattern: cf33-release-*
           path: release
           merge-multiple: true
-
-      - name: Release info and SHA256
-        shell: bash
+      - name: Generate release metadata and checksums
         env:
-          TG_READY: ${{ needs.webcore.outputs.telegram_configured }}
-          BACKUP_READY: ${{ needs.webcore.outputs.google_configured }}
-          MINIAPP_READY: ${{ needs.webcore.outputs.miniapp_configured }}
+          TELEGRAM_CONFIGURED: ${{ needs.webcore.outputs.telegram_configured }}
+          GOOGLE_CONFIGURED: ${{ needs.webcore.outputs.google_configured }}
         run: |
           set -euo pipefail
           cd release
-          cat > ContactFlow_Personal_Ultimate_3.1.0-alpha.1_RELEASE_INFO_FA.txt <<EOF
-          ContactFlow Personal Ultimate 3.1.0-alpha.1 — Business/MiniApp/Backup Hotfix
+          cat > "${PREFIX}_RELEASE_INFO_FA.txt" <<EOF
+          ContactFlow Personal Ultimate 3.3.0
           Source commit: ${GITHUB_SHA}
           Workflow run: ${GITHUB_RUN_ID}
-          Telegram Business Bot connector ready without API ID/Hash: ${TG_READY}
-          Backup fallback ready without mandatory GOOGLE_CLIENT_ID: ${BACKUP_READY}
-          Hosted Mini App URL mode ready without build secret: ${MINIAPP_READY}
-
-          Telegram primary mode: Bot Pair + Telegram Business Connection.
-          Legacy Web-MTProto files are retained but are no longer required or the default connector.
-          Mini App deployment: unzip on HTTPS hosting and register https://domain/path/miniapp.html at runtime.
-          Backup: Android System Picker, desktop Sync Folder/file fallback, optional Google OAuth if Client ID exists.
+          Shared web core across PWA/Desktop/Android/Mini App: yes
+          Telegram contacts method: official MTProto contacts.getContacts
+          Build-level Telegram credentials configured: ${TELEGRAM_CONFIGURED}
+          Local device credentials supported: yes
+          Google OAuth configured: ${GOOGLE_CONFIGURED}
+          Data model: Local-First; no ContactFlow account server required
           EOF
-          find . -maxdepth 1 -type f ! -name 'ContactFlow_Personal_Ultimate_3.1.0-alpha.1_SHA256.txt' -print0 | sort -z | xargs -0 sha256sum > ContactFlow_Personal_Ultimate_3.1.0-alpha.1_SHA256.txt
+          find . -maxdepth 1 -type f ! -name "${PREFIX}_SHA256.txt" -print0 | sort -z | xargs -0 sha256sum > "${PREFIX}_SHA256.txt"
           ls -lh
-
-      - name: Publish GitHub prerelease
+      - name: Publish GitHub Release 3.3.0
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: v3.1.0-alpha.1
+          tag_name: v3.3.0
           target_commitish: main
-          name: ContactFlow Personal Ultimate 3.1.0-alpha.1
-          prerelease: true
-          make_latest: false
+          name: ContactFlow Personal Ultimate 3.3.0
+          prerelease: false
+          make_latest: true
           overwrite_files: true
           preserve_order: true
           files: release/*
           body: |
-            # ContactFlow Personal Ultimate 3.1.0-alpha.1 — Hotfix
+            # ContactFlow Personal Ultimate 3.3.0
 
-            - Primary Telegram connector is Bot Pair + Telegram Business Connection; no TELEGRAM_API_ID / TELEGRAM_API_HASH required for this path.
-            - Up to 10 local account pairings with manual sender selection, connection labels, known-chat list and test-send.
-            - Promotional campaigns are limited to explicit opt-in Business chats; queue progress, cancel and Telegram retry_after handling are included.
-            - Hosted Mini App restored: unzip to HTTPS hosting and register `https://domain/path/miniapp.html` at runtime; no Mini App build secret required.
-            - Backup no longer fails when GOOGLE_CLIENT_ID is absent: Android System Picker, desktop Sync Folder and file backup/restore are available; Google OAuth remains optional.
-            - One-click VCF workflow prepares large contact lists for import into system Contacts; no fake Bot-side contact import.
-            - Existing ContactFlow 3.0/3.1 features remain in the build.
+            نسخه ۳.۳ هسته رابط را بین Telegram Mini App، PWA، Android، Windows، Linux و macOS یکسان می‌کند.
 
-            Persian setup and troubleshooting docs are included in the repository and Source ZIP.
+            - مشاهده و خروجی مخاطبین واقعی حساب Telegram از طریق User Session رسمی و `contacts.getContacts`
+            - QR login، انتخاب حساب، Snapshot آفلاین، جستجو، مرتب‌سازی و انتخاب گروهی
+            - خروجی CSV / VCF / TXT / JSON / XLS با انتخاب ستون، Chunk، ZIP و پروفایل‌های ذخیره‌شده
+            - Import امن به دیتابیس ContactFlow همراه با Undo محدود به رکوردهای تازه‌افزوده‌شده
+            - رابط کامل Mini App به‌جای صفحه Placeholder قبلی
+            - بیش از ۲۰ بهبود مشترک در مدیریت، خروجی، سازگاری دستگاه، حریم خصوصی و Diagnostics
 
-  report:
-    if: always()
-    needs: [webcore, desktop, android, miniapp, source, release]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Report status
-        env:
-          GH_TOKEN: ${{ github.token }}
-          WEB: ${{ needs.webcore.result }}
-          DESKTOP: ${{ needs.desktop.result }}
-          ANDROID: ${{ needs.android.result }}
-          MINIAPP: ${{ needs.miniapp.result }}
-          SOURCE: ${{ needs.source.result }}
-          RELEASE: ${{ needs.release.result }}
-        shell: bash
-        run: |
-          if [[ "$WEB" == success && "$DESKTOP" == success && "$ANDROID" == success && "$MINIAPP" == success && "$SOURCE" == success && "$RELEASE" == success ]]; then
-            gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "✅ ContactFlow 3.1 hotfix release succeeded — web=$WEB desktop=$DESKTOP android=$ANDROID miniapp=$MINIAPP source=$SOURCE release=$RELEASE — Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" || true
-          else
-            gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body "❌ ContactFlow 3.1 hotfix release needs attention — web=$WEB desktop=$DESKTOP android=$ANDROID miniapp=$MINIAPP source=$SOURCE release=$RELEASE — Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" || true
-            exit 1
-          fi
+            محدودیت رسمی: `Telegram.WebApp` و Bot API مستقیماً فهرست مخاطبین حساب را ارائه نمی‌کنند. این قابلیت به User Session مستقل و API ID/Hash رسمی کاربر یا تنظیم Build نیاز دارد؛ داده‌ها در مدل Local-First همان دستگاه نگه‌داری می‌شوند.

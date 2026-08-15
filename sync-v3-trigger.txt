@@ -1,4 +1,0 @@
-ContactFlow Personal Ultimate 3.0 canonical source sync
-version=3.0.0-alpha.1
-requested=2026-08-11
-attempt=3

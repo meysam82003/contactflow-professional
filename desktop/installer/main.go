@@ -16,7 +16,7 @@ import (
 var payload embed.FS
 
 const appName = "ContactFlow Personal Ultimate"
-const appVersion = "3.1.0-alpha.1"
+const appVersion = "3.3.0"
 
 var (
 	user32          = syscall.NewLazyDLL("user32.dll")
@@ -76,7 +76,7 @@ func copySelf(dst string) error {
 	return os.WriteFile(dst, b, 0755)
 }
 func install() error {
-	if msg("به نصب ContactFlow Personal Ultimate 3.1 خوش آمدید.\n\nLocal‑First، Telegram Web‑MTProto QR، Google Drive Sync و Mini App بدون حساب ContactFlow.", "ContactFlow Setup", 0x40) != 1 {
+	if msg("به نصب ContactFlow Personal Ultimate 3.3 خوش آمدید.\n\nیک هسته مشترک برای Desktop، Android، PWA و Telegram Mini App با خروجی مخاطبین Telegram.", "ContactFlow Setup", 0x40) != 1 {
 		return nil
 	}
 	if msg("برنامه برای همین کاربر ویندوز نصب شود؟\n\n%LOCALAPPDATA%\\Programs\\ContactFlow Personal Ultimate", "آماده نصب", 0x00000004|0x00000020) != 6 {

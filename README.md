@@ -1,40 +1,25 @@
-# ContactFlow Personal Ultimate 3.1
+# ContactFlow Personal Ultimate 3.3
 
-Local-first contact management, bulk import/export, Iranian number generator, consent-aware audiences, Telegram QR user-account connector, campaign composer, Google Drive backup/sync, and Telegram Mini App.
+ContactFlow is a local-first contact workspace with one shared web core for Telegram Mini App, PWA, Android, Windows, Linux and macOS.
 
-Version: `3.1.0-alpha.1`
+Version 3.3 adds an official Telegram User API contact workspace. After an independent QR-authenticated user session, it calls `contacts.getContacts`, keeps an offline snapshot on the current origin, and exports all filtered contacts or a selection as CSV, VCF, TXT, JSON or Excel-compatible XLS. Field selection, sorting, mutual-contact filters, chunking, ZIP packages, saved export profiles, safe local import and scoped undo are included.
 
-## Architecture
+Telegram Bot API and `Telegram.WebApp` do not expose the current account's full address book. The feature therefore requires an official Telegram API ID/hash supplied by the build or stored locally by the user, plus a separate QR login. The Telegram app's internal session is never accessed.
 
-There is no ContactFlow login/register/forgot-password/server-account layer. Core data stays in the local IndexedDB database. Optional backup paths are `.cfbackup`, Google Drive, and Android's system document picker.
+## Source layout
 
-Telegram user accounts are connected by QR through the Web-MTProto connector. Up to 10 independent sessions can be stored per device, with manual sender selection. The application does not rotate accounts to bypass Telegram rate limits.
+- `web/` — canonical shared UI and contact engine
+- `enhancements/telegram-web-entry.js` — MTProto user-session connector
+- `desktop/` — Go desktop shell
+- `android/` — Android WebView shell
+- `telegram-miniapp/` — optional Bot/Business gateway
+- `.github/workflows/release-all.yml` — all-device build and v3.3 release
 
-Promotional private messaging is restricted to explicit opt-in recipients. Existing chats may be used for service/non-promotional messaging. The authorized phone checker reports `matched`, `not_returned`, and `retry`; `not_returned` is not proof that a number has no Telegram account.
+## Verification
 
-See the full Persian documentation in [README_FA.md](README_FA.md) and `docs/`.
+```bash
+node --test tests/*.test.cjs
+node scripts/verify-v33.mjs
+```
 
-## Build-time configuration
-
-GitHub Actions secrets/variables:
-- `TELEGRAM_API_ID`
-- `TELEGRAM_API_HASH`
-- `GOOGLE_CLIENT_ID`
-- optional `MINIAPP_URL`
-- optional `TELEGRAM_BOT_USERNAME`
-
-Telegram API credentials belong to this app and are never requested from end users in the UI.
-
-## Main components
-
-- `enhancements/` — Web-MTProto, Drive Sync, runtime feature layer
-- `telegram-miniapp/` — cPanel PHP Bot/Mini App package
-- `desktop/` — Windows/Linux/macOS shell
-- `android/` — Android shell
-- `scripts/apply-v31.mjs` — build augmentation
-- `.source-bundles/v3/` — canonical 3.0 web core
-- `.source-bundles/v31/` — canonical 3.1 augmentation bundle
-
-## Release
-
-Run **Release All Devices — Personal Ultimate 3.1** in GitHub Actions. It validates and publishes Windows Setup/Portable, Android APK, Linux, macOS, PWA, Mini App cPanel package, source, release info, and SHA256 checksums.
+See [Telegram contact export architecture](docs/TELEGRAM_CONTACT_EXPORT_3_3_FA.md) and the [3.3 feature list](docs/FEATURES_3_3_FA.md).

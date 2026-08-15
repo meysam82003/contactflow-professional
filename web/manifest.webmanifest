@@ -1,0 +1,28 @@
+{
+  "id": "./",
+  "name": "ContactFlow Personal Ultimate 3.3",
+  "short_name": "ContactFlow",
+  "description": "Local-First ContactFlow 3.3 with shared Telegram Mini App, PWA, Android and Desktop core",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "background_color": "#0b1020",
+  "theme_color": "#0b1020",
+  "lang": "fa",
+  "dir": "rtl",
+  "categories": ["productivity", "utilities"],
+  "shortcuts": [
+    {"name":"مخاطبین تلگرام","short_name":"Telegram","url":"./#telegram-contacts"},
+    {"name":"خروجی","short_name":"Export","url":"./#exports"},
+    {"name":"Backup","short_name":"Backup","url":"./#backup"}
+  ],
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

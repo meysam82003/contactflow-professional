@@ -1,5 +1,34 @@
 # Changelog
 
+## 3.3.0 — Shared core and Telegram contact export — 2026-08-15
+
+### Shared application core
+- سورس قابل ممیزی `web/` به Source of Truth همه خروجی‌ها تبدیل شد.
+- Telegram Mini App، PWA، Android، Windows، Linux و macOS از همان Web Core ساخته می‌شوند.
+- Placeholder قبلی Mini App با Workspace کامل برنامه جایگزین شد.
+- نسخه همه پوسته‌ها، Manifest، Service Worker، Android، Desktop و Gateway روی `3.3.0` یکسان شد.
+
+### Telegram contacts
+- ورود مستقل User Session با QR رسمی و حداکثر ۱۰ حساب.
+- دریافت دفترچه مخاطبین حساب با متد رسمی `contacts.getContacts`.
+- Snapshot آفلاین مجزا برای هر حساب، Refresh اجباری و پاک‌سازی مستقل Cache.
+- جستجو، مرتب‌سازی، فیلتر مخاطب دوطرفه، انتخاب صفحه و انتخاب همه نتایج.
+- Import شماره‌های Telegram به ContactFlow همراه با Duplicate Guard و Undo محدود به رکوردهای تازه.
+- تنظیم API ID/Hash از Build یا Storage محلی دستگاه؛ Bot API و `Telegram.WebApp` به‌عنوان جایگزین ساختگی معرفی نمی‌شوند.
+
+### Export and cross-device features
+- خروجی CSV، VCF، TXT، JSON و XLS با انتخاب ستون‌ها.
+- Chunk، ZIP، پروفایل تنظیمات خروجی و نام فایل امن.
+- Android System Document Picker، Web Share و دانلود استاندارد مرورگر.
+- Telegram theme، Safe Area، Fullscreen، Home Screen، Offline state، میان‌برهای صفحه‌کلید، Activity Log و Diagnostics.
+- بیش از ۲۰ قابلیت مشترک نسخه ۳.۳ در `docs/FEATURES_3_3_FA.md` ثبت شد.
+
+### Quality and release
+- موتور مستقل و تست‌پذیر Export به `web/contact-export.js` اضافه شد.
+- تست‌های قرارداد نسخه، Dedupe، Filter، Serializer، Chunk و VCF اضافه شد.
+- Pipeline واحد Release همه خروجی‌ها، Source ZIP، Release info و SHA-256 را تولید می‌کند.
+- انتشار پایدار با Tag `v3.3.0` انجام می‌شود.
+
 ## Hosted Mini App Contact Workspace hotfix — 2026-08-12
 
 ### Mini App

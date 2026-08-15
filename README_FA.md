@@ -1,125 +1,76 @@
-# ContactFlow Personal Ultimate 3.1
+# ContactFlow Personal Ultimate 3.3
 
-ContactFlow یک مجموعه Local‑First برای مدیریت حجم زیاد مخاطب، Import/Export، شماره‌ساز، Campaign، Backup و Telegram Mini App است.
+ContactFlow یک نرم‌افزار Local‑First برای مدیریت، پاک‌سازی، نام‌گذاری، Backup و خروجی مخاطبین است. نسخه ۳.۳ از یک Web Core مشترک برای Telegram Mini App، PWA، Android، Windows، Linux و macOS استفاده می‌کند.
 
-> نسخه پایه: `3.1.0-alpha.1` + Hosted Mini App Contact Workspace hotfix
+## تغییر اصلی 3.3
 
-## اصل معماری
+صفحه «مخاطبین تلگرام» می‌تواند پس از ورود رسمی User Session، فهرست واقعی مخاطبین حساب را با `contacts.getContacts` دریافت کند و با تنظیمات کامل خروجی بگیرد:
 
-ContactFlow حساب داخلی، Login، Register، Forgot Password یا Server URL ندارد. داده‌های اصلی روی همان دستگاه در IndexedDB نگه‌داری می‌شوند و Backup دستی انتخابی است.
+- جستجو، مرتب‌سازی و فیلتر Mutual
+- انتخاب صفحه یا همه نتایج
+- خروجی همه یا فقط Selection
+- CSV، VCF، TXT، JSON و XLS
+- انتخاب ستون، Chunk و ZIP
+- پروفایل‌های ذخیره‌شده خروجی
+- Snapshot آفلاین و پاک‌سازی مستقل Cache
+- Import به ContactFlow و Undo محدود به رکوردهای جدید
 
-## دو حالت Telegram
+## محدودیت رسمی Telegram
 
-### 1) Hosted Mini App — بدون App credentials
-این حالت برای چیزی است که فقط با Upload روی هاست و URL کار کند:
+Bot API و `Telegram.WebApp` مستقیماً فهرست مخاطبین حساب را نمی‌دهند. `requestContact` فقط درخواست شماره خود کاربر را به Bot می‌فرستد. مشاهده همه مخاطبین به User Session رسمی و API ID/Hash نیاز دارد.
 
-`https://domain/contactflow/miniapp.html`
+ContactFlow دو روش دارد:
 
-Mini App در این حالت برای باز شدن و مدیریت شماره‌ها به `TELEGRAM_API_ID`، `TELEGRAM_API_HASH` یا `GOOGLE_CLIENT_ID` در Build نیاز ندارد.
+1. API ID/Hash از قبل در Build تنظیم شده باشد.
+2. کاربر API ID/Hash رسمی خودش را از `my.telegram.org/apps` فقط روی همان دستگاه ذخیره کند.
 
-قابلیت‌ها:
-- Import چند فایل TXT/CSV
-- Paste شماره
-- Normalize ایران/بین‌المللی
-- حذف Duplicate
-- Preview و آمار معتبر/نامعتبر
-- CSV
-- VCF
-- Share VCF به Google Drive از Share Sheet سیستم در دستگاه‌های پشتیبانی‌شده
-- Backup/Restore محلی `.cfbackup`
-- Telegram ID/Username کاربر Mini App
-- `requestContact` برای شماره خود همان کاربر با تأیید خودش
+Session و Snapshot در IndexedDB همان Origin نگه‌داری می‌شوند و به Account Server متعلق به ContactFlow ارسال نمی‌شوند. جزئیات: [راهنمای خروجی مخاطبین Telegram](docs/TELEGRAM_CONTACT_EXPORT_3_3_FA.md).
 
-### 2) User MTProto Connector — قابلیت‌های سطح حساب
-Telegram متدهای `contacts.importContacts`، `contacts.resolvePhone` و `contacts.addContact` را فقط برای User Session ارائه می‌کند. بنابراین Phone Lookup واقعی و افزودن مستقیم مخاطب به حساب Telegram از داخل Bot/Mini App ممکن نیست مگر یک User Session رسمی وجود داشته باشد.
+## ساختار سورس
 
-QR login رسمی User Session نیز در سطح پروتکل به App credentials نیاز دارد. اگر این credentials موجود نباشد، ContactFlow نباید QR یا نتیجه Checker ساختگی نمایش دهد.
+- `web/` — هسته قابل ممیزی و مشترک همه دستگاه‌ها
+- `enhancements/telegram-web-entry.js` — Connector رسمی MTProto/User Session
+- `desktop/` — پوسته Go برای Windows/Linux/macOS
+- `android/` — پوسته WebView با System Document Picker
+- `telegram-miniapp/` — Gateway اختیاری Bot/Business و ورودی توسعه
+- `scripts/build-miniapp.mjs` — ساخت Mini App کامل از همان `web/`
+- `.github/workflows/release-all.yml` — Build و Release همه دستگاه‌ها
 
-## قابلیت‌های اصلی ContactFlow
+فایل‌های `.source-bundles/` فقط برای سابقه نسخه‌های قدیمی نگه‌داری شده‌اند و Source of Truth نسخه ۳.۳ نیستند.
 
-- شماره‌ساز ایران: ترتیبی/تصادفی، Prefix، شهر، بخش و نام‌گذاری سریالی
-- Import چندفایلی CSV/TSV/TXT/XLSX با تنظیمات مستقل هر فایل
-- Normalize شماره ایران و بین‌المللی
-- حذف تکراری، Mapping ستون، Sequence و Bulk Edit
-- Contacts با فیلتر شهر/بخش/منبع
-- Export CSV/VCF/TXT و خروجی قطعه‌ای/ZIP در هسته اصلی
-- Suppression / مخاطبین مجاز برای جلوگیری از ارسال ناخواسته
-- Campaign Composer
-- Dry Run، Duplicate Guard، سقف اجرا، Delay، Stop/Pause
-- توقف روی FloodWait / Restricted / Frozen
-- گزارش پیشرفت
-- Backup کامل `.cfbackup`
-- Android System Document Picker
-- Hosted Telegram Mini App
-- Activity/Audit Log
-- Windows Setup/Portable، Android، Linux، macOS و PWA
+## اجرای PWA محلی
 
-## Telegram Checker — واقعیت API
+یک Static Server در ریشه مخزن اجرا کنید و `web/index.html` را باز کنید. استفاده از User Session به HTTPS یا Origin امن نیاز دارد.
 
-طبق API رسمی Telegram:
+## Build Connector
 
-- `contacts.resolvePhone` می‌تواند برای User Session شماره را Resolve کند.
-- `contacts.importContacts` می‌تواند لیست مخاطبین را وارد کند.
-- هر دو فقط برای کاربران (User Session) هستند، نه Bot/Mini App.
-- Privacy حساب مقصد می‌تواند باعث شود شماره‌ای با وجود داشتن Telegram برنگردد.
+```bash
+npm --prefix enhancements install
+npm --prefix enhancements run build
+cp enhancements/dist/telegram-web.bundle.js web/
+```
 
-بنابراین Hosted Mini App بدون User Session نمی‌تواند به‌طور رسمی بگوید هر شماره Telegram دارد یا ندارد. این نسخه به‌جای نتیجه جعلی، `VCF` و `needs-check.csv` تولید می‌کند.
+## تست
 
-شماره‌ساز برای ساخت/پاک‌سازی دیتاست وجود دارد؛ خروجی شماره‌های تولیدشده به‌صورت خودکار برای کشف انبوه حساب‌های Telegram اسکن نمی‌شود.
+```bash
+node --test tests/*.test.cjs
+node scripts/verify-v33.mjs
+```
 
-## افزودن مخاطبین بدون API_ID/HASH
+## Mini App
 
-مسیر رسمی و بدون App credentials در Hosted Mini App:
+Release با نام زیر یک بسته Flat و آماده cPanel می‌سازد:
 
-1. شماره‌ها را Import و Normalize کنید.
-2. VCF بگیرید.
-3. VCF را داخل Contacts گوشی/سیستم Import کنید.
-4. اگر Sync Contacts در Telegram روشن باشد، Telegram دفترچه مخاطبین سیستم را Sync می‌کند.
+`ContactFlow_Personal_Ultimate_3.3.0_Telegram_MiniApp_cPanel.zip`
 
-## Google Drive بدون GOOGLE_CLIENT_ID
+محتویات ZIP را روی HTTPS Extract و `https://domain/path/miniapp.html` را در BotFather ثبت کنید. این فایل همان رابط کامل برنامه را بارگذاری می‌کند، نه صفحه Placeholder نسخه قبلی.
 
-Hosted Mini App دیگر برای Backup پایه خطای `GOOGLE_CLIENT_ID در Build تنظیم نشده است` نمی‌دهد. Backup و VCF فایل واقعی می‌سازند. روی Android و دستگاه‌های دارای Web Share API، فایل را می‌توان به Share Sheet فرستاد و Google Drive را انتخاب کرد. روی Desktop فایل دانلود می‌شود و قابل Upload در Drive است.
+## اصول استفاده
 
-Direct Drive OAuth پیشرفته همچنان یک قابلیت جداگانه است و اگر فعال شود به Google Client ID نیاز دارد؛ نبود آن نباید مانع Backup محلی/Share شود.
+- داده‌ها Local‑First هستند.
+- Session Telegram در Backup عمومی صادر نمی‌شود.
+- Bot یا Mini App برای اسکن پنهانی شماره‌ها استفاده نمی‌شود.
+- ارسال تبلیغاتی باید فقط به مخاطب دارای رضایت صریح انجام شود.
+- استفاده Flood/Spam می‌تواند باعث محدودیت یا مسدودشدن حساب Telegram شود.
 
-## درباره پیام‌رسانی
-
-عبارت `Opt-in` از رابط Hosted Mini App مخاطبین حذف شده است، اما کنترل جلوگیری از ارسال خودکار ناخواسته از موتور Campaign حذف نشده است. Public privacy یا قابل Resolve بودن شماره به معنی اجازه تبلیغ خصوصی محسوب نمی‌شود.
-
-## Telegram Mini App
-
-کد cPanel در `telegram-miniapp/` است. نصب ساده Contact Workspace:
-
-1. پوشه `telegram-miniapp` را روی HTTPS Upload/Extract کنید.
-2. URL زیر را در BotFather به‌عنوان Main Mini App یا Menu Button ثبت کنید:
-   `https://domain/contactflow/miniapp.html`
-3. صفحه بدون Build Secret باز می‌شود.
-
-`setup.php` و Gateway فقط برای قابلیت‌های Bot/Business اختیاری هستند و برای خود Contact Workspace لازم نیستند.
-
-## Build از GitHub
-
-Workflow اصلی:
-
-`.github/workflows/release-all.yml`
-
-Workflow PWA، Windows، Linux، macOS، Android، Mini App و Source را Build/Package می‌کند و SHA256 می‌سازد.
-
-## فایل‌های مهم
-
-- `.source-bundles/v3/` — Canonical Web Core 3.0
-- `.source-bundles/v31/` — augmentation نسخه 3.1
-- `enhancements/telegram-web-entry.js` — User MTProto connector اختیاری
-- `enhancements/drive-sync.js` — Direct Drive Sync اختیاری
-- `telegram-miniapp/miniapp.html` — Hosted Mini App بدون Build Secrets
-- `telegram-miniapp/` — بسته cPanel
-- `desktop/` — Desktop shell
-- `android/` — Android shell
-
-## Debug
-
-برای Hosted Mini App فقط این URL را مستقیم در مرورگر باز کنید:
-
-`https://domain/contactflow/miniapp.html`
-
-اگر صفحه باز شد، بخش Contact Workspace مستقل از Bot Gateway سالم است. برای امکانات اختیاری Gateway از `telegram-miniapp/health.php` استفاده کنید.
+فهرست قابلیت‌های جدید: [FEATURES_3_3_FA.md](docs/FEATURES_3_3_FA.md)

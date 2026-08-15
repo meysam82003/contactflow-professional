@@ -1,8 +1,15 @@
-# Android / APK
+# Android / APK — ContactFlow 3.3
 
-این پوشه سورس Android نسخه Professional است. UI همان PWA است و داخل APK بسته‌بندی می‌شود؛ بنابراین برای اجرای هسته مخاطبین به سایت خارجی وابسته نیست. Sync و Telegram Gateway همچنان اینترنت می‌خواهند.
+Android یک پوسته WebViewAssetLoader روی همان Web Core پوشه `web/` است. بنابراین UI، مخاطبین Telegram و موتور خروجی با PWA، Mini App و Desktop یکسان‌اند و Assets درون APK قرار می‌گیرند.
 
-## ساخت خودکار در GitHub
-پروژه را در GitHub قرار دهید و فایل workflow موجود در `.github/workflows/build-android.yml` را به مسیر `.github/workflows/` ریشه Repository منتقل کنید یا همان workflow را از ریشه اجرا کنید. سپس Actions → Build Android APK → Run workflow. خروجی `app-debug.apk` به‌عنوان Artifact ارائه می‌شود.
+ساخت رسمی از workflow واحد `.github/workflows/release-all.yml` انجام می‌شود و فایل `ContactFlow_Personal_Ultimate_3.3.0_Android.apk` را تولید می‌کند.
 
-Toolchain مرجع پروژه: AGP 9.4.0، Gradle 9.6.0، JDK 17، compileSdk 37 و AndroidX WebKit 1.16.0.
+مشخصات نسخه ۳.۳:
+
+- `minSdk 21`
+- `targetSdk 36`
+- `compileSdk 36`
+- AGP `9.3.0`
+- AndroidX WebKit `1.14.0`
+- ذخیره خروجی و Backup با System Document Picker
+- Telegram User API در هسته مشترک؛ اتصال شبکه برای QR و Refresh مخاطبین لازم است

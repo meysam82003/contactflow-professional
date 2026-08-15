@@ -5,6 +5,7 @@ if($action==='info') cf_json(['ok'=>true,'version'=>CF_VERSION,'configured'=>(bo
 if($action==='health'){ $cs=cf_read_json('connections',[]);$enabled=0;foreach($cs as $c)if(!empty($c['enabled']))$enabled++;cf_json(['ok'=>true,'configured'=>(bool)$cfg,'connections'=>$enabled,'version'=>CF_VERSION]); }
 if(!$cfg) cf_json(['ok'=>false,'error'=>'gateway_not_configured'],503);
 if($action==='pair'){
+  if(!cf_rate_limit('pair',10,600))cf_json(['ok'=>false,'error'=>'too_many_pair_attempts'],429);
   $b=cf_body();$code=preg_replace('/\D/','',(string)($b['code']??''));$codes=cf_read_json('pair_codes',[]);$r=$codes[$code]??null;if(!$r||($r['expires']??0)<time())cf_json(['ok'=>false,'error'=>'pair_code_invalid_or_expired'],400);unset($codes[$code]);cf_write_json('pair_codes',$codes);$raw=cf_token();$clients=cf_read_json('clients',[]);$clients[hash('sha256',$raw)]=['user_id'=>(string)$r['user_id'],'chat_id'=>(string)$r['chat_id'],'user'=>$r['user'],'created_at'=>time(),'last_seen'=>time()];cf_write_json('clients',$clients);cf_json(['ok'=>true,'token'=>$raw,'user'=>$r['user'],'botUsername'=>$cfg['bot_username']]);
 }
 if(strpos($action,'miniapp_')===0){

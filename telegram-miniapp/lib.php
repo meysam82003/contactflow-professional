@@ -1,5 +1,5 @@
 <?php
-const CF_VERSION = '3.1.0-alpha.1-business-hotfix';
+const CF_VERSION = '3.3.0';
 function cf_storage_dir(){ $d=__DIR__.'/storage'; if(!is_dir($d)) @mkdir($d,0700,true); return $d; }
 function cf_config_path(){ return cf_storage_dir().'/config.php'; }
 function cf_config(){ $p=cf_config_path(); if(!is_file($p)) return null; $c=include $p; return is_array($c)?$c:null; }
@@ -17,6 +17,12 @@ function cf_read_json($name,$default=[]){ $p=cf_storage_dir().'/'.$name.'.json';
 function cf_write_json($name,$data){ $p=cf_storage_dir().'/'.$name.'.json'; $tmp=$p.'.tmp.'.bin2hex(random_bytes(4)); $raw=json_encode($data,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_PRETTY_PRINT); file_put_contents($tmp,$raw,LOCK_EX); @chmod($tmp,0600); rename($tmp,$p); }
 function cf_body(){ $raw=file_get_contents('php://input'); $j=json_decode($raw,true); if(is_array($j)) return $j; return $_POST; }
 function cf_token(){ return bin2hex(random_bytes(32)); }
+function cf_rate_limit($scope,$limit=10,$window=600){
+  $ip=(string)($_SERVER['REMOTE_ADDR']??'unknown');$key=hash('sha256',(string)$scope.'|'.$ip);$now=time();$all=cf_read_json('rate_limits',[]);$row=$all[$key]??['started'=>$now,'count'=>0];
+  if(($row['started']??0)+$window<=$now)$row=['started'=>$now,'count'=>0];
+  if(($row['count']??0)>=$limit)return false;$row['count']=(int)($row['count']??0)+1;$row['updated_at']=$now;$all[$key]=$row;
+  foreach($all as $k=>$value)if(($value['started']??0)+$window*2<$now)unset($all[$k]);cf_write_json('rate_limits',$all);return true;
+}
 function cf_tg($method,$params=[]){
   $c=cf_config(); if(!$c||empty($c['bot_token'])) throw new RuntimeException('Bot gateway not configured');
   $url='https://api.telegram.org/bot'.$c['bot_token'].'/'.$method;

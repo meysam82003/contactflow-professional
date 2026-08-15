@@ -1,0 +1,14 @@
+{
+  "name": "contactflow-personal-ultimate",
+  "version": "3.3.0",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.cjs",
+    "verify": "node scripts/verify-v33.mjs",
+    "build:connectors": "npm --prefix enhancements run build",
+    "build:miniapp": "node scripts/build-miniapp.mjs web build/miniapp"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

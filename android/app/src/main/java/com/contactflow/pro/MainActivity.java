@@ -50,7 +50,7 @@ public class MainActivity extends Activity {
             s.setAllowUniversalAccessFromFileURLs(false);
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
-        s.setUserAgentString(s.getUserAgentString() + " ContactFlowPersonalUltimate/3.1");
+        s.setUserAgentString(s.getUserAgentString() + " ContactFlowPersonalUltimate/3.3");
         CookieManager.getInstance().setAcceptCookie(true);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) CookieManager.getInstance().setAcceptThirdPartyCookies(webView, false);
 
@@ -150,8 +150,8 @@ public class MainActivity extends Activity {
     private void chooseOpenBackup() {Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType("*/*");startActivityForResult(i,OPEN_BACKUP);}
 
     public class AndroidBridge {
-        @JavascriptInterface public String nativeCapabilities() {return "{\"ok\":true,\"connector\":true,\"telegramQr\":true,\"telegramMode\":\"web_mtproto\",\"secureAssetOrigin\":true,\"systemDrivePicker\":true,\"filePicker\":true,\"platform\":\"android\",\"version\":\"3.1.0-alpha.1\"}";}
-        @JavascriptInterface public String startTelegramQr() {return "{\"ok\":true,\"mode\":\"web_mtproto\",\"message\":\"QR is handled by the Web-MTProto connector\"}";}
+        @JavascriptInterface public String nativeCapabilities() {return "{\"ok\":true,\"connector\":true,\"telegramQr\":true,\"telegramContacts\":true,\"telegramMode\":\"user_session_optional\",\"secureAssetOrigin\":true,\"systemDrivePicker\":true,\"filePicker\":true,\"platform\":\"android\",\"version\":\"3.3.0\"}";}
+        @JavascriptInterface public String startTelegramQr() {return "{\"ok\":true,\"mode\":\"user_session_optional\",\"message\":\"QR and contacts.getContacts are handled by the shared Web connector\"}";}
         @JavascriptInterface public void saveFile(final String name,final String mime,final String base64) {runOnUiThread(() -> MainActivity.this.saveFile(name,mime,base64));}
         @JavascriptInterface public void saveDocument(final String name,final String mime,final String base64) {runOnUiThread(() -> MainActivity.this.chooseSaveDocument(name,mime,base64));}
         @JavascriptInterface public void openBackupDocument() {runOnUiThread(() -> MainActivity.this.chooseOpenBackup());}

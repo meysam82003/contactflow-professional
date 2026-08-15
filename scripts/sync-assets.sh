@@ -2,11 +2,10 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
-FILES=(index.html app.js pro.js config.js styles.css manifest.webmanifest sw.js)
-rm -rf desktop/webapp android/app/src/main/assets
-mkdir -p desktop/webapp/icons android/app/src/main/assets/icons
-cp "${FILES[@]}" desktop/webapp/
-cp "${FILES[@]}" android/app/src/main/assets/
-cp -r icons/. desktop/webapp/icons/
-cp -r icons/. android/app/src/main/assets/icons/
-echo "PWA assets synced to Desktop and Android."
+test -s enhancements/dist/telegram-web.bundle.js || npm --prefix enhancements run build
+for target in desktop/webapp android/app/src/main/assets; do
+  mkdir -p "$target"
+  cp -R web/. "$target/"
+  cp enhancements/dist/telegram-web.bundle.js "$target/"
+done
+echo "ContactFlow 3.3 shared web core synced to Desktop and Android."
