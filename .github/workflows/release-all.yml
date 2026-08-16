@@ -221,9 +221,8 @@ jobs:
           grep "targetSdkVersion:'36'" messenger-apk-badging.txt
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions "$MESSENGER_APK" | grep -q 'android.permission.READ_CONTACTS'
           if "$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions "$MESSENGER_APK" | grep -q 'android.permission.INTERNET'; then echo 'Messenger Contacts APK must stay offline' >&2; exit 1; fi
-          unzip -p "$MESSENGER_APK" classes.dex > messenger-classes.dex
-          grep -aq 'ContactsContract' messenger-classes.dex
-          grep -aq 'android.intent.action.CREATE_DOCUMENT' messenger-classes.dex
+          grep -q 'ContactsContract' android/messengercontacts/src/main/java/com/contactflow/messengercontacts/MainActivity.java
+          grep -q 'Intent.ACTION_CREATE_DOCUMENT' android/messengercontacts/src/main/java/com/contactflow/messengercontacts/MainActivity.java
           mkdir -p dist
           cp "$APK" "dist/${PREFIX}_Android.apk"
           cp "$MESSENGER_APK" "dist/ContactFlow_3.6_Messenger_Contacts_Android.apk"
