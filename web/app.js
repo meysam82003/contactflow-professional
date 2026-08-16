@@ -6,7 +6,7 @@ const DB_VERSION = 6;
 const PAGE_SIZE = 50;
 const $ = (id) => document.getElementById(id);
 const fmt = new Intl.NumberFormat('fa-IR');
-const state = { db:null, file:null, page:1, exports:[], importQueue:[], exportQueue:[], deferredInstall:null, busy:false };
+const state = { db:null, file:null, page:1, exports:[], importQueue:[], exportQueue:[], deferredInstall:null, busy:false, exportAbort:null };
 
 // ---------- UI ----------
 const pageMeta = {
@@ -40,7 +40,7 @@ function setPage(page){
   if(page==='rename') updateRenamePreview();
   if(page==='settings') refreshCapabilities();
 }
-function setBusy(b){state.busy=b; ['start-import','start-rename','start-export'].forEach(id=>{const e=$(id);if(e)e.disabled=b;});}
+function setBusy(b){state.busy=b; ['start-import','start-rename','start-export','add-export-queue','run-export-queue'].forEach(id=>{const e=$(id);if(e)e.disabled=b;});const cancel=$('cancel-export');if(cancel)cancel.disabled=!b||!state.exportAbort||state.exportAbort.cancelled;}
 function progress(pct,label,stats=''){
   $('upload-progress-wrap').classList.remove('hidden'); $('upload-pct').textContent=`${Math.max(0,Math.min(100,Math.round(pct)))}%`;
   $('upload-bar').style.width=`${Math.max(0,Math.min(100,pct))}%`; $('upload-label').textContent=label; $('live-stats').textContent=stats;
@@ -316,12 +316,107 @@ function crc32(bytes){let c=0xffffffff;for(const b of bytes)c=CRC_TABLE[(c^b)&25
 function le16(n){return new Uint8Array([n&255,(n>>>8)&255]);}function le32(n){return new Uint8Array([n&255,(n>>>8)&255,(n>>>16)&255,(n>>>24)&255]);}
 function dosDateTime(d=new Date()){let y=Math.max(1980,d.getFullYear());return {time:(d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1),date:((y-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate()};}
 async function makeZip(entries){let total=entries.reduce((a,e)=>a+e.blob.size,0);if(total>512*1024*1024)throw new Error('برای ZIP مرورگری مجموع فایل‌ها باید کمتر از 512MB باشد؛ فایل‌های جداگانه آماده شده‌اند.');const enc=new TextEncoder(),parts=[],central=[];let offset=0;const dt=dosDateTime();for(const e of entries){const name=enc.encode(e.name),data=new Uint8Array(await e.blob.arrayBuffer()),crc=crc32(data),local=new Blob([le32(0x04034b50),le16(20),le16(0x0800),le16(0),le16(dt.time),le16(dt.date),le32(crc),le32(data.length),le32(data.length),le16(name.length),le16(0),name,data]);parts.push(local);central.push(new Blob([le32(0x02014b50),le16(20),le16(20),le16(0x0800),le16(0),le16(dt.time),le16(dt.date),le32(crc),le32(data.length),le32(data.length),le16(name.length),le16(0),le16(0),le16(0),le16(0),le32(0),le32(offset),name]));offset+=local.size;}const centralSize=central.reduce((a,b)=>a+b.size,0),end=new Blob([le32(0x06054b50),le16(0),le16(0),le16(entries.length),le16(entries.length),le32(centralSize),le32(offset),le16(0)]);return new Blob([...parts,...central,end],{type:'application/zip'});}
-function currentExportJob(){return {id:(crypto.randomUUID?.()||`${Date.now()}-${Math.random()}`),format:$('export-format').value,city:$('export-city').value,section:$('export-section')?.value||'',chunk:Math.max(100,Math.min(100000,Number($('export-chunk').value)||10000)),base:safeName($('export-name').value),zip:!!$('export-zip')?.checked,status:'queued',result:null,error:''};}
-function renderExportQueue(){const el=$('export-queue');if(!el)return;if(!state.exportQueue.length){el.innerHTML='<div class="empty-state compact">خروجی‌ای در صف نیست.</div>';return;}el.innerHTML=state.exportQueue.map(j=>`<div class="export-row"><div><strong>${escapeHtml(j.base)}</strong><small>${escapeHtml(j.format.toUpperCase())} • ${escapeHtml(j.city||'همه شهرها')} • ${escapeHtml(j.section||'همه بخش‌ها')} • هر فایل ${fmt.format(j.chunk)}${j.zip?' • ZIP':''}</small>${j.error?`<small class="queue-error">${escapeHtml(j.error)}</small>`:''}</div><span class="pill ${j.status==='done'?'active':j.status==='error'?'danger':'queued'}">${escapeHtml(j.status)}</span><button class="danger-btn export-queue-remove" data-id="${escapeHtml(j.id)}" ${j.status==='running'?'disabled':''}>حذف</button></div>`).join('');el.querySelectorAll('.export-queue-remove').forEach(b=>b.onclick=()=>{state.exportQueue=state.exportQueue.filter(x=>x.id!==b.dataset.id);renderExportQueue();});}
-function addExportQueue(){state.exportQueue.push(currentExportJob());renderExportQueue();toast('تنظیمات خروجی به صف اضافه شد.');}
-async function executeExportJob(job){const {format,city,section,chunk,base}=job,ext=({vcf:'vcf',csv:'csv',txt:'txt',xls:'xls'}[format]||'csv'),entries=[];let batch=[],part=1,total=0;await new Promise((resolve,reject)=>{const tx=state.db.transaction('contacts','readonly'),store=tx.objectStore('contacts'),src=city?store.index('city'):store,range=city?IDBKeyRange.only(city):null,r=src.openCursor(range);r.onsuccess=()=>{const c=r.result;if(!c)return resolve();if(section&&c.value.section!==section){c.continue();return;}batch.push(c.value);total++;if(batch.length>=chunk){entries.push({blob:makeExportBlob(format,batch),name:`${base}_${String(part++).padStart(4,'0')}.${ext}`,count:batch.length});batch=[];}c.continue();};r.onerror=()=>reject(r.error);});if(batch.length)entries.push({blob:makeExportBlob(format,batch),name:`${base}_${String(part++).padStart(4,'0')}.${ext}`,count:batch.length});if(!total)throw new Error('مخاطبی برای خروجی وجود ندارد.');for(const e of entries)appendExport(e.blob,e.name,e.count);if(job.zip){const zip=await makeZip(entries),zipName=`${base}_${String(entries.length).padStart(2,'0')}_parts.zip`;appendExport(zip,zipName,total,'export-zip');}await addArtifact({type:'export',name:base,format,city,section,count:total,parts:entries.length,zipped:job.zip});touchRevision();return {total,parts:entries.length};}
-async function startExport(){if(state.busy)return;setBusy(true);clearExports();const job=currentExportJob();try{job.result=await executeExportJob(job);toast(`${fmt.format(job.result.total)} مخاطب در ${fmt.format(job.result.parts)} فایل آماده شد${job.zip?' + ZIP':''}.`);}catch(e){toast(e.message||'خطا در خروجی','bad');}finally{setBusy(false);}}
-async function runExportQueue(){if(state.busy)return;if(!state.exportQueue.length)return toast('ابتدا یک یا چند خروجی به صف اضافه کنید.','bad');setBusy(true);clearExports();let ok=0,fail=0;try{for(const job of state.exportQueue){if(job.status==='done')continue;job.status='running';job.error='';renderExportQueue();try{job.result=await executeExportJob(job);job.status='done';ok++;}catch(e){job.status='error';job.error=e.message||String(e);fail++;}renderExportQueue();}toast(`صف خروجی تمام شد: ${fmt.format(ok)} موفق${fail?` • ${fmt.format(fail)} خطا`:''}.`);}finally{setBusy(false);}}
+const EXPORT_PREFS_KEY='cf_export_preferences_v2';
+function isMiniAppRuntime(){return document.documentElement.dataset.contactflowMiniapp==='true';}
+function exportApi(){return window.ContactFlowBulkVcf||null;}
+function exportAbortError(){const error=new Error('خروجی با درخواست شما متوقف شد؛ قطعه‌های کامل‌شده قابل ذخیره‌اند.');error.name='AbortError';return error;}
+function assertExportActive(token){if(token?.cancelled)throw exportAbortError();}
+function saveExportPreferences(){
+  if(isMiniAppRuntime()||!$('export-format'))return;
+  const data={format:$('export-format').value,city:$('export-city').value,section:$('export-section')?.value||'',chunk:$('export-chunk').value,base:$('export-name').value,extra:$('export-extra')?.value||'',maxTotal:$('export-max-total')?.value||'1000000',zip:!!$('export-zip')?.checked,offline:!!$('export-offline')?.checked,compatible:!!$('export-online-fallback')?.checked,splitByCity:!!$('export-split-city')?.checked,cityName:$('export-city-name')?.checked!==false};
+  localStorage.setItem(EXPORT_PREFS_KEY,JSON.stringify(data));
+}
+function restoreExportPreferences(){
+  if(isMiniAppRuntime()||!$('export-format'))return;
+  try{
+    const data=JSON.parse(localStorage.getItem(EXPORT_PREFS_KEY)||'null');if(!data)return;
+    for(const [id,key] of [['export-format','format'],['export-city','city'],['export-section','section'],['export-chunk','chunk'],['export-name','base'],['export-extra','extra'],['export-max-total','maxTotal']])if($(id)&&data[key]!=null)$(id).value=String(data[key]);
+    for(const [id,key] of [['export-zip','zip'],['export-offline','offline'],['export-online-fallback','compatible'],['export-split-city','splitByCity'],['export-city-name','cityName']])if($(id)&&typeof data[key]==='boolean')$(id).checked=data[key];
+  }catch(error){console.warn('Export preferences could not be restored',error);}
+}
+function updateExportNamePreview(){
+  const preview=$('export-name-preview'),examples=$('export-examples');if(!preview&&!examples)return;
+  const api=exportApi(),format=$('export-format')?.value||'vcf',ext=({vcf:'vcf',csv:'csv',txt:'txt',xls:'xls'}[format]||'csv'),base=safeName($('export-name')?.value),city=$('export-city')?.value||'',extra=$('export-extra')?.value||'',split=!!$('export-split-city')?.checked,useCity=$('export-city-name')?.checked!==false;
+  const compose=(valueCity,preferCity)=>api?.composeBaseName?.(base,valueCity,extra,preferCity)||safeName([preferCity&&valueCity?valueCity:base,extra].filter(Boolean).join(' '));
+  const file=(name,part)=>api?.partName?.(name,part,ext)||`${name}_${String(part).padStart(4,'0')}.${ext}`;
+  let names;
+  if(split){const cities=city?[city]:['تهران','قم','مشهد'];names=cities.map(value=>file(compose(value,true),1));}
+  else {const name=compose(city,useCity&&!!city);names=[1,2,3].map(part=>file(name,part));}
+  if(preview)preview.value=names[0];if(examples)examples.innerHTML=names.map(escapeHtml).join('<br/>');
+}
+function updateExportProgress(processed,expected,label,parts=0,complete=false){
+  const wrap=$('export-progress-wrap');if(!wrap)return;wrap.classList.remove('hidden');
+  const target=Math.max(1,Math.min(expected||processed||1,exportApi()?.MAX_TOTAL||1_000_000)),percent=complete?100:Math.min(99,processed/target*100);
+  $('export-progress-label').textContent=label||'در حال ساخت خروجی…';$('export-progress-pct').textContent=`${fmt.format(Math.round(percent))}٪`;$('export-progress-bar').style.width=`${percent}%`;$('export-progress-stats').textContent=`${fmt.format(processed)} مخاطب • ${fmt.format(parts)} قطعهٔ کامل`;
+}
+function cancelExport(){if(!state.exportAbort||state.exportAbort.cancelled)return;state.exportAbort.cancelled=true;const button=$('cancel-export');if(button)button.disabled=true;updateExportProgress(state.exportAbort.processed||0,state.exportAbort.expected||0,'در حال توقف امن پس از قطعهٔ جاری…',state.exportAbort.parts||0);}
+function currentExportJob(){
+  const api=exportApi(),mini=isMiniAppRuntime(),format=$('export-format').value,offline=!mini&&($('export-offline')?.checked!==false),compatible=mini||($('export-online-fallback')?.checked!==false),maxAllowed=api?.MAX_TOTAL||1_000_000;
+  if(format==='vcf'&&!offline&&!compatible)throw new Error('حداقل یکی از حالت‌های آفلاین یا آنلاین/سازگار را فعال کنید.');
+  if(format==='vcf'&&offline&&!api?.makeVcfBlob&&!compatible)throw new Error('موتور آفلاین بارگذاری نشد؛ مسیر آنلاین/سازگار را فعال کنید.');
+  const job={id:(crypto.randomUUID?.()||`${Date.now()}-${Math.random()}`),format,city:$('export-city').value,section:$('export-section')?.value||'',chunk:Math.max(100,Math.min(100000,Number($('export-chunk').value)||10000)),base:safeName($('export-name').value),extra:mini?'':api?.cleanToken?.($('export-extra')?.value||'')||safeName($('export-extra')?.value||'').replace(/^contacts$/,''),maxTotal:mini?Number.MAX_SAFE_INTEGER:Math.max(1,Math.min(maxAllowed,Number($('export-max-total')?.value)||maxAllowed)),zip:!!$('export-zip')?.checked,offline,compatible,splitByCity:!mini&&!!$('export-split-city')?.checked,cityName:!mini&&$('export-city-name')?.checked!==false,status:'queued',result:null,error:'',processed:0,parts:0};
+  saveExportPreferences();return job;
+}
+function renderExportQueue(){
+  const el=$('export-queue');if(!el)return;if(!state.exportQueue.length){el.innerHTML='<div class="empty-state compact">خروجی‌ای در صف نیست.</div>';return;}
+  const labels={queued:'در صف',running:'در حال اجرا',done:'تمام',error:'خطا',cancelled:'لغوشده'};
+  el.innerHTML=state.exportQueue.map(j=>{const engine=j.format!=='vcf'?'محلی':j.offline&&j.compatible?'آفلاین ← سازگار':j.offline?'آفلاین':'سازگار';return `<div class="export-row"><div><strong>${escapeHtml([j.base,j.extra].filter(Boolean).join(' '))}</strong><small>${escapeHtml(j.format.toUpperCase())} • ${escapeHtml(j.city||'همه شهرها')} • ${escapeHtml(j.section||'همه بخش‌ها')} • هر فایل ${fmt.format(j.chunk)} • ${engine}${j.splitByCity?' • تفکیک شهر':''}${j.zip?' • ZIP':''}</small>${j.status==='running'?`<small>${fmt.format(j.processed||0)} مخاطب • ${fmt.format(j.parts||0)} قطعه</small>`:''}${j.error?`<small class="queue-error">${escapeHtml(j.error)}</small>`:''}</div><span class="pill ${j.status==='done'?'active':j.status==='error'?'danger':'queued'}">${escapeHtml(labels[j.status]||j.status)}</span><button class="danger-btn export-queue-remove" data-id="${escapeHtml(j.id)}" ${j.status==='running'?'disabled':''}>حذف</button></div>`;}).join('');
+  el.querySelectorAll('.export-queue-remove').forEach(button=>button.onclick=()=>{state.exportQueue=state.exportQueue.filter(item=>item.id!==button.dataset.id);renderExportQueue();});
+}
+function addExportQueue(){try{state.exportQueue.push(currentExportJob());renderExportQueue();toast('تنظیمات خروجی به صف اضافه شد.');}catch(error){toast(error.message||'تنظیمات خروجی معتبر نیست.','bad');}}
+async function listExportScopes(job){
+  if(job.city)return [{mode:'city',city:job.city,label:job.city}];
+  if(!job.splitByCity)return [{mode:'all',city:'',label:''}];
+  const tx=state.db.transaction('contacts','readonly'),store=tx.objectStore('contacts'),index=store.index('city'),cities=[];let hasBlank=false;
+  const totalPromise=reqP(store.count()),indexedPromise=reqP(index.count()),citiesPromise=new Promise((resolve,reject)=>{const request=index.openKeyCursor(null,'nextunique');request.onsuccess=()=>{const cursor=request.result;if(!cursor)return resolve();const key=String(cursor.key??'').trim();if(key)cities.push(key);else hasBlank=true;cursor.continue();};request.onerror=()=>reject(request.error);});
+  const [total,indexed]=await Promise.all([totalPromise,indexedPromise,citiesPromise]).then(values=>[values[0],values[1]]);
+  const scopes=cities.map(city=>({mode:'city',city,label:city}));if(hasBlank||total>indexed)scopes.push({mode:'missing',city:'',label:'بدون شهر'});return scopes;
+}
+async function estimateExportTotal(job){const stats=await getStats(),estimated=job.city?(stats.cityCounts?.[job.city]||0):(stats.total||0);return Math.max(0,estimated);}
+function makeJobExportBlob(job,rows,runtime){
+  if(job.format!=='vcf'){runtime.modes.add('local');return makeExportBlob(job.format,rows);}
+  if(runtime.offlineActive){
+    try{const blob=runtime.api.makeVcfBlob(rows);runtime.modes.add('offline');return blob;}
+    catch(error){runtime.offlineError=error;runtime.offlineActive=false;if(!job.compatible)throw error;if(!runtime.fallbackNotified){runtime.fallbackNotified=true;toast('موتور آفلاین این دستگاه خطا داد؛ ادامه با مسیر سازگار انجام می‌شود.','bad',6500);}}
+  }
+  if(job.compatible){runtime.modes.add(job.offline?'fallback':'compatible');return makeExportBlob('vcf',rows);}
+  throw new Error('موتور آفلاین در دسترس نیست و مسیر سازگار خاموش است.');
+}
+async function executeLegacyExportJob(job){
+  const {format,city,section,chunk,base}=job,ext=({vcf:'vcf',csv:'csv',txt:'txt',xls:'xls'}[format]||'csv'),entries=[];let batch=[],part=1,total=0;
+  await new Promise((resolve,reject)=>{const tx=state.db.transaction('contacts','readonly'),store=tx.objectStore('contacts'),src=city?store.index('city'):store,range=city?IDBKeyRange.only(city):null,request=src.openCursor(range);request.onsuccess=()=>{const cursor=request.result;if(!cursor)return resolve();if(section&&cursor.value.section!==section){cursor.continue();return;}batch.push(cursor.value);total++;if(batch.length>=chunk){entries.push({blob:makeExportBlob(format,batch),name:`${base}_${String(part++).padStart(4,'0')}.${ext}`,count:batch.length});batch=[];}cursor.continue();};request.onerror=()=>reject(request.error);});
+  if(batch.length)entries.push({blob:makeExportBlob(format,batch),name:`${base}_${String(part++).padStart(4,'0')}.${ext}`,count:batch.length});if(!total)throw new Error('مخاطبی برای خروجی وجود ندارد.');for(const entry of entries)appendExport(entry.blob,entry.name,entry.count);if(job.zip){const zip=await makeZip(entries),zipName=`${base}_${String(entries.length).padStart(2,'0')}_parts.zip`;appendExport(zip,zipName,total,'export-zip');}await addArtifact({type:'export',name:base,format,city,section,count:total,parts:entries.length,zipped:job.zip});touchRevision();return {total,parts:entries.length,engine:'legacy-compatible'};
+}
+async function executeExportJob(job){
+  if(isMiniAppRuntime())return executeLegacyExportJob(job);
+  const api=exportApi(),ext=({vcf:'vcf',csv:'csv',txt:'txt',xls:'xls'}[job.format]||'csv'),scopes=await listExportScopes(job),estimated=await estimateExportTotal(job),target=Math.min(job.maxTotal,estimated||job.maxTotal),token=state.exportAbort||{cancelled:false},zipEntries=[],usedNames=new Set(),runtime={api,offlineActive:job.offline&&!!api?.makeVcfBlob,offlineError:null,fallbackNotified:false,modes:new Set()};
+  if(job.format==='vcf'&&!runtime.offlineActive&&!job.compatible)throw new Error('موتور آفلاین بارگذاری نشد و مسیر سازگار خاموش است.');
+  let total=0,parts=0,capReached=false;token.expected=target;token.processed=0;token.parts=0;updateExportProgress(0,target,'آماده‌سازی Cursor دیتابیس…',0);
+  for(const [scopeIndex,scope] of scopes.entries()){
+    assertExportActive(token);if(total>=job.maxTotal){capReached=true;break;}
+    const useCityName=job.splitByCity||(job.cityName&&!!scope.label),scopeBase=api?.composeBaseName?.(job.base,scope.label,job.extra,useCityName)||safeName([useCityName&&scope.label?scope.label:job.base,job.extra].filter(Boolean).join(' '));let batch=[],scopePart=1,scopeCount=0;
+    const flush=()=>{if(!batch.length)return;const count=batch.length,blob=makeJobExportBlob(job,batch,runtime);let name=api?.partName?.(scopeBase,scopePart++,ext)||`${scopeBase}_${String(scopePart++).padStart(4,'0')}.${ext}`;if(usedNames.has(name)){const uniqueBase=`${scopeBase}-${scopeIndex+1}`;name=api?.partName?.(uniqueBase,scopePart-1,ext)||`${uniqueBase}_${String(scopePart-1).padStart(4,'0')}.${ext}`;}usedNames.add(name);appendExport(blob,name,count);if(job.zip)zipEntries.push({blob,name,count});parts++;job.parts=parts;token.parts=parts;batch=[];updateExportProgress(total,target,`در حال ساخت ${scope.label||'همه مخاطبین'}…`,parts);renderExportQueue();};
+    await new Promise((resolve,reject)=>{
+      const tx=state.db.transaction('contacts','readonly'),store=tx.objectStore('contacts'),source=scope.mode==='city'?store.index('city'):store,range=scope.mode==='city'?IDBKeyRange.only(scope.city):null,request=source.openCursor(range);
+      request.onsuccess=()=>{try{assertExportActive(token);const cursor=request.result;if(!cursor){flush();resolve();return;}const value=cursor.value;if(scope.mode==='missing'&&value.city){cursor.continue();return;}if(job.section&&value.section!==job.section){cursor.continue();return;}if(total>=job.maxTotal){capReached=true;flush();resolve();return;}batch.push(value);scopeCount++;total++;job.processed=total;token.processed=total;if(batch.length>=job.chunk)flush();else if(total%2000===0)updateExportProgress(total,target,`خواندن ${scope.label||'مخاطبین'}…`,parts);if(total>=job.maxTotal){capReached=true;flush();resolve();return;}cursor.continue();}catch(error){reject(error);}};
+      request.onerror=()=>reject(request.error);
+    });
+    if(!scopeCount&&scope.mode==='missing')continue;
+  }
+  assertExportActive(token);if(!total)throw new Error('مخاطبی برای خروجی وجود ندارد.');
+  let zipped=false,zipError='';
+  if(job.zip){try{const zip=await makeZip(zipEntries),zipBase=api?.composeBaseName?.(job.base,job.city,job.extra,job.cityName&&!!job.city)||safeName([job.base,job.extra].filter(Boolean).join(' ')),zipName=`${zipBase}_${String(parts).padStart(4,'0')}_parts.zip`;appendExport(zip,zipName,total,'export-zip');zipped=true;}catch(error){zipError=error.message||String(error);toast(`فایل‌های جدا آماده‌اند؛ ZIP ساخته نشد: ${zipError}`,'bad',7500);}}
+  const engine=[...runtime.modes].join('+')||'compatible',truncated=capReached&&estimated>job.maxTotal;await addArtifact({type:'export',name:job.base,format:job.format,city:job.city,section:job.section,suffix:job.extra,count:total,parts,zipped,splitByCity:job.splitByCity,maxTotal:job.maxTotal,engine,truncated});touchRevision();updateExportProgress(total,total,'خروجی کامل شد.',parts,true);return {total,parts,engine,truncated,zipped,zipError};
+}
+async function startExport(){
+  if(state.busy)return;let job;try{job=currentExportJob();}catch(error){toast(error.message||'تنظیمات خروجی معتبر نیست.','bad');return;}
+  state.exportAbort={cancelled:false,processed:0,parts:0,expected:job.maxTotal};setBusy(true);clearExports();
+  try{job.result=await executeExportJob(job);toast(`${fmt.format(job.result.total)} مخاطب در ${fmt.format(job.result.parts)} فایل آماده شد${job.result.zipped?' + ZIP':''}${job.result.truncated?'؛ سقف اجرا اعمال شد':''}.`);}catch(error){toast(error.message||'خطا در خروجی',error.name==='AbortError'?'good':'bad',6500);}finally{state.exportAbort=null;setBusy(false);}
+}
+async function runExportQueue(){
+  if(state.busy)return;if(!state.exportQueue.length)return toast('ابتدا یک یا چند خروجی به صف اضافه کنید.','bad');state.exportAbort={cancelled:false,processed:0,parts:0,expected:0};setBusy(true);clearExports();let ok=0,fail=0,cancelled=false;
+  try{for(const job of state.exportQueue){if(job.status==='done')continue;job.status='running';job.error='';job.processed=0;job.parts=0;renderExportQueue();try{job.result=await executeExportJob(job);job.status='done';ok++;}catch(error){job.error=error.message||String(error);if(error.name==='AbortError'){job.status='cancelled';cancelled=true;}else{job.status='error';fail++;}}renderExportQueue();if(cancelled)break;}toast(cancelled?`صف متوقف شد؛ ${fmt.format(ok)} خروجی کامل باقی مانده است.`:`صف خروجی تمام شد: ${fmt.format(ok)} موفق${fail?` • ${fmt.format(fail)} خطا`:''}.`,cancelled?'good':'good');}finally{state.exportAbort=null;setBusy(false);}
+}
 function appendExport(blob,name,count,kind='export'){if(window.ContactFlowProArchiveFile)window.ContactFlowProArchiveFile(blob,kind,name);const url=URL.createObjectURL(blob);state.exports.push(url);const row=document.createElement('div');row.className='export-row';row.innerHTML=`<div><strong>${escapeHtml(name)}</strong><small>${fmt.format(count)} رکورد • ${formatBytes(blob.size)}</small></div><div class="button-row"><button class="download-btn save-as">ذخیره با نام…</button><a class="ghost-btn" href="${url}" download="${escapeHtml(name)}">دانلود جایگزین</a></div>`;row.querySelector('.save-as').addEventListener('click',async()=>{try{const result=await window.ContactFlowFileSave?.save(blob,name);if(result?.method!=='cancelled')toast(`فایل ${name} ذخیره شد.`);}catch(e){toast(`ذخیره ناموفق: ${e.message}`,'bad');}});if($('exports-list').querySelector('.empty-state'))$('exports-list').innerHTML='';$('exports-list').appendChild(row);}
 function clearExports(){state.exports.forEach(URL.revokeObjectURL);state.exports=[];$('exports-list').innerHTML='<div class="empty-state compact">هنوز خروجی ساخته نشده است.</div>';}
 
@@ -336,14 +431,15 @@ function saveGateway(){localStorage.setItem('cf_tg_gateway',$('tg-gateway').valu
 async function testGateway(){const url=$('tg-gateway').value.trim().replace(/\/$/,'');if(!url){toast('Gateway URL را وارد کنید.','bad');return;}try{const headers={};const key=$('tg-key').value;if(key)headers.Authorization=`Bearer ${key}`;const r=await fetch(url+'/health',{headers});if(!r.ok)throw new Error(`HTTP ${r.status}`);toast('اتصال Gateway موفق بود.');}catch(e){toast(`اتصال ناموفق: ${e.message}`,'bad',6000);}}
 
 // ---------- Init ----------
-async function initData(){await refreshDashboard();await refreshImports();await fillCitySelects();refreshCapabilities();renderImportQueue();renderExportQueue();if($('tg-gateway'))$('tg-gateway').value=localStorage.getItem('cf_tg_gateway')||'';if($('tg-key'))$('tg-key').value=sessionStorage.getItem('cf_tg_key')||'';}
+async function initData(){await refreshDashboard();await refreshImports();await fillCitySelects();restoreExportPreferences();updateExportNamePreview();refreshCapabilities();renderImportQueue();renderExportQueue();if($('tg-gateway'))$('tg-gateway').value=localStorage.getItem('cf_tg_gateway')||'';if($('tg-key'))$('tg-key').value=sessionStorage.getItem('cf_tg_key')||'';}
 function bind(){
   document.querySelectorAll('.nav-item,[data-go],#bottom-nav button').forEach(b=>b.addEventListener('click',()=>setPage(b.dataset.page||b.dataset.go)));
   $('mobile-menu').addEventListener('click',()=>$('sidebar').classList.toggle('open'));
   $('theme-toggle').addEventListener('click',()=>{document.documentElement.classList.toggle('light');localStorage.setItem('cf_theme',document.documentElement.classList.contains('light')?'light':'dark');});
   const fileInput=$('import-file'),drop=$('dropzone');fileInput.addEventListener('change',()=>{const files=[...fileInput.files];if(files.length){state.file=files[0];selectFile(files[0]);enqueueImportFiles(files);}});drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('drag')});drop.addEventListener('dragleave',()=>drop.classList.remove('drag'));drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('drag');const files=[...e.dataTransfer.files];if(files.length){state.file=files[0];selectFile(files[0]);enqueueImportFiles(files);}});
   $('start-import').addEventListener('click',startImport);$('refresh-contacts').addEventListener('click',()=>{state.page=1;refreshContacts()});$('contact-search').addEventListener('keydown',e=>{if(e.key==='Enter'){state.page=1;refreshContacts()}});$('contact-city').addEventListener('change',()=>{state.page=1;refreshContacts()});$('contact-section')?.addEventListener('change',()=>{state.page=1;refreshContacts()});$('prev-page').addEventListener('click',()=>{if(state.page>1){state.page--;refreshContacts()}});$('next-page').addEventListener('click',()=>{state.page++;refreshContacts()});
-  ['rename-city','rename-start','rename-count','rename-template'].forEach(id=>$(id)?.addEventListener('input',updateRenamePreview));$('start-rename').addEventListener('click',startRename);$('apply-bulk-edit')?.addEventListener('click',bulkEditContacts);$('start-export').addEventListener('click',startExport);$('add-export-queue')?.addEventListener('click',addExportQueue);$('run-export-queue')?.addEventListener('click',runExportQueue);$('clear-exports').addEventListener('click',clearExports);$('wipe-db').addEventListener('click',wipeDB);$('backup-json').addEventListener('click',backupSettings);
+  ['rename-city','rename-start','rename-count','rename-template'].forEach(id=>$(id)?.addEventListener('input',updateRenamePreview));$('start-rename').addEventListener('click',startRename);$('apply-bulk-edit')?.addEventListener('click',bulkEditContacts);$('start-export').addEventListener('click',startExport);$('add-export-queue')?.addEventListener('click',addExportQueue);$('run-export-queue')?.addEventListener('click',runExportQueue);$('cancel-export')?.addEventListener('click',cancelExport);$('clear-exports').addEventListener('click',clearExports);$('wipe-db').addEventListener('click',wipeDB);$('backup-json').addEventListener('click',backupSettings);
+  ['export-format','export-city','export-section','export-chunk','export-name','export-extra','export-max-total','export-zip','export-offline','export-online-fallback','export-split-city','export-city-name'].forEach(id=>{const element=$(id);if(!element)return;const event=(element.tagName==='INPUT'&&element.type!=='checkbox')?'input':'change';element.addEventListener(event,()=>{updateExportNamePreview();saveExportPreferences();});});
   window.addEventListener('online',updateOnline);window.addEventListener('offline',updateOnline);
   window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.deferredInstall=e;$('install-app').classList.remove('hidden')});$('install-app').addEventListener('click',async()=>{if(!state.deferredInstall)return;state.deferredInstall.prompt();await state.deferredInstall.userChoice;state.deferredInstall=null;$('install-app').classList.add('hidden')});
 }

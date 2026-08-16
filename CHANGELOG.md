@@ -2,6 +2,12 @@
 
 ## 3.6.0 — Essential extensions refresh — 2026-08-16
 
+- Added an installed-app/PWA VCF exporter that processes up to 1,000,000 contacts with IndexedDB cursors, bounded 2,000-row text blocks and chunks of up to 100,000 contacts.
+- Added offline-first and browser-compatible fallback selectors; both paths remain local and never upload contact files.
+- Added global Persian/English filename suffixes, per-city file splitting and stable numeric names such as `تهران ایرانسل_0001.vcf`.
+- Added live progress, persistent export preferences, safe cancellation, partial-file retention and graceful ZIP failure handling.
+- Kept the million-contact module and its controls out of the Telegram Mini App while applying it to PWA, Android and all desktop builds.
+- Added a CI stress test that creates exactly 1,000,000 vCards across 100 bounded chunks.
 - Upgraded the Android contacts extension with a bounded-memory vCard 2.1/3.0/4.0 streaming importer supporting up to 1,000,000 cards per file and a disk-limited SQLite/WAL vault.
 - Added optional batched Android Contacts insertion with WRITE_CONTACTS consent, a per-file device group where supported, existing-number indexing, idempotency tokens, yield points, recursive bad-batch isolation, safe pause/resume and Android 15 timeout handling.
 - Added Persian/Arabic digit normalization, structured-name spacing repair, quoted-printable decoding, per-field safety bounds, duplicate/invalid statistics and a saveable CSV verification report.

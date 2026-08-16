@@ -11,6 +11,7 @@
 - [ ] Mini App در نبود Contact Picker ادعای خواندن دفترچه کامل گوشی ندارد.
 - [ ] Checker بیش از ۵۰۰ شماره در یک اجرا نمی‌پذیرد و `not_returned` را قطعی معرفی نمی‌کند.
 - [ ] `web/` Source of Truth است و Mini App/PWA/Desktop/Android از همان Artifact استفاده می‌کنند.
+- [ ] `bulk-vcf-export.js` در PWA/Desktop/Android وجود دارد، در Mini App و Service Worker آن وجود ندارد.
 - [ ] `npm test` و `npm run verify` موفق‌اند.
 - [ ] Placeholder قبلی Mini App در Release وجود ندارد.
 - [ ] فایل Build شده `telegram-web.bundle.js` در تمام Artifactهای دارای Web Core وجود دارد.
@@ -30,6 +31,8 @@
 - [ ] جستجو در نام، شماره، Username و Telegram ID کار می‌کند.
 - [ ] Sort، Mutual filter، بدون شماره، Pagination و Bulk selection تست شده‌اند.
 - [ ] CSV، VCF، TXT، JSON و XLS با UTF-8 باز می‌شوند.
+- [ ] تست فشار یک‌میلیون vCard پاس می‌شود و نام نمونه `تهران ایرانسل_0001.vcf` است.
+- [ ] خاموش/روشن‌کردن موتور آفلاین و مسیر سازگار، جداسازی شهر، Progress و لغو امن تست شده‌اند.
 - [ ] انتخاب ستون، Chunk، ZIP و پروفایل ذخیره‌شده تست شده‌اند.
 - [ ] Android picker، Web Share و Download مرورگر تست شده‌اند.
 - [ ] Import به ContactFlow فقط رکورد جدید را اضافه می‌کند و Undo فقط همان رکوردها را حذف می‌کند.

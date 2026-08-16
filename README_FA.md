@@ -1,6 +1,6 @@
 # ContactFlow Personal Ultimate 3.6
 
-ContactFlow یک نرم‌افزار Local‑First برای Import، پاک‌سازی، Merge، Backup، تحلیل شهری و خروجی مخاطبین است. نسخه ۳.۶ از یک هسته آفلاین مشترک برای Telegram Mini App، PWA، Android، Windows، Linux و macOS استفاده می‌کند.
+ContactFlow یک نرم‌افزار Local‑First برای Import، پاک‌سازی، Merge، Backup، تحلیل شهری و خروجی مخاطبین است. نسخه ۳.۶ از یک هسته آفلاین مشترک برای Telegram Mini App، PWA، Android، Windows، Linux و macOS استفاده می‌کند؛ موتور خروجی میلیونی بنا به طراحی فقط در PWA و برنامه‌های نصب‌شده قرار دارد و وارد Mini App نمی‌شود.
 
 افزونه‌های ضروری همین Release شامل ابزارهای بومی Windows و Android برای تغییرنام ترتیبی فایل‌ها و اپ آفلاین Android برای تفکیک مخاطبین تلگرام، واتساپ، روبیکا، ایتا، بله، سروش و سایر اکشن‌های ثبت‌شده است. جزئیات در [`extensions/README_FA.md`](extensions/README_FA.md) قرار دارد.
 
@@ -13,6 +13,10 @@ ContactFlow یک نرم‌افزار Local‑First برای Import، پاک‌س
 - جعبه‌ابزار جداگانه V14 تبدیل TXT/CSV/VCF/JSON/Excel، حذف تکراری، Prefix، VCF قطعه‌ای، Hex/Unicode و Image Base64 را یکپارچه می‌کند.
 - ذخیره خروجی با System Save As در Android و مرورگرهای پشتیبانی‌شده انجام می‌شود و Download فقط fallback است.
 - فاصلهٔ قالب‌های چسبیده مثل `{city}{province}` اصلاح و نام‌های قدیمی مثل `ابرکوهیزد` در اولین اجرا ترمیم می‌شوند.
+- Export Center در PWA، Android، Windows، Linux و macOS تا سقف ۱٬۰۰۰٬۰۰۰ مخاطب را با Cursor و قطعه‌های حداکثر ۱۰۰٬۰۰۰تایی می‌سازد؛ تست فشار CI یک‌میلیون کارت را واقعاً تولید می‌کند.
+- دو انتخاب «آفلاین محلی» و «آنلاین/سازگار» وجود دارد. حالت دوم همان موتور فعلی مرورگر و مسیر جایگزین است و هیچ فایل یا مخاطبی را روی سرور آپلود نمی‌کند.
+- متن دلخواهی مثل «ایرانسل»، «جدید» یا «تست» به نام همه خروجی‌ها اضافه می‌شود و شماره قطعه در انتها می‌ماند؛ نمونه: `تهران ایرانسل_0001.vcf`.
+- خروجی می‌تواند به‌تفکیک شهر ساخته شود، پیش‌نمایش زنده نام دارد، تنظیمات را محلی نگه می‌دارد و با لغو امن قطعه‌های کامل‌شده را حفظ می‌کند.
 
 ## تغییرهای اصلی ۳.۵
 
@@ -39,10 +43,10 @@ Mini App نمی‌تواند مخفیانه فهرست خصوصی مخاطبین
 - `desktop/` — پوسته Go برای Windows/Linux/macOS
 - `android/` — پوسته WebView با System Document Picker، دفترچه مجوزمحور و OCR محلی
 - `telegram-miniapp/` — Gateway اختیاری Bot/Business و ورودی توسعه
-- `scripts/build-miniapp.mjs` — ساخت Mini App کامل از همان `web/`
+- `scripts/build-miniapp.mjs` — ساخت Mini App از `web/` و حذف صریح موتور خروجی میلیونی
 - `.github/workflows/release-all.yml` — Build و Release همه دستگاه‌ها
 
-موتورهای `web/import-merge.js`، `web/location-operator.js`، `web/name-engine.js`، `web/telegram-export.js` و `web/legacy-tools.js` به‌همراه رابط `web/v36.js` Source of Truth نسخه ۳.۶ هستند.
+موتورهای `web/import-merge.js`، `web/location-operator.js`، `web/name-engine.js`، `web/telegram-export.js`، `web/legacy-tools.js` و `web/bulk-vcf-export.js` به‌همراه رابط `web/v36.js` Source of Truth نسخه ۳.۶ هستند.
 
 ## اجرای PWA محلی
 
@@ -61,6 +65,7 @@ cp enhancements/dist/telegram-web.bundle.js web/
 ```bash
 node --test tests/*.test.cjs
 node scripts/verify-v36.mjs
+node scripts/stress-bulk-vcf.mjs
 ```
 
 ## Mini App
@@ -69,7 +74,7 @@ Release با نام زیر یک بسته Flat و آماده cPanel می‌ساز
 
 `ContactFlow_Personal_Ultimate_3.6.0_Telegram_MiniApp_cPanel.zip`
 
-محتویات ZIP را روی HTTPS Extract و `https://domain/path/miniapp.html` را در BotFather ثبت کنید. این فایل همان رابط کامل برنامه را بارگذاری می‌کند، نه صفحه Placeholder نسخه قبلی.
+محتویات ZIP را روی HTTPS Extract و `https://domain/path/miniapp.html` را در BotFather ثبت کنید. این فایل رابط اصلی برنامه را بارگذاری می‌کند، اما کنترل‌ها و موتور خروجی میلیونی عمداً از Mini App حذف شده‌اند.
 
 ## اصول استفاده
 
