@@ -8,6 +8,7 @@
 - Capped the in-memory messenger inspector to a 25,000-contact preview and chunked ContactsContract queries so a huge system address book does not exhaust RAM.
 - Fixed adjacent city/province word spacing and added an automatic repair pass for existing names such as `ابرکوهیزد`.
 - Added a native Windows sequential file renamer with Enter-to-next, extension safety, collision checks, Undo, natural ordering, templates and CSV audit reports.
+- Fixed the Windows renamer event re-entry that caused repeated NullReferenceException dialogs, false error statuses after successful moves and one-character Persian input; added transient-lock retry and non-modal diagnostics.
 - Added an offline native Android messenger-contact inspector for Telegram, WhatsApp, Rubika, Eitaa, Bale, Soroush and other registered contact actions, with TXT/CSV/XLSX/VCF Save As.
 
 ## 3.4.0 — Smart import, reversible merge and Telegram status — 2026-08-15

@@ -11,6 +11,11 @@ test('native Windows sequential renamer keeps the requested one-by-one workflow'
   const form=read('extensions/sequential-file-renamer/MainForm.cs');
   const rules=read('extensions/sequential-file-renamer/RenameRules.cs');
   for(const marker of ['Multiselect = true','Keys.Enter','MoveToNext','UndoLast','File.Move','preserveExtension','ApplyTemplateToRemaining','SaveReport'])assert.ok(form.includes(marker),`renamer missing ${marker}`);
+  for(const marker of ['suppressUiEvents','RefreshDraftCell','RenameCurrentAsync','MoveFileWithRetryAsync','operationInProgress','ReportUnexpectedError'])assert.ok(form.includes(marker),`renamer regression guard missing ${marker}`);
+  assert.doesNotMatch(form,/queue\.Items\[index\]\s*=\s*ItemFor/,'typing must not replace the selected ListView row');
+  assert.match(read('extensions/sequential-file-renamer/Program.cs'),/SetUnhandledExceptionMode\(UnhandledExceptionMode\.CatchException\)/);
+  assert.match(read('extensions/sequential-file-renamer/RenameRules.cs'),/NormalizationForm\.FormC/);
+  assert.match(read('extensions/sequential-file-renamer/SequentialFileRenamer.csproj'),/<FileVersion>3\.6\.0\.2<\/FileVersion>/);
   for(const marker of ['DestinationFor','File.Exists','ApplySequenceTemplate','GetInvalidFileNameChars'])assert.ok(rules.includes(marker),`rename rules missing ${marker}`);
   assert.match(read('extensions/sequential-file-renamer/SequentialFileRenamer.csproj'),/<UseWindowsForms>true<\/UseWindowsForms>/);
 });

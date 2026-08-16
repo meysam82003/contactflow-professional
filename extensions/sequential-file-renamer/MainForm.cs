@@ -4,6 +4,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace ContactFlow.SequentialFileRenamer;
@@ -23,8 +24,11 @@ internal sealed class MainForm : Form
     private readonly TextBox sequenceTemplate = new();
     private readonly NumericUpDown sequenceStart = new();
     private readonly Button renameButton = new();
+    private readonly Button skipButton = new();
     private readonly Button undoButton = new();
     private int currentIndex = -1;
+    private bool suppressUiEvents;
+    private bool operationInProgress;
 
     private static readonly Color Background = Color.FromArgb(8, 12, 21);
     private static readonly Color Panel = Color.FromArgb(20, 27, 42);
@@ -37,7 +41,7 @@ internal sealed class MainForm : Form
 
     public MainForm()
     {
-        Text = "ContactFlow — تغییرنام ترتیبی فایل‌ها 3.6";
+        Text = "ContactFlow — تغییرنام ترتیبی فایل‌ها 3.6 r2";
         Width = 1180;
         Height = 760;
         MinimumSize = new Size(940, 620);
@@ -123,6 +127,8 @@ internal sealed class MainForm : Form
         nameBox.BackColor = PanelSoft;
         nameBox.ForeColor = TextPrimary;
         nameBox.BorderStyle = BorderStyle.FixedSingle;
+        nameBox.RightToLeft = RightToLeft.Yes;
+        nameBox.ShortcutsEnabled = true;
         editor.Controls.Add(nameBox, 0, 5);
 
         preserveExtension.Text = "پسوند اصلی فایل حفظ شود";
@@ -135,7 +141,8 @@ internal sealed class MainForm : Form
         var mainActions = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.RightToLeft, WrapContents = true };
         renameButton.Text = "ثبت و فایل بعدی  Enter";
         StyleButton(renameButton, Accent, Color.FromArgb(7, 26, 24));
-        var skipButton = ButtonOf("رد کردن  Ctrl+Enter", PanelSoft);
+        skipButton.Text = "رد کردن  Ctrl+Enter";
+        StyleButton(skipButton, PanelSoft, TextPrimary);
         undoButton.Text = "برگرداندن  Ctrl+Z";
         StyleButton(undoButton, PanelSoft, TextPrimary);
         undoButton.Enabled = false;
@@ -193,7 +200,7 @@ internal sealed class MainForm : Form
 
         selectFiles.Click += (_, _) => SelectFiles();
         selectFolder.Click += (_, _) => SelectFolder();
-        renameButton.Click += (_, _) => RenameCurrent();
+        renameButton.Click += async (_, _) => await RenameCurrentAsync();
         skipButton.Click += (_, _) => SkipCurrent();
         undoButton.Click += (_, _) => UndoLast();
         applyTemplate.Click += (_, _) => ApplyTemplateToRemaining();
@@ -207,18 +214,23 @@ internal sealed class MainForm : Form
     {
         queue.SelectedIndexChanged += (_, _) =>
         {
-            if (queue.SelectedIndices.Count > 0) SelectIndex(queue.SelectedIndices[0]);
+            if (suppressUiEvents || queue.SelectedIndices.Count == 0) return;
+            var selectedIndex = queue.SelectedIndices[0];
+            if (selectedIndex != currentIndex) SelectIndex(selectedIndex);
         };
         nameBox.TextChanged += (_, _) =>
         {
+            if (suppressUiEvents) return;
             if (currentIndex >= 0 && currentIndex < entries.Count) entries[currentIndex].DraftName = nameBox.Text;
-            RefreshRow(currentIndex);
+            RefreshDraftCell(currentIndex);
+            UpdateProgress();
         };
-        nameBox.KeyDown += (_, eventArgs) =>
+        nameBox.KeyDown += async (_, eventArgs) =>
         {
             if (eventArgs.KeyCode != Keys.Enter) return;
             eventArgs.SuppressKeyPress = true;
-            if (eventArgs.Control) SkipCurrent(); else RenameCurrent();
+            eventArgs.Handled = true;
+            if (eventArgs.Control) SkipCurrent(); else await RenameCurrentAsync();
         };
         KeyDown += (_, eventArgs) =>
         {
@@ -271,16 +283,25 @@ internal sealed class MainForm : Form
         var added = paths.Where(File.Exists).Select(Path.GetFullPath).Where(path => queuedPaths.Add(path)).OrderBy(path => Path.GetFileName(path), Comparer<string>.Create(RenameRules.NaturalCompare)).ToList();
         foreach (var path in added) entries.Add(new RenameEntry(path));
         RebuildQueue();
-        if (currentIndex < 0 && entries.Count > 0) SelectIndex(0);
+        if (entries.Count > 0) SelectIndex(currentIndex < 0 ? 0 : currentIndex);
         SetStatus(added.Count == 0 ? "فایل جدیدی اضافه نشد." : $"{added.Count:N0} فایل اضافه شد؛ جمع صف {entries.Count:N0} فایل است.", false);
     }
 
     private void RebuildQueue()
     {
+        var wasSuppressed = suppressUiEvents;
+        suppressUiEvents = true;
         queue.BeginUpdate();
-        queue.Items.Clear();
-        for (var index = 0; index < entries.Count; index++) queue.Items.Add(ItemFor(entries[index], index));
-        queue.EndUpdate();
+        try
+        {
+            queue.Items.Clear();
+            for (var index = 0; index < entries.Count; index++) queue.Items.Add(ItemFor(entries[index], index));
+        }
+        finally
+        {
+            queue.EndUpdate();
+            suppressUiEvents = wasSuppressed;
+        }
         UpdateProgress();
     }
 
@@ -299,67 +320,141 @@ internal sealed class MainForm : Form
     private void RefreshRow(int index)
     {
         if (index < 0 || index >= entries.Count || index >= queue.Items.Count) return;
-        var selected = queue.Items[index].Selected;
-        queue.Items[index] = ItemFor(entries[index], index);
-        queue.Items[index].Selected = selected;
+        var entry = entries[index];
+        var item = queue.Items[index];
+        item.Text = (index + 1).ToString();
+        item.SubItems[1].Text = entry.FileName;
+        item.SubItems[2].Text = entry.DraftName;
+        item.SubItems[3].Text = entry.Status;
+        item.ForeColor = entry.Status == "انجام شد" ? Accent : entry.Status == "خطا" ? Danger : TextPrimary;
+    }
+
+    private void RefreshDraftCell(int index)
+    {
+        if (index < 0 || index >= entries.Count || index >= queue.Items.Count) return;
+        queue.Items[index].SubItems[2].Text = entries[index].DraftName;
     }
 
     private void SelectIndex(int index)
     {
         if (entries.Count == 0) { currentIndex = -1; return; }
-        currentIndex = Math.Clamp(index, 0, entries.Count - 1);
-        for (var i = 0; i < queue.Items.Count; i++) queue.Items[i].Selected = i == currentIndex;
-        queue.EnsureVisible(currentIndex);
-        var entry = entries[currentIndex];
-        currentLabel.Text = entry.FileName;
-        detailLabel.Text = $"{currentIndex + 1:N0} از {entries.Count:N0}  •  {Path.GetDirectoryName(entry.CurrentPath)}";
-        nameBox.Text = string.IsNullOrWhiteSpace(entry.DraftName) ? Path.GetFileNameWithoutExtension(entry.CurrentPath) : entry.DraftName;
+        var wasSuppressed = suppressUiEvents;
+        suppressUiEvents = true;
+        try
+        {
+            currentIndex = Math.Clamp(index, 0, entries.Count - 1);
+            for (var i = 0; i < queue.Items.Count; i++) queue.Items[i].Selected = i == currentIndex;
+            queue.EnsureVisible(currentIndex);
+            var entry = entries[currentIndex];
+            currentLabel.Text = entry.FileName;
+            detailLabel.Text = $"{currentIndex + 1:N0} از {entries.Count:N0}  •  {Path.GetDirectoryName(entry.CurrentPath)}";
+            var draft = string.IsNullOrWhiteSpace(entry.DraftName) ? Path.GetFileNameWithoutExtension(entry.CurrentPath) : entry.DraftName;
+            if (!string.Equals(nameBox.Text, draft, StringComparison.Ordinal)) nameBox.Text = draft;
+        }
+        finally { suppressUiEvents = wasSuppressed; }
         nameBox.Focus();
         nameBox.SelectAll();
         UpdateProgress();
     }
 
-    private void RenameCurrent()
+    private async Task RenameCurrentAsync()
     {
+        if (operationInProgress) return;
         if (currentIndex < 0 || currentIndex >= entries.Count) { SetStatus("ابتدا فایل انتخاب کنید.", true); return; }
+        operationInProgress = true;
+        SetEditorBusy(true);
+        var renameIndex = currentIndex;
         var entry = entries[currentIndex];
+        string? errorMessage = null;
+        var renamed = false;
         try
         {
             var destination = RenameRules.DestinationFor(entry, nameBox.Text, preserveExtension.Checked);
             if (string.Equals(destination, entry.CurrentPath, StringComparison.Ordinal))
             {
                 entry.Status = "بدون تغییر";
+                entry.LastError = string.Empty;
             }
             else
             {
                 var before = entry.CurrentPath;
-                File.Move(before, destination);
+                await MoveFileWithRetryAsync(before, destination);
                 queuedPaths.Remove(before);
                 queuedPaths.Add(destination);
                 entry.CurrentPath = destination;
                 entry.DraftName = Path.GetFileNameWithoutExtension(destination);
                 entry.Status = "انجام شد";
+                entry.LastError = string.Empty;
                 history.Push(new RenameAction(entry, before, destination));
                 undoButton.Enabled = true;
             }
-            RefreshRow(currentIndex);
-            SetStatus($"ثبت شد: {entry.FileName}", false);
-            MoveToNext();
+            renamed = true;
         }
         catch (Exception exception)
         {
             entry.Status = "خطا";
-            RefreshRow(currentIndex);
-            SetStatus(exception.Message, true);
-            nameBox.Focus();
-            nameBox.SelectAll();
+            entry.LastError = exception.Message;
+            errorMessage = exception.Message;
         }
+        finally
+        {
+            operationInProgress = false;
+            SetEditorBusy(false);
+        }
+
+        try
+        {
+            RefreshRow(renameIndex);
+            if (!renamed)
+            {
+                SetStatus(errorMessage ?? "تغییرنام انجام نشد.", true);
+                nameBox.Focus();
+                return;
+            }
+
+            SetStatus($"ثبت شد: {entry.FileName}", false);
+            await Task.Yield();
+            if (!IsDisposed && currentIndex == renameIndex) MoveToNext();
+        }
+        catch (Exception exception)
+        {
+            ReportUnexpectedError(exception);
+        }
+    }
+
+    private static async Task MoveFileWithRetryAsync(string source, string destination)
+    {
+        const int attempts = 4;
+        for (var attempt = 1; attempt <= attempts; attempt++)
+        {
+            try
+            {
+                File.Move(source, destination);
+                return;
+            }
+            catch (IOException) when (attempt < attempts && !File.Exists(destination))
+            {
+                await Task.Delay(80 * attempt);
+            }
+        }
+    }
+
+    private void SetEditorBusy(bool busy)
+    {
+        queue.Enabled = !busy;
+        nameBox.Enabled = !busy;
+        preserveExtension.Enabled = !busy;
+        skipButton.Enabled = !busy;
+        undoButton.Enabled = !busy && history.Count > 0;
+        renameButton.Enabled = !busy && currentIndex >= 0;
     }
 
     private void SkipCurrent()
     {
+        if (operationInProgress) return;
         if (currentIndex < 0 || currentIndex >= entries.Count) return;
         entries[currentIndex].Status = "رد شد";
+        entries[currentIndex].LastError = string.Empty;
         RefreshRow(currentIndex);
         MoveToNext();
     }
@@ -377,6 +472,7 @@ internal sealed class MainForm : Form
 
     private void UndoLast()
     {
+        if (operationInProgress) return;
         if (!history.TryPop(out var action)) return;
         try
         {
@@ -388,6 +484,7 @@ internal sealed class MainForm : Form
             action.Entry.CurrentPath = action.BeforePath;
             action.Entry.DraftName = Path.GetFileNameWithoutExtension(action.BeforePath);
             action.Entry.Status = "برگردانده شد";
+            action.Entry.LastError = string.Empty;
             var index = entries.IndexOf(action.Entry);
             RefreshRow(index);
             SelectIndex(index);
@@ -403,6 +500,7 @@ internal sealed class MainForm : Form
 
     private void ApplyTemplateToRemaining()
     {
+        if (operationInProgress) return;
         if (entries.Count == 0) return;
         var startAt = currentIndex < 0 ? 0 : currentIndex;
         var number = (int)sequenceStart.Value;
@@ -414,6 +512,7 @@ internal sealed class MainForm : Form
 
     private void MoveSelected(int offset)
     {
+        if (operationInProgress) return;
         if (currentIndex < 0) return;
         var target = currentIndex + offset;
         if (target < 0 || target >= entries.Count) return;
@@ -425,6 +524,7 @@ internal sealed class MainForm : Form
 
     private void RemoveSelected()
     {
+        if (operationInProgress) return;
         if (currentIndex < 0 || currentIndex >= entries.Count) return;
         var entry = entries[currentIndex];
         entries.RemoveAt(currentIndex);
@@ -442,12 +542,13 @@ internal sealed class MainForm : Form
 
     private void SaveReport()
     {
+        if (operationInProgress) return;
         if (entries.Count == 0) { SetStatus("صف خالی است.", true); return; }
         using var dialog = new SaveFileDialog { Filter = "CSV (*.csv)|*.csv", FileName = $"ContactFlow_Rename_Report_{DateTime.Now:yyyyMMdd_HHmmss}.csv", AddExtension = true };
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
         static string Cell(string value) => '"' + value.Replace("\"", "\"\"") + '"';
-        var rows = entries.Select((entry, index) => string.Join(",", new[] { (index + 1).ToString(), Cell(entry.OriginalPath), Cell(entry.CurrentPath), Cell(entry.Status) }));
-        File.WriteAllText(dialog.FileName, "row,original_path,current_path,status\r\n" + string.Join("\r\n", rows), new UTF8Encoding(true));
+        var rows = entries.Select((entry, index) => string.Join(",", new[] { (index + 1).ToString(), Cell(entry.OriginalPath), Cell(entry.CurrentPath), Cell(entry.Status), Cell(entry.LastError) }));
+        File.WriteAllText(dialog.FileName, "row,original_path,current_path,status,error\r\n" + string.Join("\r\n", rows), new UTF8Encoding(true));
         SetStatus("گزارش CSV ذخیره شد.", false);
     }
 
@@ -455,12 +556,28 @@ internal sealed class MainForm : Form
     {
         progress.Maximum = Math.Max(1, entries.Count);
         progress.Value = Math.Min(progress.Maximum, entries.Count(entry => entry.Status is "انجام شد" or "بدون تغییر"));
-        renameButton.Enabled = currentIndex >= 0 && entries.Count > 0;
+        renameButton.Enabled = !operationInProgress && currentIndex >= 0 && entries.Count > 0 && !string.IsNullOrWhiteSpace(nameBox.Text);
     }
 
     private void SetStatus(string message, bool error)
     {
         statusLabel.Text = message;
         statusLabel.ForeColor = error ? Danger : TextMuted;
+    }
+
+    internal void ReportUnexpectedError(Exception exception)
+    {
+        if (IsDisposed) return;
+        var message = string.IsNullOrWhiteSpace(exception.Message) ? "خطای داخلی ناشناخته" : exception.Message;
+        SetStatus($"خطای داخلی کنترل شد؛ فایل‌ها آسیبی ندیدند: {message}", true);
+        try
+        {
+            var logPath = Path.Combine(Path.GetTempPath(), "ContactFlow_Sequential_File_Renamer.log");
+            File.AppendAllText(logPath, $"{DateTimeOffset.Now:O}\t{exception}\r\n", new UTF8Encoding(false));
+        }
+        catch
+        {
+            // Logging must never interrupt the rename workflow.
+        }
     }
 }

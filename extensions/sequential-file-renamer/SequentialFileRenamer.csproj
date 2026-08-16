@@ -10,8 +10,9 @@
     <AssemblyName>ContactFlow.SequentialFileRenamer</AssemblyName>
     <RootNamespace>ContactFlow.SequentialFileRenamer</RootNamespace>
     <Version>3.6.0</Version>
-    <FileVersion>3.6.0.0</FileVersion>
+    <FileVersion>3.6.0.2</FileVersion>
     <AssemblyVersion>3.6.0.0</AssemblyVersion>
+    <InformationalVersion>3.6.0-renamer-r2</InformationalVersion>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
