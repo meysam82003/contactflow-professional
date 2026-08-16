@@ -8,7 +8,7 @@ android {
         applicationId 'com.contactflow.messengercontacts'
         minSdk 23
         targetSdk 36
-        versionCode 30601
+        versionCode 30602
         versionName '3.6.0'
     }
 

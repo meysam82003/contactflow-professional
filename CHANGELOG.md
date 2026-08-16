@@ -2,6 +2,10 @@
 
 ## 3.6.0 — Essential extensions refresh — 2026-08-16
 
+- Upgraded the Android contacts extension with a bounded-memory vCard 2.1/3.0/4.0 streaming importer supporting up to 1,000,000 cards per file and a disk-limited SQLite/WAL vault.
+- Added optional batched Android Contacts insertion with WRITE_CONTACTS consent, a per-file device group where supported, existing-number indexing, idempotency tokens, yield points, recursive bad-batch isolation, safe pause/resume and Android 15 timeout handling.
+- Added Persian/Arabic digit normalization, structured-name spacing repair, quoted-printable decoding, per-field safety bounds, duplicate/invalid statistics and a saveable CSV verification report.
+- Capped the in-memory messenger inspector to a 25,000-contact preview and chunked ContactsContract queries so a huge system address book does not exhaust RAM.
 - Fixed adjacent city/province word spacing and added an automatic repair pass for existing names such as `ابرکوهیزد`.
 - Added a native Windows sequential file renamer with Enter-to-next, extension safety, collision checks, Undo, natural ordering, templates and CSV audit reports.
 - Added an offline native Android messenger-contact inspector for Telegram, WhatsApp, Rubika, Eitaa, Bale, Soroush and other registered contact actions, with TXT/CSV/XLSX/VCF Save As.

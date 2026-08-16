@@ -18,14 +18,31 @@ test('native Windows sequential renamer keeps the requested one-by-one workflow'
 test('Android messenger contacts extension is offline, permission-scoped and multi-format',()=>{
   const manifest=read('android/messengercontacts/src/main/AndroidManifest.xml');
   assert.match(manifest,/android\.permission\.READ_CONTACTS/);
+  assert.match(manifest,/android\.permission\.WRITE_CONTACTS/);
+  assert.match(manifest,/android\.permission\.FOREGROUND_SERVICE_DATA_SYNC/);
+  assert.match(manifest,/android:foregroundServiceType="dataSync"/);
   assert.doesNotMatch(manifest,/android\.permission\.INTERNET/);
   assert.doesNotMatch(manifest,/QUERY_ALL_PACKAGES/);
   const main=read('android/messengercontacts/src/main/java/com/contactflow/messengercontacts/MainActivity.java');
-  for(const marker of ['ContactsContract.Contacts.CONTENT_URI','Intent.ACTION_VIEW','Intent.ACTION_CREATE_DOCUMENT','chooseExportFormat','showDetectionDetails'])assert.ok(main.includes(marker),`Android contact utility missing ${marker}`);
+  for(const marker of ['ContactsContract.Contacts.CONTENT_URI','Intent.ACTION_VIEW','Intent.ACTION_CREATE_DOCUMENT','Intent.ACTION_OPEN_DOCUMENT','takePersistableUriPermission','chooseExportFormat','showDetectionDetails','showImportReport'])assert.ok(main.includes(marker),`Android contact utility missing ${marker}`);
   const catalog=read('android/messengercontacts/src/main/java/com/contactflow/messengercontacts/MessengerCatalog.java');
   for(const id of ['telegram','whatsapp','rubika','eitaa','bale','soroush','gap','igap','shad'])assert.match(catalog,new RegExp(`"${id}"`));
   const exporter=read('android/messengercontacts/src/main/java/com/contactflow/messengercontacts/ExportWriter.java');
   for(const marker of ['.vcf','text/csv','.xlsx','ZipOutputStream','sheet1.xml'])assert.ok(exporter.includes(marker),`exporter missing ${marker}`);
+});
+
+test('Android million-card VCF pipeline is streaming, durable and resumable',()=>{
+  const parser=read('android/messengercontacts/src/main/java/com/contactflow/messengercontacts/VCardStreamParser.java');
+  for(const marker of ['MAX_CARDS_PER_FILE = 1_000_000L','BufferedReader','CardHandler','ENCODING=QUOTED-PRINTABLE','CountingInputStream'])assert.ok(parser.includes(marker),`streaming VCF parser missing ${marker}`);
+  assert.doesNotMatch(parser,/readAllBytes|Files\.readAll/);
+  const store=read('android/messengercontacts/src/main/java/com/contactflow/messengercontacts/MassContactStore.java');
+  for(const marker of ['setWriteAheadLoggingEnabled(true)','normalized_phone TEXT NOT NULL UNIQUE','checkpoint_card','device_phone_index','STATE_PAUSED','STATE_LIMIT'])assert.ok(store.includes(marker),`mass contact store missing ${marker}`);
+  const service=read('android/messengercontacts/src/main/java/com/contactflow/messengercontacts/MassImportService.java');
+  for(const marker of ['startForeground','applyBatch(ContactsContract.AUTHORITY','withYieldAllowed(true)','GroupMembership.CONTENT_ITEM_TYPE','ACTION_PAUSE','onTimeout(int startId, int fgsType)','MAX_PROVIDER_OPERATIONS','findExistingTokens'])assert.ok(service.includes(marker),`mass import service missing ${marker}`);
+  assert.doesNotMatch(service,/HttpURLConnection|OkHttp|Socket|https?:\/\//);
+  const scanner=read('android/messengercontacts/src/main/java/com/contactflow/messengercontacts/ContactScanner.java');
+  assert.match(scanner,/UI_PREVIEW_LIMIT = 25_000/);
+  assert.match(scanner,/QUERY_CHUNK = 400/);
 });
 
 test('release workflow publishes both essential extension binaries on v3.6.0',()=>{
