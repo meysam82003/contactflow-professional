@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace ContactFlow.SequentialFileRenamer;
@@ -17,6 +18,7 @@ internal sealed class RenameEntry
     public string CurrentPath { get; set; }
     public string DraftName { get; set; } = string.Empty;
     public string Status { get; set; } = "در انتظار";
+    public string LastError { get; set; } = string.Empty;
     public string FileName => Path.GetFileName(CurrentPath);
 }
 
@@ -31,7 +33,7 @@ internal static partial class RenameRules
 
     public static string CleanFileName(string value)
     {
-        var cleaned = (value ?? string.Empty).Trim();
+        var cleaned = (value ?? string.Empty).Normalize(NormalizationForm.FormC).Trim();
         foreach (var invalid in Path.GetInvalidFileNameChars()) cleaned = cleaned.Replace(invalid, '_');
         cleaned = Regex.Replace(cleaned, @"\s+", " ").TrimEnd(' ', '.');
         return cleaned;

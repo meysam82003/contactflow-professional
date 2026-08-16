@@ -11,6 +11,9 @@ internal static class Program
         Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
-        Application.Run(new MainForm());
+        Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+        var mainForm = new MainForm();
+        Application.ThreadException += (_, eventArgs) => mainForm.ReportUnexpectedError(eventArgs.Exception);
+        Application.Run(mainForm);
     }
 }

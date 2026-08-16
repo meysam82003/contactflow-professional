@@ -17,6 +17,8 @@ if(read('VERSION').trim()!=='3.6.0')throw new Error('VERSION must be 3.6.0');
 for(const [file,marker] of [['desktop/main.go','appVersion = "3.6.0"'],['android/app/build.gradle',"versionName '3.6.0'"],['telegram-miniapp/lib.php',"CF_VERSION = '3.6.0'"],['.github/workflows/release-all.yml','VERSION: 3.6.0']])if(!read(file).includes(marker))throw new Error(`${file} is not on 3.6.0`);
 for(const asset of ["'./v36.js'","'./v36.css'","'./telegram-export.js'","'./legacy-tools.js'","'./file-save.js'"])if(!read('web/sw.js').includes(asset))throw new Error(`service worker missing ${asset}`);
 for(const asset of ['ContactFlow_3.6_Sequential_File_Renamer_Windows_x64.exe','ContactFlow_3.6_Messenger_Contacts_Android.apk'])if(!read('.github/workflows/release-all.yml').includes(asset))throw new Error(`release workflow missing extension ${asset}`);
+for(const marker of ['suppressUiEvents','RefreshDraftCell','RenameCurrentAsync','MoveFileWithRetryAsync','ReportUnexpectedError'])if(!read('extensions/sequential-file-renamer/MainForm.cs').includes(marker))throw new Error(`sequential renamer hotfix missing ${marker}`);
+if(!read('extensions/sequential-file-renamer/SequentialFileRenamer.csproj').includes('<FileVersion>3.6.0.2</FileVersion>'))throw new Error('sequential renamer hotfix file version missing');
 if(read('android/messengercontacts/src/main/AndroidManifest.xml').includes('android.permission.INTERNET'))throw new Error('messenger contacts extension must remain offline');
 JSON.parse(read('web/manifest.webmanifest'));
 console.log('ContactFlow 3.6 source verification PASS');

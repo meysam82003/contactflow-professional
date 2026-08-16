@@ -170,6 +170,8 @@ jobs:
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           $target = 'dist/ContactFlow_3.6_Sequential_File_Renamer_Windows_x64.exe'
           Copy-Item $source $target
+          $fileVersion = (Get-Item $target).VersionInfo.FileVersion
+          if ($fileVersion -ne '3.6.0.2') { throw "Unexpected sequential renamer file version: $fileVersion" }
           $hash = (Get-FileHash -Algorithm SHA256 $target).Hash.ToLowerInvariant()
           "$hash  ContactFlow_3.6_Sequential_File_Renamer_Windows_x64.exe" | Set-Content -Encoding ascii dist/ContactFlow_3.6_Sequential_File_Renamer_SHA256.txt
           if ((Get-Item $target).Length -lt 1000000) { throw 'Sequential File Renamer executable is unexpectedly small.' }
