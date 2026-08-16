@@ -30,10 +30,16 @@ public class MainActivity extends Activity {
     private static final int OPEN_BACKUP = 4204;
     private static final int OCR_IMAGE = 4205;
     private static final int CONTACTS_PERMISSION = 4206;
+    private static final int SAVE_DOCUMENT_STREAM = 4207;
     private static final String APP_URL = "https://appassets.androidplatform.net/assets/index.html";
     private WebView webView;
     private ValueCallback<Uri[]> fileCallback;
     private String pendingName, pendingMime, pendingBase64;
+    private final Object streamSaveLock = new Object();
+    private String pendingStreamToken, pendingStreamName;
+    private Uri pendingStreamUri;
+    private OutputStream pendingStreamOutput;
+    private long pendingStreamExpected = -1L, pendingStreamWritten = 0L;
     private WebViewAssetLoader assetLoader;
 
     @Override public void onCreate(Bundle state) {
@@ -110,6 +116,10 @@ public class MainActivity extends Activity {
             if(resultCode==RESULT_OK && data!=null && data.getData()!=null && pendingBase64!=null) writePendingDocument(data.getData());
             pendingName=pendingMime=pendingBase64=null; return;
         }
+        if(requestCode==SAVE_DOCUMENT_STREAM) {
+            handleStreamDocumentResult(resultCode,data);
+            return;
+        }
         if(requestCode==OPEN_BACKUP && resultCode==RESULT_OK && data!=null && data.getData()!=null) readBackupDocument(data.getData());
         if(requestCode==OCR_IMAGE && resultCode==RESULT_OK && data!=null && data.getData()!=null) recognizeImage(data.getData());
     }
@@ -122,6 +132,103 @@ public class MainActivity extends Activity {
             out.write(bytes);out.close();
             Toast.makeText(this,"فایل ذخیره شد.",Toast.LENGTH_LONG).show();
         } catch(Exception e) { Toast.makeText(this,"ذخیره ناموفق: "+e.getMessage(),Toast.LENGTH_LONG).show(); }
+    }
+
+    private void chooseStreamDocument(String name,String mime,String token,String expectedBytes) {
+        String replacedToken=pendingStreamToken;
+        abortStreamDocument(null,false);
+        if(replacedToken!=null)notifyStreamDocumentReady(replacedToken,false,"یک ذخیرهٔ جدید جایگزین عملیات قبلی شد.");
+        pendingStreamToken=token;
+        pendingStreamName=safeFileName(name);
+        pendingMime=(mime==null||mime.length()==0)?"application/octet-stream":mime;
+        try {pendingStreamExpected=Long.parseLong(expectedBytes);} catch(Exception ignored) {pendingStreamExpected=-1L;}
+        pendingStreamWritten=0L;
+        Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType(pendingMime);
+        intent.putExtra(Intent.EXTRA_TITLE,pendingStreamName);
+        try {startActivityForResult(intent,SAVE_DOCUMENT_STREAM);}
+        catch(Exception error) {
+            String failedToken=pendingStreamToken;
+            clearStreamDocument(false);
+            notifyStreamDocumentReady(failedToken,false,"پنجره ذخیره در دسترس نیست: "+error.getMessage());
+        }
+    }
+
+    private void handleStreamDocumentResult(int resultCode,Intent data) {
+        String token=pendingStreamToken;
+        if(token==null)return;
+        if(resultCode!=RESULT_OK||data==null||data.getData()==null) {
+            clearStreamDocument(false);
+            notifyStreamDocumentReady(token,false,"ذخیره توسط کاربر لغو شد.");
+            return;
+        }
+        synchronized(streamSaveLock) {
+            try {
+                pendingStreamUri=data.getData();
+                OutputStream raw=getContentResolver().openOutputStream(pendingStreamUri,"w");
+                if(raw==null)throw new IOException("مسیر خروجی باز نشد.");
+                pendingStreamOutput=new BufferedOutputStream(raw,256*1024);
+            } catch(Exception error) {
+                clearStreamDocument(true);
+                notifyStreamDocumentReady(token,false,"بازکردن مقصد ناموفق: "+error.getMessage());
+                return;
+            }
+        }
+        notifyStreamDocumentReady(token,true,"");
+    }
+
+    private String appendStreamDocument(String token,String base64) {
+        synchronized(streamSaveLock) {
+            if(token==null||!token.equals(pendingStreamToken)||pendingStreamOutput==null)return "نشست ذخیره منقضی شده است.";
+            try {
+                byte[] bytes=Base64.decode(base64,Base64.DEFAULT);
+                pendingStreamOutput.write(bytes);
+                pendingStreamWritten+=bytes.length;
+                if(pendingStreamExpected>=0&&pendingStreamWritten>pendingStreamExpected)throw new IOException("حجم داده از اندازه اعلام‌شده بیشتر شد.");
+                return "";
+            } catch(Exception error) {return "نوشتن Backup ناموفق: "+error.getMessage();}
+        }
+    }
+
+    private String finishStreamDocument(String token) {
+        synchronized(streamSaveLock) {
+            if(token==null||!token.equals(pendingStreamToken)||pendingStreamOutput==null)return "نشست ذخیره منقضی شده است.";
+            try {
+                if(pendingStreamExpected>=0&&pendingStreamWritten!=pendingStreamExpected)throw new IOException("اندازه فایل کامل نیست: "+pendingStreamWritten+" از "+pendingStreamExpected+" بایت");
+                pendingStreamOutput.flush();
+                pendingStreamOutput.close();
+                String name=pendingStreamName;
+                clearStreamDocument(false);
+                runOnUiThread(() -> Toast.makeText(this,"فایل کامل ذخیره شد: "+name,Toast.LENGTH_LONG).show());
+                return "";
+            } catch(Exception error) {
+                String message="نهایی‌سازی Backup ناموفق: "+error.getMessage();
+                clearStreamDocument(true);
+                return message;
+            }
+        }
+    }
+
+    private void abortStreamDocument(String token,boolean showToast) {
+        synchronized(streamSaveLock) {
+            if(token!=null&&!token.equals(pendingStreamToken))return;
+            boolean hadSession=pendingStreamToken!=null;
+            clearStreamDocument(true);
+            if(showToast&&hadSession)runOnUiThread(() -> Toast.makeText(this,"ذخیره ناقص پاک شد.",Toast.LENGTH_SHORT).show());
+        }
+    }
+
+    private void clearStreamDocument(boolean deletePartial) {
+        try {if(pendingStreamOutput!=null)pendingStreamOutput.close();} catch(Exception ignored) {}
+        if(deletePartial&&pendingStreamUri!=null)try {getContentResolver().delete(pendingStreamUri,null,null);} catch(Exception ignored) {}
+        pendingStreamOutput=null;pendingStreamUri=null;pendingStreamToken=null;pendingStreamName=null;pendingStreamExpected=-1L;pendingStreamWritten=0L;
+    }
+
+    private void notifyStreamDocumentReady(String token,boolean ok,String message) {
+        if(token==null)return;
+        final String js="window.ContactFlowFileSave&&window.ContactFlowFileSave.onAndroidDocumentReady("+jsString(token)+","+(ok?"true":"false")+","+jsString(message==null?"":message)+")";
+        webView.post(() -> webView.evaluateJavascript(js,null));
     }
 
     private void readBackupDocument(Uri uri) {
@@ -152,6 +259,7 @@ public class MainActivity extends Activity {
     }
 
     @Override public void onBackPressed() { if (webView.canGoBack()) webView.goBack(); else super.onBackPressed(); }
+    @Override protected void onDestroy() {abortStreamDocument(null,false);if(webView!=null)webView.destroy();super.onDestroy();}
     private String safeFileName(String name) {String n=(name==null||name.trim().length()==0)?"contactflow.bin":name.trim();return n.replaceAll("[\\\\/:*?\"<>|]","_");}
 
     private void saveLegacy(String name,String mime,String b64) {
@@ -163,6 +271,7 @@ public class MainActivity extends Activity {
     private void saveFile(String name,String mime,String base64) {if(Build.VERSION.SDK_INT>=29){saveModern(name,mime,base64);return;}if(Build.VERSION.SDK_INT>=23&&checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)!=PackageManager.PERMISSION_GRANTED){pendingName=name;pendingMime=mime;pendingBase64=base64;requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},STORAGE_PERMISSION);return;}saveLegacy(name,mime,base64);}
     private void chooseSaveDocument(String name,String mime,String base64) {pendingName=safeFileName(name);pendingMime=(mime==null||mime.length()==0)?"application/octet-stream":mime;pendingBase64=base64;Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType(pendingMime);i.putExtra(Intent.EXTRA_TITLE,pendingName);startActivityForResult(i,SAVE_DOCUMENT);}
     private void chooseOpenBackup() {Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType("*/*");startActivityForResult(i,OPEN_BACKUP);}
+    private void triggerBackupFileInput() {webView.evaluateJavascript("(function(){var e=document.getElementById('backup-restore-file')||document.getElementById('drive-restore-file');if(e)e.click()})()",null);}
 
     private void requestContactsAccess() {
         if(Build.VERSION.SDK_INT>=23 && checkSelfPermission(Manifest.permission.READ_CONTACTS)!=PackageManager.PERMISSION_GRANTED) {
@@ -203,7 +312,11 @@ public class MainActivity extends Activity {
         @JavascriptInterface public String startTelegramQr() {return "{\"ok\":false,\"mode\":\"desktop_export_offline\",\"message\":\"Use Telegram Desktop result.json; API ID/hash is not required\"}";}
         @JavascriptInterface public void saveFile(final String name,final String mime,final String base64) {runOnUiThread(() -> MainActivity.this.saveFile(name,mime,base64));}
         @JavascriptInterface public void saveDocument(final String name,final String mime,final String base64) {runOnUiThread(() -> MainActivity.this.chooseSaveDocument(name,mime,base64));}
-        @JavascriptInterface public void openBackupDocument() {runOnUiThread(() -> MainActivity.this.chooseOpenBackup());}
+        @JavascriptInterface public void beginDocumentSave(final String name,final String mime,final String token,final String expectedBytes) {runOnUiThread(() -> MainActivity.this.chooseStreamDocument(name,mime,token,expectedBytes));}
+        @JavascriptInterface public String appendDocumentChunk(final String token,final String base64) {return MainActivity.this.appendStreamDocument(token,base64);}
+        @JavascriptInterface public String finishDocumentSave(final String token) {return MainActivity.this.finishStreamDocument(token);}
+        @JavascriptInterface public void abortDocumentSave(final String token) {MainActivity.this.abortStreamDocument(token,false);}
+        @JavascriptInterface public void openBackupDocument() {runOnUiThread(() -> MainActivity.this.triggerBackupFileInput());}
         @JavascriptInterface public void requestDeviceContacts() {runOnUiThread(() -> MainActivity.this.requestContactsAccess());}
         @JavascriptInterface public void recognizeBusinessCard() {runOnUiThread(() -> MainActivity.this.chooseBusinessCard());}
     }

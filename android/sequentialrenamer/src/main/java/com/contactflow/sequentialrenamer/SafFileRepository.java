@@ -25,8 +25,25 @@ final class SafFileRepository {
             }
         } catch (SecurityException exception) {
             throw new FileNotFoundException("دسترسی فایل منقضی شده است: " + exception.getMessage());
+        } catch (RuntimeException ignored) {
+            // Some OEM/cloud providers reject SIZE in the projection. Retry with name only.
+            try (Cursor cursor = resolver.query(uri, new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null)) {
+                if (cursor != null && cursor.moveToFirst()) {
+                    int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                    if (nameIndex >= 0 && !cursor.isNull(nameIndex)) name = cursor.getString(nameIndex);
+                }
+            } catch (SecurityException exception) {
+                throw new FileNotFoundException("دسترسی فایل منقضی شده است: " + exception.getMessage());
+            } catch (RuntimeException ignoredAgain) { }
         }
-        if (name == null || name.trim().isEmpty()) name = uri.getLastPathSegment();
+        if (name == null || name.trim().isEmpty()) {
+            String segment = uri.getLastPathSegment();
+            name = segment == null ? null : Uri.decode(segment);
+            if (name != null) {
+                int slash = name.lastIndexOf('/');
+                if (slash >= 0 && slash + 1 < name.length()) name = name.substring(slash + 1);
+            }
+        }
         if (name == null || name.trim().isEmpty()) throw new FileNotFoundException("نام فایل از ارائه‌دهندهٔ حافظه دریافت نشد.");
         return new RenameEntry(uri, name, size, supportsRename(resolver, uri));
     }

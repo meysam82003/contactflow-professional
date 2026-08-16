@@ -39,6 +39,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
@@ -272,7 +273,16 @@ public final class MainActivity extends Activity {
         intent.setType("*/*");
         intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
-        startActivityForResult(intent, OPEN_FILES);
+        try { startActivityForResult(intent, OPEN_FILES); }
+        catch (Exception first) {
+            Intent fallback = new Intent(Intent.ACTION_GET_CONTENT);
+            fallback.addCategory(Intent.CATEGORY_OPENABLE);
+            fallback.setType("*/*");
+            fallback.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+            fallback.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            try { startActivityForResult(Intent.createChooser(fallback, "انتخاب فایل‌ها"), OPEN_FILES); }
+            catch (Exception second) { setStatus("انتخاب‌گر فایل در این دستگاه در دسترس نیست: " + second.getMessage(), true); }
+        }
     }
 
     private void openFolderPicker() {
@@ -283,15 +293,21 @@ public final class MainActivity extends Activity {
 
     @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode != RESULT_OK || data == null) return;
+        if (resultCode != RESULT_OK || data == null) {
+            if (requestCode == OPEN_FILES || requestCode == OPEN_FOLDER) setStatus("انتخاب لغو شد؛ صف قبلی دست‌نخورده ماند.", false);
+            return;
+        }
         if (requestCode == OPEN_FILES) {
-            ArrayList<Uri> uris = new ArrayList<>();
+            LinkedHashSet<Uri> selected = new LinkedHashSet<>();
             ClipData clip = data.getClipData();
             if (clip != null) {
-                for (int index = 0; index < clip.getItemCount(); index++) uris.add(clip.getItemAt(index).getUri());
-            } else if (data.getData() != null) uris.add(data.getData());
+                for (int index = 0; index < clip.getItemCount(); index++) if (clip.getItemAt(index).getUri() != null) selected.add(clip.getItemAt(index).getUri());
+            }
+            if (data.getData() != null) selected.add(data.getData());
+            ArrayList<Uri> uris = new ArrayList<>(selected);
             persistPermissions(data, uris);
-            addUris(uris, false);
+            boolean writeGranted = (data.getFlags() & Intent.FLAG_GRANT_WRITE_URI_PERMISSION) != 0;
+            addUris(uris, false, writeGranted);
         } else if (requestCode == OPEN_FOLDER && data.getData() != null) {
             Uri treeUri = data.getData();
             persistPermissions(data, Collections.singletonList(treeUri));
@@ -326,10 +342,10 @@ public final class MainActivity extends Activity {
 
     private void addUrisAfterBusy(List<Uri> uris, boolean naturalSort) {
         operationInProgress = false;
-        addUris(uris, naturalSort);
+        addUris(uris, naturalSort, true);
     }
 
-    private void addUris(List<Uri> uris, boolean naturalSort) {
+    private void addUris(List<Uri> uris, boolean naturalSort, boolean writeGranted) {
         if (uris.isEmpty()) { setBusy(false, "فایلی انتخاب نشد."); return; }
         if (operationInProgress) return;
         setBusy(true, "در حال آماده‌کردن " + formatNumber(uris.size()) + " فایل…");
@@ -338,16 +354,25 @@ public final class MainActivity extends Activity {
         worker.execute(() -> {
             ArrayList<RenameEntry> added = new ArrayList<>();
             int failed = 0;
-            for (Uri uri : uris) {
+            String firstFailure = "";
+            for (int index = 0; index < uris.size(); index++) {
+                Uri uri = uris.get(index);
                 if (uri == null || existing.contains(uri.toString())) continue;
                 try {
                     RenameEntry entry = SafFileRepository.describe(getContentResolver(), uri);
+                    if (!writeGranted) entry.renameSupported = false;
                     added.add(entry);
                     existing.add(uri.toString());
-                } catch (Exception ignored) { failed++; }
+                } catch (Exception error) {
+                    failed++;
+                    if (firstFailure.isEmpty()) firstFailure = error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage();
+                }
+                int processed = index + 1;
+                if (processed % 10 == 0 || processed == uris.size()) runOnUiThread(() -> setStatus("در حال خواندن مشخصات فایل‌ها: " + formatNumber(processed) + " از " + formatNumber(uris.size()), false));
             }
             if (naturalSort) Collections.sort(added, (left, right) -> RenameRules.naturalCompare(left.currentName, right.currentName));
             int failedCount = failed;
+            String failureDetail = firstFailure;
             runOnUiThread(() -> {
                 int oldSize = entries.size();
                 entries.addAll(added);
@@ -356,7 +381,9 @@ public final class MainActivity extends Activity {
                 else refreshUi();
                 String message = formatNumber(added.size()) + " فایل اضافه شد";
                 if (failedCount > 0) message += "؛ " + formatNumber(failedCount) + " فایل بدون دسترسی رد شد";
+                if (added.isEmpty() && failedCount > 0 && !failureDetail.isEmpty()) message += " • " + failureDetail;
                 if (added.isEmpty() && failedCount == 0) message = "فایل تازه‌ای به صف اضافه نشد.";
+                if (!writeGranted && !added.isEmpty()) message += "؛ این انتخاب‌گر فقط دسترسی خواندن داد، برای Rename از «افزودن پوشه» استفاده کن";
                 setBusy(false, message + (entries.size() > oldSize ? "؛ ترتیب قابل جابه‌جایی است." : ""));
                 scheduleSave();
             });

@@ -15,7 +15,7 @@ test('native Windows sequential renamer keeps the requested one-by-one workflow'
   assert.doesNotMatch(form,/queue\.Items\[index\]\s*=\s*ItemFor/,'typing must not replace the selected ListView row');
   assert.match(read('extensions/sequential-file-renamer/Program.cs'),/SetUnhandledExceptionMode\(UnhandledExceptionMode\.CatchException\)/);
   assert.match(read('extensions/sequential-file-renamer/RenameRules.cs'),/NormalizationForm\.FormC/);
-  assert.match(read('extensions/sequential-file-renamer/SequentialFileRenamer.csproj'),/<FileVersion>3\.6\.0\.2<\/FileVersion>/);
+  assert.match(read('extensions/sequential-file-renamer/SequentialFileRenamer.csproj'),/<FileVersion>3\.6\.0\.3<\/FileVersion>/);
   for(const marker of ['DestinationFor','File.Exists','ApplySequenceTemplate','GetInvalidFileNameChars'])assert.ok(rules.includes(marker),`rename rules missing ${marker}`);
   assert.match(read('extensions/sequential-file-renamer/SequentialFileRenamer.csproj'),/<UseWindowsForms>true<\/UseWindowsForms>/);
 });
@@ -30,6 +30,8 @@ test('Android messenger contacts extension is offline, permission-scoped and mul
   assert.doesNotMatch(manifest,/QUERY_ALL_PACKAGES/);
   const main=read('android/messengercontacts/src/main/java/com/contactflow/messengercontacts/MainActivity.java');
   for(const marker of ['ContactsContract.Contacts.CONTENT_URI','Intent.ACTION_VIEW','Intent.ACTION_CREATE_DOCUMENT','Intent.ACTION_OPEN_DOCUMENT','takePersistableUriPermission','chooseExportFormat','showDetectionDetails','showImportReport'])assert.ok(main.includes(marker),`Android contact utility missing ${marker}`);
+  for(const marker of ['verifyVcfSource','setPositiveButton("ورود سریع"','setNeutralButton("ورود به گوشی"','clearPendingImport'])assert.ok(main.includes(marker),`Android VCF chooser fix missing ${marker}`);
+  assert.doesNotMatch(main,/setItems\(modes/,'VCF mode actions must not disappear behind AlertDialog message content');
   const catalog=read('android/messengercontacts/src/main/java/com/contactflow/messengercontacts/MessengerCatalog.java');
   for(const id of ['telegram','whatsapp','rubika','eitaa','bale','soroush','gap','igap','shad'])assert.match(catalog,new RegExp(`"${id}"`));
   const exporter=read('android/messengercontacts/src/main/java/com/contactflow/messengercontacts/ExportWriter.java');
@@ -43,7 +45,7 @@ test('Android million-card VCF pipeline is streaming, durable and resumable',()=
   const store=read('android/messengercontacts/src/main/java/com/contactflow/messengercontacts/MassContactStore.java');
   for(const marker of ['setWriteAheadLoggingEnabled(true)','normalized_phone TEXT NOT NULL UNIQUE','checkpoint_card','device_phone_index','STATE_PAUSED','STATE_LIMIT'])assert.ok(store.includes(marker),`mass contact store missing ${marker}`);
   const service=read('android/messengercontacts/src/main/java/com/contactflow/messengercontacts/MassImportService.java');
-  for(const marker of ['startForeground','applyBatch(ContactsContract.AUTHORITY','withYieldAllowed(true)','GroupMembership.CONTENT_ITEM_TYPE','ACTION_PAUSE','onTimeout(int startId, int fgsType)','MAX_PROVIDER_OPERATIONS','findExistingTokens'])assert.ok(service.includes(marker),`mass import service missing ${marker}`);
+  for(const marker of ['startForeground','applyBatch(ContactsContract.AUTHORITY','withYieldAllowed(true)','GroupMembership.CONTENT_ITEM_TYPE','ACTION_PAUSE','onTimeout(int startId, int fgsType)','MAX_PROVIDER_OPERATIONS','findExistingTokens','PROCESS_ACTIVE_JOB','isJobActiveInProcess'])assert.ok(service.includes(marker),`mass import service missing ${marker}`);
   assert.doesNotMatch(service,/HttpURLConnection|OkHttp|Socket|https?:\/\//);
   const scanner=read('android/messengercontacts/src/main/java/com/contactflow/messengercontacts/ContactScanner.java');
   assert.match(scanner,/UI_PREVIEW_LIMIT = 25_000/);
@@ -54,12 +56,14 @@ test('native Android sequential renamer uses SAF and keeps Persian input stable'
   const manifest=read('android/sequentialrenamer/src/main/AndroidManifest.xml');
   assert.doesNotMatch(manifest,/android\.permission\.INTERNET|MANAGE_EXTERNAL_STORAGE|READ_EXTERNAL_STORAGE|WRITE_EXTERNAL_STORAGE/);
   const main=read('android/sequentialrenamer/src/main/java/com/contactflow/sequentialrenamer/MainActivity.java');
-  for(const marker of ['Intent.ACTION_OPEN_DOCUMENT','Intent.ACTION_OPEN_DOCUMENT_TREE','Intent.ACTION_CREATE_DOCUMENT','EditorInfo.IME_ACTION_NEXT','suppressTextEvents','undoLast','showTemplateDialog','SessionStore.save'])assert.ok(main.includes(marker),`Android renamer missing ${marker}`);
+  for(const marker of ['Intent.ACTION_OPEN_DOCUMENT','Intent.ACTION_GET_CONTENT','Intent.ACTION_OPEN_DOCUMENT_TREE','Intent.ACTION_CREATE_DOCUMENT','EditorInfo.IME_ACTION_NEXT','suppressTextEvents','undoLast','showTemplateDialog','SessionStore.save','LinkedHashSet<Uri>'])assert.ok(main.includes(marker),`Android renamer missing ${marker}`);
   const repository=read('android/sequentialrenamer/src/main/java/com/contactflow/sequentialrenamer/SafFileRepository.java');
   for(const marker of ['DocumentsContract.renameDocument','FLAG_SUPPORTS_RENAME','buildChildDocumentsUriUsingTree'])assert.ok(repository.includes(marker),`Android SAF repository missing ${marker}`);
   assert.match(read('android/sequentialrenamer/src/main/java/com/contactflow/sequentialrenamer/SessionStore.java'),/AtomicFile/);
   assert.match(read('android/sequentialrenamer/src/main/java/com/contactflow/sequentialrenamer/RenameRules.java'),/Normalizer\.Form\.NFC/);
   assert.match(read('android/sequentialrenamer/build.gradle'),/applicationId 'com\.contactflow\.sequentialrenamer'/);
+  assert.match(read('android/sequentialrenamer/build.gradle'),/versionCode 30603/);
+  assert.match(read('android/messengercontacts/build.gradle'),/versionCode 30603/);
 });
 
 test('release workflow publishes all essential extension binaries on v3.6.0',()=>{

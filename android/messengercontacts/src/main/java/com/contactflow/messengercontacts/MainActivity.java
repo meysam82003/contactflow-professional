@@ -34,6 +34,9 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
@@ -286,7 +289,7 @@ public final class MainActivity extends Activity {
 
     private void handleVcfSelection(Intent data) {
         Uri uri = data.getData();
-        if (uri == null) return;
+        if (uri == null) { massStatusText.setText("فایلی انتخاب نشد."); return; }
         try {
             int flags = data.getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
             getContentResolver().takePersistableUriPermission(uri, flags & Intent.FLAG_GRANT_READ_URI_PERMISSION);
@@ -301,21 +304,74 @@ public final class MainActivity extends Activity {
                 if (!cursor.isNull(1)) pendingImportSize = cursor.getLong(1);
             }
         } catch (Exception ignored) { }
+        importVcfButton.setEnabled(false);
+        massProgress.setIndeterminate(true);
+        massStatusText.setText("فایل انتخاب شد؛ در حال بررسی دسترسی و سربرگ VCF…");
+        worker.execute(() -> {
+            try {
+                verifyVcfSource(uri);
+                runOnUiThread(this::showImportModeDialog);
+            } catch (Exception error) {
+                runOnUiThread(() -> {
+                    clearPendingImport();
+                    importVcfButton.setEnabled(true);
+                    massProgress.setIndeterminate(false);
+                    massProgress.setProgress(0);
+                    massStatusText.setText("فایل خوانده نشد: " + friendlyMessage(error));
+                    Toast.makeText(this, "VCF معتبر/قابل‌خواندن نیست: " + friendlyMessage(error), Toast.LENGTH_LONG).show();
+                });
+            }
+        });
+    }
+
+    private void verifyVcfSource(Uri uri) throws Exception {
+        try (InputStream raw = getContentResolver().openInputStream(uri)) {
+            if (raw == null) throw new IllegalStateException("ارائه‌دهندهٔ فایل اجازهٔ خواندن نداد.");
+            BufferedInputStream input = new BufferedInputStream(raw, 64 * 1024);
+            ByteArrayOutputStream sample = new ByteArrayOutputStream(128 * 1024);
+            byte[] buffer = new byte[16 * 1024];
+            int read, remaining = 256 * 1024;
+            while (remaining > 0 && (read = input.read(buffer, 0, Math.min(buffer.length, remaining))) > 0) {
+                sample.write(buffer, 0, read);
+                remaining -= read;
+            }
+            if (sample.size() == 0) throw new IllegalArgumentException("فایل خالی است.");
+            String header = new String(sample.toByteArray(), StandardCharsets.UTF_8).replace("\u0000", "").toUpperCase(Locale.ROOT);
+            if (!header.contains("BEGIN:VCARD")) throw new IllegalArgumentException("سربرگ BEGIN:VCARD در ابتدای فایل پیدا نشد.");
+        }
+    }
+
+    private void showImportModeDialog() {
+        if (pendingImportUri == null) return;
+        importVcfButton.setEnabled(true);
+        massProgress.setIndeterminate(false);
+        massProgress.setProgress(0);
         String size = pendingImportSize > 0 ? Formatter.formatFileSize(this, pendingImportSize) : "حجم نامشخص";
-        String[] modes = {
-            "فقط مخزن سریع (پیشنهادی برای فایل خیلی بزرگ)",
-            "مخزن + دفترچهٔ مخاطبین گوشی"
-        };
-        new AlertDialog.Builder(this)
+        massStatusText.setText("VCF بررسی شد؛ یکی از دو مقصد ورود را انتخاب کنید.");
+        AlertDialog dialog = new AlertDialog.Builder(this)
             .setTitle(pendingImportName)
-            .setMessage(size + " • خواندن استریم و حذف شماره‌های تکراری\n\nحالت دوم به محدودیت سرعت و ظرفیت Contacts Provider خود گوشی وابسته است.")
-            .setItems(modes, (dialog, which) -> {
-                if (which == 0) createAndStartImport(false);
-                else if (hasImportContactsPermission()) createAndStartImport(true);
+            .setMessage(size + " • فایل قابل‌خواندن است\n\n«ورود سریع» شماره‌ها را در مخزن دیسکی ContactFlow نگه می‌دارد. «ورود به گوشی» علاوه بر مخزن، مخاطبین را دسته‌ای در دفترچه Android ثبت می‌کند و سرعتش به Contacts Provider گوشی وابسته است.")
+            .setPositiveButton("ورود سریع", (item, which) -> createAndStartImport(false))
+            .setNeutralButton("ورود به گوشی", (item, which) -> {
+                if (hasImportContactsPermission()) createAndStartImport(true);
                 else requestImportContactsPermission();
             })
-            .setNegativeButton("لغو", null)
-            .show();
+            .setNegativeButton("لغو", (item, which) -> {
+                clearPendingImport();
+                massStatusText.setText("ورود لغو شد؛ فایل دیگری انتخاب کنید.");
+            })
+            .create();
+        dialog.setOnCancelListener(item -> {
+            clearPendingImport();
+            massStatusText.setText("ورود لغو شد؛ فایل دیگری انتخاب کنید.");
+        });
+        dialog.show();
+    }
+
+    private void clearPendingImport() {
+        pendingImportUri = null;
+        pendingImportName = null;
+        pendingImportSize = -1L;
     }
 
     private void createAndStartImport(boolean targetSystem) {
@@ -323,9 +379,7 @@ public final class MainActivity extends Activity {
         Uri uri = pendingImportUri;
         String name = pendingImportName;
         long size = pendingImportSize;
-        pendingImportUri = null;
-        pendingImportName = null;
-        pendingImportSize = -1L;
+        clearPendingImport();
         importVcfButton.setEnabled(false);
         massStatusText.setText("در حال ساخت کار ورود…");
         worker.execute(() -> {
@@ -379,7 +433,12 @@ public final class MainActivity extends Activity {
                 long count = database.vaultCount();
                 long bytes = database.databaseBytes();
                 MassContactStore.JobSnapshot job = database.latestJob();
-                runOnUiThread(() -> renderMassImportState(count, bytes, job));
+                if (job != null && MassContactStore.STATE_RUNNING.equals(job.state) && !MassImportService.isJobActiveInProcess(job.id)) {
+                    database.setState(job.id, MassContactStore.STATE_PAUSED, "اجرای قبلی بسته شده بود؛ Checkpoint سالم است و با «ادامه» از همان نقطه شروع می‌شود.");
+                    job = database.readJob(job.id);
+                }
+                MassContactStore.JobSnapshot currentJob = job;
+                runOnUiThread(() -> renderMassImportState(count, bytes, currentJob));
             } catch (Exception ignored) { }
             finally { database.close(); }
         });
@@ -663,6 +722,7 @@ public final class MainActivity extends Activity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == OPEN_VCF_DOCUMENT) {
             if (resultCode == RESULT_OK && data != null && data.getData() != null) handleVcfSelection(data);
+            else massStatusText.setText("انتخاب فایل لغو شد؛ داده‌ای تغییر نکرد.");
             return;
         }
         if (requestCode != SAVE_DOCUMENT) return;
@@ -739,6 +799,10 @@ public final class MainActivity extends Activity {
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
     private String localNumber(int value) { return localNumber((long) value); }
     private String localNumber(long value) { return String.format(new Locale("fa", "IR"), "%d", value); }
+    private static String friendlyMessage(Throwable error) {
+        String message = error.getMessage();
+        return message == null || message.trim().isEmpty() ? error.getClass().getSimpleName() : VCardContact.cleanText(message);
+    }
 
     @Override protected void onDestroy() {
         worker.shutdownNow();

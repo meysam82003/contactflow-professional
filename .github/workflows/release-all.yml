@@ -65,6 +65,7 @@ jobs:
           node --check web/name-engine.js
           node --check web/telegram-export.js
           node --check web/legacy-tools.js
+          node --check web/backup-engine.js
           node --check web/file-save.js
           node --check web/bulk-vcf-export.js
           node --check web/v36.js
@@ -175,7 +176,7 @@ jobs:
           $target = 'dist/ContactFlow_3.6_Sequential_File_Renamer_Windows_x64.exe'
           Copy-Item $source $target
           $fileVersion = (Get-Item $target).VersionInfo.FileVersion
-          if ($fileVersion -ne '3.6.0.2') { throw "Unexpected sequential renamer file version: $fileVersion" }
+          if ($fileVersion -ne '3.6.0.3') { throw "Unexpected sequential renamer file version: $fileVersion" }
           $hash = (Get-FileHash -Algorithm SHA256 $target).Hash.ToLowerInvariant()
           "$hash  ContactFlow_3.6_Sequential_File_Renamer_Windows_x64.exe" | Set-Content -Encoding ascii dist/ContactFlow_3.6_Sequential_File_Renamer_SHA256.txt
           if ((Get-Item $target).Length -lt 1000000) { throw 'Sequential File Renamer executable is unexpectedly small.' }
@@ -215,6 +216,7 @@ jobs:
           test -s "$MESSENGER_APK"
           test -s "$RENAMER_APK"
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | tee apk-badging.txt
+          grep "package: name='com.contactflow.pro' versionCode='30603'" apk-badging.txt
           grep "sdkVersion:'23'" apk-badging.txt
           grep "targetSdkVersion:'36'" apk-badging.txt
           unzip -p "$APK" assets/v33.js | grep -q 'telegram-contacts'
@@ -225,7 +227,7 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions "$APK" | grep -q 'android.permission.READ_CONTACTS'
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$MESSENGER_APK" | tee messenger-apk-badging.txt
           grep "package: name='com.contactflow.messengercontacts'" messenger-apk-badging.txt
-          grep "versionCode='30602'" messenger-apk-badging.txt
+          grep "versionCode='30603'" messenger-apk-badging.txt
           grep "sdkVersion:'23'" messenger-apk-badging.txt
           grep "targetSdkVersion:'36'" messenger-apk-badging.txt
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions "$MESSENGER_APK" | grep -q 'android.permission.READ_CONTACTS'
@@ -239,7 +241,7 @@ jobs:
           grep -q 'applyBatch(ContactsContract.AUTHORITY' android/messengercontacts/src/main/java/com/contactflow/messengercontacts/MassImportService.java
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$RENAMER_APK" | tee renamer-apk-badging.txt
           grep "package: name='com.contactflow.sequentialrenamer'" renamer-apk-badging.txt
-          grep "versionCode='30602'" renamer-apk-badging.txt
+          grep "versionCode='30603'" renamer-apk-badging.txt
           grep "sdkVersion:'23'" renamer-apk-badging.txt
           grep "targetSdkVersion:'36'" renamer-apk-badging.txt
           if "$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions "$RENAMER_APK" | grep -q 'android.permission.INTERNET'; then echo 'Sequential Renamer APK must stay offline' >&2; exit 1; fi
@@ -348,6 +350,7 @@ jobs:
           Build-level Telegram credentials required: no
           City intelligence and Legacy V14 toolbox: yes
           Essential extensions: native sequential file renamers for Windows/Android + offline Android messenger-contact inspector and million-card streaming VCF vault/importer
+          Reliability hotfix r3: visible VCF destination actions, picker fallbacks, atomic SHA-256 backup/restore and chunked Android Save As
           Google OAuth configured: ${GOOGLE_CONFIGURED}
           Data model: Local-First; no ContactFlow account server required
           EOF
@@ -382,6 +385,7 @@ jobs:
             - جعبه‌ابزار مستقل V14: TXT/CSV/VCF/JSON/Excel، حذف تکراری، Prefix، Chunk VCF، Hex/Unicode و Image Base64
             - خروجی VCF تا ۱٬۰۰۰٬۰۰۰ مخاطب در PWA/Android/Desktop با موتور آفلاین، fallback سازگار، تفکیک شهر، پسوند سراسری نام، Progress و لغو امن؛ خارج از Mini App
             - Save As بومی در APK و مرورگرهای پشتیبانی‌شده؛ Download فقط مسیر جایگزین
+            - Hotfix r3: رفع پنجرهٔ VCF که فقط «لغو» نشان می‌داد، بررسی واقعی فایل پیش از ورود، انتخاب‌گر مقاوم‌تر Renamer و Backup/Restore اتمی با SHA‑256 و ذخیرهٔ قطعه‌ای APK
 
             ## افزونه‌های کاربردی و ضروری همین نسخه
 

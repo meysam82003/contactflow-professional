@@ -79,12 +79,49 @@ async function renderRequests(){const rs=(await uAll('ad_requests')).sort((a,b)=
 
 // ---------- Backup ----------
 const backupStores=['contacts','imports','meta','settings','artifacts','contact_flags','campaigns','ad_requests','telegram_accounts','templates','activity','merge_runs','contact_images','watch_state'];
-function ser(v){if(v instanceof Blob)return {__blob:true,type:v.type,name:v.name||'',data:null};return v}
-async function makeBackupObject(note=''){const data={format:'ContactFlowBackup',version:8,appVersion:'3.6.0',createdAt:new Date().toISOString(),note,stores:{}};for(const s of backupStores){try{const rows=await uAll(s);data.stores[s]=rows.map(r=>JSON.parse(JSON.stringify(r,(k,v)=>v instanceof Blob?{__blob:true,type:v.type,size:v.size}:v)))}catch{data.stores[s]=[]}}return data}
-async function createBackup(returnBlob=false){const data=await makeBackupObject($('backup-note').value.trim()),blob=new Blob([JSON.stringify(data)],{type:'application/x-contactflow-backup'}),name=`ContactFlow_${new Date().toISOString().replace(/[:.]/g,'-')}.cfbackup`;await log('backup','Backup ساخته شد',{name,size:blob.size});$('backup-state').textContent=`${name} • ${formatBytes(blob.size)}`;renderBackupHistory();if(returnBlob)return {blob,name};dl(name,blob);return {blob,name}}
-async function restoreBackup(file){const data=JSON.parse(await file.text());if(data.format!=='ContactFlowBackup')throw new Error('فرمت Backup معتبر نیست');if(!confirm('داده‌های محلی با Backup جایگزین شوند؟'))return;for(const s of backupStores){try{await uClear(s);for(const r of data.stores?.[s]||[])await uPut(s,r)}catch(e){console.warn(s,e)}}toast('Backup بازیابی شد.');await log('backup','Backup بازیابی شد',{file:file.name});location.reload()}
+if(!window.ContactFlowBackupEngine)throw new Error('Backup engine بارگذاری نشد.');
+const backupController=window.ContactFlowBackupEngine.createController({
+  getDatabase:async()=>{await waitDB();return state.db},storeNames:backupStores,appVersion:'3.6.0',
+  getConnectors:async()=>{const tg=window.ContactFlowTelegramWeb;return tg?.exportState?{telegram:await tg.exportState()}:{}},
+  restoreConnectors:async connectors=>{const tg=window.ContactFlowTelegramWeb;if(connectors?.telegram&&tg?.importState)await tg.importState(connectors.telegram)}
+});
+window.ContactFlowFullBackup=backupController;
+function backupProgress(p){
+  const labels={reading:'خواندن مخزن',encoding:'بسته‌بندی امن',decoding:'بازکردن Backup',writing:'بازیابی اتمی',verifying:'راستی‌آزمایی'};
+  const current=Number(p.done)||Number(p.completedStores)||0,total=Number(p.total)||Number(p.totalStores)||0;
+  $('backup-state').textContent=`${labels[p.phase]||'پردازش Backup'}${p.store?' • '+p.store:''}${total?` • ${fmt.format(current)}/${fmt.format(total)}`:''}`;
+}
+function backupConfirm(report){
+  const warning=report.warnings.length?'\n\nهشدار: '+report.warnings.join(' | '):'';
+  return confirm(`Backup بررسی شد.\nنسخه فایل: ${report.appVersion||report.version}\nتاریخ: ${report.createdAt||'نامشخص'}\n${fmt.format(report.totalRecords)} رکورد در ${fmt.format(report.storeCount)} مخزن\n\nتمام داده‌های محلی فعلی به‌صورت یک تراکنش جایگزین شوند؟${warning}`);
+}
+async function createBackup(returnBlob=false){
+  const button=$('backup-create');button.disabled=true;$('backup-state').textContent='در حال خواندن کامل دیتابیس…';
+  try{
+    const output=await backupController.createBlob({note:$('backup-note').value.trim(),onProgress:backupProgress});
+    if(returnBlob)return output;
+    const saved=await window.ContactFlowFileSave.save(output.blob,output.name,{description:'ContactFlow full backup'});
+    if(saved?.method==='cancelled'){$('backup-state').textContent='ذخیره Backup لغو شد؛ داده‌های برنامه تغییری نکرد.';return {...output,saved}}
+    await log('backup','Backup کامل و راستی‌آزمایی‌شده ساخته شد',{name:output.name,size:output.blob.size,records:output.summary.totalRecords,sha256:output.summary.sha256});
+    $('backup-state').textContent=`ذخیره شد: ${output.name} • ${formatBytes(output.blob.size)} • ${fmt.format(output.summary.totalRecords)} رکورد • SHA-256 ${output.summary.sha256.slice(0,12)}…`;
+    await renderBackupHistory();return {...output,saved};
+  }catch(error){$('backup-state').textContent='ساخت Backup ناموفق: '+error.message;toast(error.message,'bad',8000);throw error}
+  finally{button.disabled=false}
+}
+async function restoreBackup(file){
+  const inputs=[$('backup-restore-file'),$('drive-restore-file')].filter(Boolean);inputs.forEach(input=>input.disabled=true);$('backup-state').textContent='در حال بررسی Checksum و ساختار Backup…';
+  try{
+    const result=await backupController.restoreBlob(file,{confirm:backupConfirm,onProgress:backupProgress});
+    if(result.cancelled){$('backup-state').textContent='Restore لغو شد؛ هیچ داده‌ای تغییر نکرد.';return result}
+    await log('backup','Backup اتمی بازیابی و راستی‌آزمایی شد',{file:file.name,records:result.totalRecords,warnings:result.warnings});
+    $('backup-state').textContent=`Restore کامل شد • ${fmt.format(result.totalRecords)} رکورد${result.warnings.length?' • '+result.warnings.join(' | '):''}`;
+    toast('Backup کامل بازیابی و شمارش آن راستی‌آزمایی شد.');setTimeout(()=>location.reload(),700);return result;
+  }catch(error){$('backup-state').textContent='Restore ناموفق؛ داده‌های قبلی حفظ شد: '+error.message;toast(error.message,'bad',9000);throw error}
+  finally{inputs.forEach(input=>{input.disabled=false;input.value=''})}
+}
 async function renderBackupHistory(){const logs=(await uAll('activity')).filter(x=>x.type==='backup').sort((a,b)=>b.createdAt-a.createdAt).slice(0,30);$('backup-history').innerHTML=logs.map(x=>`<div class="export-row"><div><strong>${escapeHtml(x.message)}</strong><small>${new Date(x.createdAt).toLocaleString('fa-IR')}</small></div></div>`).join('')||'<div class="empty-state compact">هنوز Backup ساخته نشده.</div>'}
-async function driveBackup(){const o=await createBackup(true);if(window.ContactFlowAndroid?.saveDocument){const b=await o.blob.arrayBuffer(),u8=new Uint8Array(b);let bin='';for(let i=0;i<u8.length;i+=0x8000)bin+=String.fromCharCode(...u8.subarray(i,i+0x8000));window.ContactFlowAndroid.saveDocument(o.name,o.blob.type,btoa(bin));$('drive-state').textContent='File Picker سیستم باز شد؛ Google Drive را به‌عنوان مقصد انتخاب کنید.';return}const cid=window.CONTACTFLOW_CONFIG?.googleClientId;if(!cid){$('drive-state').textContent='Google OAuth Client ID داخلی این Build تنظیم نشده است. Backup دستی فعال است؛ در Android انتخاب Google Drive از File Picker انجام می‌شود.';return}await googleUpload(o.blob,o.name,cid)}
+async function driveBackup(){const o=await createBackup(true);if(window.ContactFlowFileSave){await window.ContactFlowFileSave.save(o.blob,o.name,{description:'ContactFlow Drive backup'});$('drive-state').textContent='پنجره ذخیره باز شد؛ Google Drive را به‌عنوان مقصد انتخاب کنید.';return}const cid=window.CONTACTFLOW_CONFIG?.googleClientId;if(!cid){$('drive-state').textContent='Google OAuth Client ID داخلی این Build تنظیم نشده است. Backup دستی فعال است.';return}await googleUpload(o.blob,o.name,cid)}
+window.ContactFlowBackupUI={createManual:()=>createBackup(false),restoreFile:restoreBackup};
 function loadGIS(){return new Promise((res,rej)=>{if(window.google?.accounts?.oauth2)return res();const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.onload=res;s.onerror=()=>rej(new Error('Google Identity Services بارگذاری نشد'));document.head.appendChild(s)})}
 async function googleToken(cid){await loadGIS();return new Promise((res,rej)=>{const c=google.accounts.oauth2.initTokenClient({client_id:cid,scope:'https://www.googleapis.com/auth/drive.file',callback:r=>r.error?rej(new Error(r.error)):res(r.access_token)});c.requestAccessToken({prompt:''})})}
 async function googleUpload(blob,name,cid){try{const tok=U.driveToken||await googleToken(cid);U.driveToken=tok;const meta={name,mimeType:blob.type||'application/octet-stream'};const boundary='cf'+Date.now();const head=`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${boundary}\r\nContent-Type: ${blob.type}\r\n\r\n`;const body=new Blob([head,blob,`\r\n--${boundary}--`]);const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:`Bearer ${tok}`,'Content-Type':`multipart/related; boundary=${boundary}`},body});if(!r.ok)throw new Error(`Drive HTTP ${r.status}`);$('drive-state').textContent='Backup در Google Drive ذخیره شد.';$('drive-pill').textContent='Connected';$('drive-pill').className='pill active';}catch(e){$('drive-state').textContent=e.message}}
@@ -103,7 +140,7 @@ async function init(){await waitDB();
   $('tg-native-check').onclick=checkNative;$('tg-add-account').onclick=startQR;$('tg-qr-cancel').onclick=()=>$('tg-qr-wrap').classList.add('hidden');$('tg-prepare-check').onclick=prepareCheck;$('tg-export-check').onclick=exportAllowed;
   ['camp-title','camp-text','camp-ref','camp-main','camp-stop','camp-on','camp-request'].forEach(id=>$(id).oninput=campaignPreview);$('camp-media').onchange=campaignPreview;$('camp-preview-btn').onclick=campaignPreview;$('camp-save-btn').onclick=saveCampaign;$('camp-template-save').onclick=saveTemplate;$('campaign-list').onclick=e=>{if(e.target.dataset.campLoad)loadCampaign(e.target.dataset.campLoad);if(e.target.dataset.campDel)uDel('campaigns',e.target.dataset.campDel).then(renderCampaigns)};$('template-list').onclick=e=>e.target.dataset.tplLoad&&loadTemplate(e.target.dataset.tplLoad);
   $('req-add').onclick=addRequest;$('req-table').onclick=async e=>{const id=e.target.dataset.reqInc||e.target.dataset.reqRun;if(!id)return;const r=await uReq(uStore('ad_requests').get(id));if(!r)return;if(e.target.dataset.reqInc){r.done=Math.min(r.count,r.done+1);r.status=r.done>=r.count?'completed':'running'}else r.status='running';await uPut('ad_requests',r);renderRequests()};
-  $('backup-create').onclick=()=>createBackup();$('backup-restore-file').onchange=e=>e.target.files[0]&&restoreBackup(e.target.files[0]).catch(x=>toast(x.message,'bad'));$('drive-backup').onclick=driveBackup;$('drive-connect').onclick=async()=>{const cid=window.CONTACTFLOW_CONFIG?.googleClientId;if(!cid)return $('drive-state').textContent='Google OAuth Client ID داخلی Build تنظیم نشده.';try{U.driveToken=await googleToken(cid);$('drive-pill').textContent='Connected';$('drive-pill').className='pill active';$('drive-state').textContent='Google Drive متصل شد.'}catch(e){$('drive-state').textContent=e.message}};$('drive-restore').onclick=()=>$('drive-restore-file').click();$('drive-restore-file').onchange=e=>e.target.files[0]&&restoreBackup(e.target.files[0]).catch(x=>toast(x.message,'bad'));
+  $('backup-create').onclick=()=>createBackup().catch(()=>{});$('backup-restore-file').onchange=e=>e.target.files[0]&&restoreBackup(e.target.files[0]).catch(()=>{});$('drive-backup').onclick=()=>driveBackup().catch(e=>$('drive-state').textContent=e.message);$('drive-connect').onclick=async()=>{const cid=window.CONTACTFLOW_CONFIG?.googleClientId;if(!cid)return $('drive-state').textContent='Google OAuth Client ID داخلی Build تنظیم نشده.';try{U.driveToken=await googleToken(cid);$('drive-pill').textContent='Connected';$('drive-pill').className='pill active';$('drive-state').textContent='Google Drive متصل شد.'}catch(e){$('drive-state').textContent=e.message}};$('drive-restore').onclick=()=>$('drive-restore-file').click();$('drive-restore-file').onchange=e=>e.target.files[0]&&restoreBackup(e.target.files[0]).catch(()=>{});
   $('activity-export').onclick=exportActivity;$('activity-clear').onclick=()=>confirm('Log پاک شود؟')&&uClear('activity').then(renderActivity);
   // initial
   previewGenerator();refreshAudience();renderCampaigns();renderTemplates();renderRequests();renderBackupHistory();checkNative();

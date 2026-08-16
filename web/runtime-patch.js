@@ -116,13 +116,6 @@ async function refreshDiagnostics(){
   q('cf-features').innerHTML=features.map(([,name,status])=>`<div class="feature-item"><span>✓</span><div><strong>${esc(name)}</strong><small>${status}</small></div></div>`).join('');
   const out={appVersion:VERSION,time:new Date().toISOString(),location:location.href,online:navigator.onLine,secureContext:window.isSecureContext,telegram:d,drive:window.ContactFlowDrive?.diagnostics?.()||null,features:features.map(x=>x[1])};q('cf-diag-json').textContent=JSON.stringify(out,null,2);return out;
 }
-async function fullBackup(){
-  const stores=['contacts','imports','meta','settings','artifacts','contact_flags','campaigns','ad_requests','telegram_accounts','templates','activity','merge_runs','contact_images','watch_state'],data={format:'ContactFlowBackup',version:7,appVersion:VERSION,createdAt:new Date().toISOString(),stores:{},connectors:{}};
-  for(const s of stores){try{data.stores[s]=await coreAll(s)}catch{data.stores[s]=[]}}
-  const tg=await connector().catch(()=>null);if(tg)data.connectors.telegram=await tg.exportState();return data;
-}
-async function restoreFullBlob(blob){const data=JSON.parse(await blob.text());if(data.format!=='ContactFlowBackup')throw new Error('Backup معتبر نیست.');if(!confirm('Backup روی داده محلی بازیابی شود؟'))return;for(const [s,rows] of Object.entries(data.stores||{})){try{const tx=state.db.transaction(s,'readwrite'),st=tx.objectStore(s);st.clear();for(const r of rows)st.put(r)}catch(e){console.warn('restore',s,e)}}location.reload();}
-window.ContactFlowFullBackup={create:fullBackup,restoreBlob:restoreFullBlob,download:async()=>{const d=await fullBackup(),blob=new Blob([JSON.stringify(d)],{type:'application/x-contactflow-backup'});dl(`ContactFlow_${new Date().toISOString().replace(/[:.]/g,'-')}.cfbackup`,blob);return blob;}};
 async function refreshTelegram(){if(window.CONTACTFLOW_CONFIG?.telegramMode==='desktop_export_offline')return;await renderAccounts().catch(e=>console.warn(e));}
 function bind(){
   q('tg-add-account')&&(q('tg-add-account').onclick=beginQr);q('tg-native-check')&&(q('tg-native-check').onclick=refreshTelegram);q('tg-qr-cancel')&&(q('tg-qr-cancel').onclick=async()=>{(await connector()).cancelQr();q('tg-qr-wrap').classList.add('hidden')});
@@ -131,7 +124,6 @@ function bind(){
   q('cf-camp-dry')&&(q('cf-camp-dry').onclick=dryRun);q('cf-camp-send')&&(q('cf-camp-send').onclick=sendCampaignUI);q('cf-camp-stop')&&(q('cf-camp-stop').onclick=()=>{E.stopSignal.stopped=true;q('cf-camp-run-state').textContent='درخواست توقف ثبت شد.'});
   q('cf-mini-save')&&(q('cf-mini-save').onclick=saveMiniSettings);q('cf-mini-open')&&(q('cf-mini-open').onclick=()=>{const u=q('cf-mini-url').value.trim();if(u)window.open(u,'_blank')});q('cf-mini-bot')&&(q('cf-mini-bot').onclick=()=>{const b=q('cf-bot-user').value.trim().replace(/^@/,'');if(b)window.open('https://t.me/'+b,'_blank')});
   q('cf-diag-refresh')&&(q('cf-diag-refresh').onclick=refreshDiagnostics);q('cf-diag-export')&&(q('cf-diag-export').onclick=async()=>{const x=await refreshDiagnostics();dl('contactflow-diagnostics.json',new Blob([JSON.stringify(x,null,2)],{type:'application/json'}))});
-  q('backup-create')&&(q('backup-create').onclick=()=>window.ContactFlowFullBackup.download().catch(e=>note(e.message,'bad')));
 }
 async function init(){await waitCore();insertStyles();addNavPage();patchSetPage();upgradeTelegramUI();upgradeCampaignUI();upgradeBackupUI();bind();loadMiniSettings();await refreshTelegram();console.info(`ContactFlow enhancements ${VERSION} ready`);}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>init().catch(console.error),0));else setTimeout(()=>init().catch(console.error),0);

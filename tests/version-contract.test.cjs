@@ -20,7 +20,7 @@ test('all canonical version markers are 3.6.0',()=>{
 
 test('shared web core includes smart merge and Telegram contact modules',()=>{
   const html=read('web/index.html');
-  for(const asset of ['contact-export.js','runtime-patch.js','import-merge.js','location-operator.js','channel-handoff.js','name-engine.js','telegram-export.js','legacy-tools.js','file-save.js','bulk-vcf-export.js','v34.js','v34.css','v35.js','v35.css','v36.js','v36.css'])assert.ok(html.includes(asset),`index missing ${asset}`);
+  for(const asset of ['contact-export.js','runtime-patch.js','import-merge.js','location-operator.js','channel-handoff.js','name-engine.js','telegram-export.js','legacy-tools.js','backup-engine.js','file-save.js','bulk-vcf-export.js','v34.js','v34.css','v35.js','v35.css','v36.js','v36.css'])assert.ok(html.includes(asset),`index missing ${asset}`);
   assert.match(read('web/v33.js'),/data-page="telegram-contacts"/);
   assert.match(read('web/v34.js'),/data-page="smart-import"/);
   assert.match(read('enhancements/telegram-web-entry.js'),/Api\.contacts\.GetContacts/);
@@ -56,4 +56,6 @@ test('Android capabilities require explicit contacts permission and include loca
   assert.match(read('android/app/build.gradle'),/minSdk 23/);
   const main=read('android/app/src/main/java/com/contactflow/pro/MainActivity.java');
   for(const marker of ['requestDeviceContacts','CONTACTS_PERMISSION','TextRecognition','recognizeBusinessCard'])assert.match(main,new RegExp(marker));
+  for(const marker of ['beginDocumentSave','appendDocumentChunk','finishDocumentSave','SAVE_DOCUMENT_STREAM'])assert.match(main,new RegExp(marker));
+  assert.match(read('android/app/build.gradle'),/versionCode 30603/);
 });
