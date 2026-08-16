@@ -217,12 +217,18 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions "$APK" | grep -q 'android.permission.READ_CONTACTS'
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$MESSENGER_APK" | tee messenger-apk-badging.txt
           grep "package: name='com.contactflow.messengercontacts'" messenger-apk-badging.txt
+          grep "versionCode='30602'" messenger-apk-badging.txt
           grep "sdkVersion:'23'" messenger-apk-badging.txt
           grep "targetSdkVersion:'36'" messenger-apk-badging.txt
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions "$MESSENGER_APK" | grep -q 'android.permission.READ_CONTACTS'
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions "$MESSENGER_APK" | grep -q 'android.permission.WRITE_CONTACTS'
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions "$MESSENGER_APK" | grep -q 'android.permission.FOREGROUND_SERVICE_DATA_SYNC'
           if "$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions "$MESSENGER_APK" | grep -q 'android.permission.INTERNET'; then echo 'Messenger Contacts APK must stay offline' >&2; exit 1; fi
           grep -q 'ContactsContract' android/messengercontacts/src/main/java/com/contactflow/messengercontacts/MainActivity.java
           grep -q 'Intent.ACTION_CREATE_DOCUMENT' android/messengercontacts/src/main/java/com/contactflow/messengercontacts/MainActivity.java
+          grep -q 'Intent.ACTION_OPEN_DOCUMENT' android/messengercontacts/src/main/java/com/contactflow/messengercontacts/MainActivity.java
+          grep -q 'MAX_CARDS_PER_FILE = 1_000_000L' android/messengercontacts/src/main/java/com/contactflow/messengercontacts/VCardStreamParser.java
+          grep -q 'applyBatch(ContactsContract.AUTHORITY' android/messengercontacts/src/main/java/com/contactflow/messengercontacts/MassImportService.java
           mkdir -p dist
           cp "$APK" "dist/${PREFIX}_Android.apk"
           cp "$MESSENGER_APK" "dist/ContactFlow_3.6_Messenger_Contacts_Android.apk"
@@ -319,7 +325,7 @@ jobs:
           Smart Import/Merge: atomic analyze+commit by default, optional preview, per-file undo and rollback
           Build-level Telegram credentials required: no
           City intelligence and Legacy V14 toolbox: yes
-          Essential extensions: native sequential Windows file renamer + offline Android messenger-contact inspector
+          Essential extensions: native sequential Windows file renamer + offline Android messenger-contact inspector and million-card streaming VCF vault/importer
           Google OAuth configured: ${GOOGLE_CONFIGURED}
           Data model: Local-First; no ContactFlow account server required
           EOF
@@ -358,6 +364,7 @@ jobs:
 
             - **Sequential File Renamer برای Windows:** انتخاب هم‌زمان صدها فایل، ثبت نام و رفتن مستقیم به بعدی با Enter، حفظ پسوند، Undo، کنترل تداخل، Drag & Drop، مرتب‌سازی طبیعی و گزارش CSV
             - **Messenger Contacts برای Android:** تفکیک مخاطبین بر اساس اکشن واقعی Telegram، WhatsApp، Rubika، Eitaa، Bale، Soroush و پیام‌رسان‌های دیگر، بازکردن کارت بومی مخاطب و خروجی TXT/CSV/XLSX/VCF
+            - **ورود میلیونی VCF در همان APK:** پارس استریم تا ۱٬۰۰۰٬۰۰۰ کارت در هر فایل، مخزن SQLite/WAL محدود به فضای دستگاه، مقصد اختیاری دفترچه گوشی، Dedupe، Pause/Resume، Checkpoint و گزارش CSV
             - افزونهٔ Android مجوز اینترنت و `QUERY_ALL_PACKAGES` ندارد و فقط داده‌های ثبت‌شده در `ContactsContract` را می‌خواند؛ عضویت افراد در سرور پیام‌رسان‌ها حدس زده نمی‌شود.
 
             محدودیت رسمی: `Telegram.WebApp` فهرست کامل مخاطبین حساب را مستقیم ارائه نمی‌کند؛ نسخه ۳.۶ به‌جای API خصوصی، فایل Export انتخاب‌شده توسط خود کاربر را محلی پردازش می‌کند. دسترسی دفترچه دستگاه فقط با انتخاب یا مجوز صریح پلتفرم است.

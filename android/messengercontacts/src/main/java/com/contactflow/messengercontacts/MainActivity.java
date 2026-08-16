@@ -3,8 +3,12 @@ package com.contactflow.messengercontacts;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
@@ -13,8 +17,10 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.ContactsContract;
+import android.provider.OpenableColumns;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.text.format.Formatter;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -29,9 +35,11 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -40,6 +48,8 @@ import java.util.concurrent.Executors;
 public final class MainActivity extends Activity {
     private static final int CONTACTS_PERMISSION = 361;
     private static final int SAVE_DOCUMENT = 362;
+    private static final int OPEN_VCF_DOCUMENT = 363;
+    private static final int IMPORT_CONTACTS_PERMISSION = 364;
     private static final int BG = Color.rgb(8, 12, 21);
     private static final int PANEL = Color.rgb(20, 27, 42);
     private static final int PANEL_SOFT = Color.rgb(29, 39, 59);
@@ -62,10 +72,27 @@ public final class MainActivity extends Activity {
     private ProgressBar progress;
     private Button scanButton;
     private Button exportButton;
+    private Button importVcfButton;
+    private Button resumeImportButton;
+    private Button pauseImportButton;
+    private Button reportImportButton;
+    private TextView vaultText;
+    private TextView massStatusText;
+    private ProgressBar massProgress;
     private String currentFilter = "has_any";
     private byte[] pendingBytes;
     private String pendingName;
     private String pendingMime;
+    private Uri pendingImportUri;
+    private String pendingImportName;
+    private long pendingImportSize = -1L;
+    private long pendingResumeJobId = -1L;
+    private MassContactStore.JobSnapshot latestImportJob;
+    private boolean receiverRegistered;
+
+    private final BroadcastReceiver importProgressReceiver = new BroadcastReceiver() {
+        @Override public void onReceive(Context context, Intent intent) { refreshMassImportState(); }
+    };
 
     @Override public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -74,7 +101,25 @@ public final class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= 23) getWindow().getDecorView().setSystemUiVisibility(0);
         currentFilter = getPreferences(MODE_PRIVATE).getString("messenger_filter", "has_any");
         buildInterface();
+        refreshMassImportState();
         if (hasContactsPermission()) scanContacts(); else showPermissionState();
+    }
+
+    @Override protected void onStart() {
+        super.onStart();
+        IntentFilter filter = new IntentFilter(MassImportService.ACTION_PROGRESS);
+        if (Build.VERSION.SDK_INT >= 33) registerReceiver(importProgressReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        else registerReceiver(importProgressReceiver, filter);
+        receiverRegistered = true;
+        refreshMassImportState();
+    }
+
+    @Override protected void onStop() {
+        if (receiverRegistered) {
+            unregisterReceiver(importProgressReceiver);
+            receiverRegistered = false;
+        }
+        super.onStop();
     }
 
     private void buildInterface() {
@@ -100,6 +145,43 @@ public final class MainActivity extends Activity {
         header.addView(scanButton);
         header.addView(exportButton);
         root.addView(header);
+
+        LinearLayout massCard = vertical();
+        massCard.setPadding(dp(14), dp(12), dp(14), dp(12));
+        massCard.setBackground(rounded(Color.rgb(17, 36, 48), 16));
+        LinearLayout.LayoutParams massParams = matchWrap();
+        massParams.setMargins(0, dp(14), 0, 0);
+        TextView massTitle = text("ورود فوق‌حجیم VCF", 16, ACCENT, true);
+        TextView massHint = text("استریم تا ۱٬۰۰۰٬۰۰۰ کارت در هر فایل • مخزن کل فقط به فضای دستگاه محدود است", 11, MUTED, false);
+        massCard.addView(massTitle);
+        massCard.addView(massHint);
+        LinearLayout massActions = new LinearLayout(this);
+        massActions.setOrientation(LinearLayout.HORIZONTAL);
+        massActions.setGravity(Gravity.END);
+        massActions.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        importVcfButton = button("انتخاب VCF", ACCENT, Color.rgb(7, 26, 24));
+        resumeImportButton = button("ادامه", ACCENT_2, Color.WHITE);
+        pauseImportButton = button("توقف امن", DANGER, Color.WHITE);
+        reportImportButton = button("گزارش", PANEL_SOFT, TEXT);
+        resumeImportButton.setVisibility(View.GONE);
+        pauseImportButton.setVisibility(View.GONE);
+        reportImportButton.setEnabled(false);
+        massActions.addView(importVcfButton);
+        massActions.addView(resumeImportButton);
+        massActions.addView(pauseImportButton);
+        massActions.addView(reportImportButton);
+        massCard.addView(massActions);
+        massProgress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+        massProgress.setMax(1000);
+        massProgress.setProgress(0);
+        LinearLayout.LayoutParams massProgressParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(5));
+        massProgressParams.setMargins(0, dp(7), 0, dp(5));
+        massCard.addView(massProgress, massProgressParams);
+        vaultText = text("مخزن محلی در حال محاسبه…", 12, TEXT, true);
+        massStatusText = text("فایلی برای ورود انتخاب نشده است.", 11, MUTED, false);
+        massCard.addView(vaultText);
+        massCard.addView(massStatusText);
+        root.addView(massCard, massParams);
 
         LinearLayout statusCard = vertical();
         statusCard.setPadding(dp(14), dp(12), dp(14), dp(12));
@@ -157,6 +239,10 @@ public final class MainActivity extends Activity {
 
         scanButton.setOnClickListener(view -> { if (hasContactsPermission()) scanContacts(); else requestContactsPermission(); });
         exportButton.setOnClickListener(view -> chooseExportFormat());
+        importVcfButton.setOnClickListener(view -> openVcfPicker());
+        resumeImportButton.setOnClickListener(view -> resumeLatestImport());
+        pauseImportButton.setOnClickListener(view -> pauseCurrentImport());
+        reportImportButton.setOnClickListener(view -> showImportReport());
         searchBox.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence value, int start, int count, int after) { }
             @Override public void onTextChanged(CharSequence value, int start, int before, int count) { applyFilter(); }
@@ -177,14 +263,224 @@ public final class MainActivity extends Activity {
     private boolean hasContactsPermission() { return Build.VERSION.SDK_INT < 23 || checkSelfPermission(Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED; }
     private void requestContactsPermission() { if (Build.VERSION.SDK_INT >= 23) requestPermissions(new String[]{Manifest.permission.READ_CONTACTS}, CONTACTS_PERMISSION); else scanContacts(); }
 
+    private boolean hasImportContactsPermission() {
+        return Build.VERSION.SDK_INT < 23 || (checkSelfPermission(Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED && checkSelfPermission(Manifest.permission.WRITE_CONTACTS) == PackageManager.PERMISSION_GRANTED);
+    }
+
+    private void requestImportContactsPermission() {
+        if (Build.VERSION.SDK_INT >= 23) requestPermissions(new String[]{Manifest.permission.READ_CONTACTS, Manifest.permission.WRITE_CONTACTS}, IMPORT_CONTACTS_PERMISSION);
+    }
+
+    private void openVcfPicker() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("text/vcard");
+        intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"text/vcard", "text/x-vcard", "text/directory", "application/octet-stream"});
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        try { startActivityForResult(intent, OPEN_VCF_DOCUMENT); }
+        catch (Exception error) {
+            intent.setType("*/*");
+            startActivityForResult(intent, OPEN_VCF_DOCUMENT);
+        }
+    }
+
+    private void handleVcfSelection(Intent data) {
+        Uri uri = data.getData();
+        if (uri == null) return;
+        try {
+            int flags = data.getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            getContentResolver().takePersistableUriPermission(uri, flags & Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        } catch (Exception ignored) { }
+        pendingImportUri = uri;
+        pendingImportName = "contacts.vcf";
+        pendingImportSize = -1L;
+        try (Cursor cursor = getContentResolver().query(uri, new String[]{OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE}, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                String name = cursor.getString(0);
+                if (name != null && !name.trim().isEmpty()) pendingImportName = name.trim();
+                if (!cursor.isNull(1)) pendingImportSize = cursor.getLong(1);
+            }
+        } catch (Exception ignored) { }
+        String size = pendingImportSize > 0 ? Formatter.formatFileSize(this, pendingImportSize) : "حجم نامشخص";
+        String[] modes = {
+            "فقط مخزن سریع (پیشنهادی برای فایل خیلی بزرگ)",
+            "مخزن + دفترچهٔ مخاطبین گوشی"
+        };
+        new AlertDialog.Builder(this)
+            .setTitle(pendingImportName)
+            .setMessage(size + " • خواندن استریم و حذف شماره‌های تکراری\n\nحالت دوم به محدودیت سرعت و ظرفیت Contacts Provider خود گوشی وابسته است.")
+            .setItems(modes, (dialog, which) -> {
+                if (which == 0) createAndStartImport(false);
+                else if (hasImportContactsPermission()) createAndStartImport(true);
+                else requestImportContactsPermission();
+            })
+            .setNegativeButton("لغو", null)
+            .show();
+    }
+
+    private void createAndStartImport(boolean targetSystem) {
+        if (pendingImportUri == null) return;
+        Uri uri = pendingImportUri;
+        String name = pendingImportName;
+        long size = pendingImportSize;
+        pendingImportUri = null;
+        pendingImportName = null;
+        pendingImportSize = -1L;
+        importVcfButton.setEnabled(false);
+        massStatusText.setText("در حال ساخت کار ورود…");
+        worker.execute(() -> {
+            MassContactStore database = new MassContactStore(this);
+            try {
+                long jobId = database.createJob(uri.toString(), name == null ? "contacts.vcf" : name, size, targetSystem);
+                runOnUiThread(() -> {
+                    importVcfButton.setEnabled(true);
+                    startImportService(jobId);
+                    refreshMassImportState();
+                });
+            } catch (Exception error) {
+                runOnUiThread(() -> {
+                    importVcfButton.setEnabled(true);
+                    Toast.makeText(this, "ساخت کار ورود ناموفق: " + error.getMessage(), Toast.LENGTH_LONG).show();
+                });
+            } finally { database.close(); }
+        });
+    }
+
+    private void startImportService(long jobId) {
+        Intent intent = new Intent(this, MassImportService.class).setAction(MassImportService.ACTION_START).putExtra(MassImportService.EXTRA_JOB_ID, jobId);
+        try {
+            if (Build.VERSION.SDK_INT >= 26) startForegroundService(intent); else startService(intent);
+            massStatusText.setText("سرویس ورود شروع شد؛ می‌توانید برنامه را در پیش‌زمینه نگه دارید یا بعداً ادامه دهید.");
+        } catch (Exception error) { Toast.makeText(this, "شروع سرویس ناموفق: " + error.getMessage(), Toast.LENGTH_LONG).show(); }
+    }
+
+    private void resumeLatestImport() {
+        MassContactStore.JobSnapshot job = latestImportJob;
+        if (job == null || !job.canResume()) return;
+        if (job.targetSystem && !hasImportContactsPermission()) {
+            pendingResumeJobId = job.id;
+            requestImportContactsPermission();
+        } else startImportService(job.id);
+    }
+
+    private void pauseCurrentImport() {
+        MassContactStore.JobSnapshot job = latestImportJob;
+        if (job == null) return;
+        Intent intent = new Intent(this, MassImportService.class).setAction(MassImportService.ACTION_PAUSE).putExtra(MassImportService.EXTRA_JOB_ID, job.id);
+        startService(intent);
+        massStatusText.setText("درخواست توقف امن ارسال شد؛ دستهٔ جاری کامل و نقطهٔ ادامه ذخیره می‌شود.");
+    }
+
+    private void refreshMassImportState() {
+        if (worker.isShutdown()) return;
+        worker.execute(() -> {
+            MassContactStore database = new MassContactStore(this);
+            try {
+                long count = database.vaultCount();
+                long bytes = database.databaseBytes();
+                MassContactStore.JobSnapshot job = database.latestJob();
+                runOnUiThread(() -> renderMassImportState(count, bytes, job));
+            } catch (Exception ignored) { }
+            finally { database.close(); }
+        });
+    }
+
+    private void renderMassImportState(long vaultCount, long databaseBytes, MassContactStore.JobSnapshot job) {
+        latestImportJob = job;
+        vaultText.setText("مخزن دیسکی: " + localNumber(vaultCount) + " شمارهٔ یکتا • " + Formatter.formatFileSize(this, databaseBytes));
+        reportImportButton.setEnabled(job != null);
+        boolean running = job != null && MassContactStore.STATE_RUNNING.equals(job.state);
+        importVcfButton.setEnabled(!running);
+        pauseImportButton.setVisibility(running ? View.VISIBLE : View.GONE);
+        resumeImportButton.setVisibility(job != null && job.canResume() && !running ? View.VISIBLE : View.GONE);
+        if (job == null) {
+            massStatusText.setText("فایلی برای ورود انتخاب نشده است.");
+            massProgress.setIndeterminate(false);
+            massProgress.setProgress(0);
+            return;
+        }
+        String destination = job.targetSystem ? "مخزن + گوشی" : "فقط مخزن";
+        massStatusText.setText(stateLabel(job.state) + " • " + job.displayName + " • " + destination + "\n" + job.message + "\n" + localNumber(job.acceptedCards) + " کارت معتبر، " + localNumber(job.vaultInserted) + " شمارهٔ تازه، " + localNumber(job.duplicatePhones) + " تکراری");
+        if (job.sourceSize > 0) {
+            massProgress.setIndeterminate(false);
+            massProgress.setProgress((int) Math.min(1000L, job.bytesRead * 1000L / Math.max(1L, job.sourceSize)));
+        } else {
+            massProgress.setIndeterminate(running);
+            if (!running) massProgress.setProgress(MassContactStore.STATE_COMPLETED.equals(job.state) ? 1000 : 0);
+        }
+    }
+
+    private void showImportReport() {
+        MassContactStore.JobSnapshot job = latestImportJob;
+        if (job == null) return;
+        String report = importReportText(job);
+        new AlertDialog.Builder(this)
+            .setTitle("گزارش جامع آخرین VCF")
+            .setMessage(report)
+            .setPositiveButton("ذخیره CSV", (dialog, which) -> saveImportReport(job))
+            .setNegativeButton("بستن", null)
+            .show();
+    }
+
+    private String importReportText(MassContactStore.JobSnapshot job) {
+        return "فایل: " + job.displayName +
+            "\nوضعیت: " + stateLabel(job.state) +
+            "\nمقصد: " + (job.targetSystem ? "مخزن و دفترچه گوشی" : "مخزن دیسکی") +
+            "\nکارت پردازش‌شده: " + localNumber(job.cardsSeen) +
+            "\nکارت معتبر: " + localNumber(job.acceptedCards) +
+            "\nکارت خراب/بدون شماره: " + localNumber(job.invalidCards) +
+            "\nمقدار TEL بررسی‌شده: " + localNumber(job.phonesSeen) +
+            "\nشماره نامعتبر: " + localNumber(job.invalidPhones) +
+            "\nشماره تکراری: " + localNumber(job.duplicatePhones) +
+            "\nشماره تازه در مخزن: " + localNumber(job.vaultInserted) +
+            "\nمخاطب افزوده‌شده به گوشی: " + localNumber(job.systemInserted) +
+            "\nاز قبل در گوشی: " + localNumber(job.systemExisting) +
+            "\nخطای ثبت گوشی: " + localNumber(job.systemFailed) +
+            "\nنقطه ادامه: کارت " + localNumber(job.checkpointCard + 1) +
+            "\n\nنکته: تشخیص پیام‌رسان فقط از اکشن واقعی ثبت‌شده در ContactsContract انجام می‌شود، نه حدس عضویت سروری.";
+    }
+
+    private void saveImportReport(MassContactStore.JobSnapshot job) {
+        String header = "file,state,target,cards_seen,accepted_cards,invalid_cards,phones_seen,invalid_phones,duplicate_phones,vault_inserted,system_inserted,system_existing,system_failed,checkpoint,message\r\n";
+        String row = csv(job.displayName) + ',' + csv(job.state) + ',' + csv(job.targetSystem ? "vault+android" : "vault") + ',' + job.cardsSeen + ',' + job.acceptedCards + ',' + job.invalidCards + ',' + job.phonesSeen + ',' + job.invalidPhones + ',' + job.duplicatePhones + ',' + job.vaultInserted + ',' + job.systemInserted + ',' + job.systemExisting + ',' + job.systemFailed + ',' + job.checkpointCard + ',' + csv(job.message) + "\r\n";
+        byte[] content = ("\uFEFF" + header + row).getBytes(StandardCharsets.UTF_8);
+        String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date());
+        launchSaveDocument(new ExportWriter.ExportDocument(content, "text/csv", "ContactFlow_VCF_Import_Report_" + timestamp + ".csv"));
+    }
+
+    private static String csv(String value) { return "\"" + (value == null ? "" : value.replace("\"", "\"\"").replace('\r', ' ').replace('\n', ' ')) + "\""; }
+
+    private static String stateLabel(String state) {
+        if (MassContactStore.STATE_RUNNING.equals(state)) return "در حال اجرا";
+        if (MassContactStore.STATE_PAUSED.equals(state)) return "متوقف و قابل ادامه";
+        if (MassContactStore.STATE_COMPLETED.equals(state)) return "کامل";
+        if (MassContactStore.STATE_LIMIT.equals(state)) return "سقف یک‌میلیون تکمیل شد";
+        if (MassContactStore.STATE_FAILED.equals(state)) return "ناموفق و قابل تلاش مجدد";
+        return "در صف";
+    }
+
     @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode != CONTACTS_PERMISSION) return;
-        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) scanContacts();
-        else {
-            statusText.setText("مجوز مخاطبین داده نشد.");
-            resultText.setText("بدون READ_CONTACTS امکان تشخیص اکشن‌های تلگرام، واتساپ و سایر برنامه‌ها وجود ندارد.");
-            emptyText.setText("مجوز رد شده است؛ برای تلاش دوباره روی دکمهٔ دسترسی بزنید.");
+        if (requestCode == CONTACTS_PERMISSION) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) scanContacts();
+            else {
+                statusText.setText("مجوز مخاطبین داده نشد.");
+                resultText.setText("بدون READ_CONTACTS امکان تشخیص اکشن‌های تلگرام، واتساپ و سایر برنامه‌ها وجود ندارد.");
+                emptyText.setText("مجوز رد شده است؛ برای تلاش دوباره روی دکمهٔ دسترسی بزنید.");
+            }
+            return;
+        }
+        if (requestCode == IMPORT_CONTACTS_PERMISSION) {
+            if (hasImportContactsPermission()) {
+                if (pendingResumeJobId > 0) {
+                    long jobId = pendingResumeJobId;
+                    pendingResumeJobId = -1L;
+                    startImportService(jobId);
+                } else if (pendingImportUri != null) createAndStartImport(true);
+            } else {
+                pendingResumeJobId = -1L;
+                Toast.makeText(this, "مجوز نوشتن مخاطبین داده نشد؛ حالت «فقط مخزن سریع» بدون این مجوز کار می‌کند.", Toast.LENGTH_LONG).show();
+            }
         }
     }
 
@@ -198,7 +494,7 @@ public final class MainActivity extends Activity {
         resultText.setText("پردازش فقط روی همین دستگاه انجام می‌شود.");
         worker.execute(() -> {
             try {
-                List<ContactRecord> result = ContactScanner.scan(getContentResolver());
+                ContactScanner.ScanResult result = ContactScanner.scan(getContentResolver());
                 runOnUiThread(() -> finishScan(result));
             } catch (Exception error) {
                 runOnUiThread(() -> {
@@ -212,16 +508,16 @@ public final class MainActivity extends Activity {
         });
     }
 
-    private void finishScan(List<ContactRecord> result) {
+    private void finishScan(ContactScanner.ScanResult scanResult) {
         allContacts.clear();
-        allContacts.addAll(result);
+        allContacts.addAll(scanResult.contacts);
         progress.setVisibility(View.GONE);
         scanButton.setEnabled(true);
         scanButton.setText("اسکن مجدد");
         int withApps = 0, appSignals = 0;
         for (ContactRecord row : allContacts) { if (!row.appIds.isEmpty()) withApps++; appSignals += row.appIds.size(); }
-        statusText.setText(String.format(new Locale("fa", "IR"), "%d مخاطب دارای شماره خوانده شد", allContacts.size()));
-        resultText.setText(String.format(new Locale("fa", "IR"), "%d مخاطب دارای اکشن پیام‌رسان • %d اتصال تشخیص‌داده‌شده", withApps, appSignals));
+        statusText.setText(String.format(new Locale("fa", "IR"), "%d مخاطب دارای شماره خوانده شد%s", allContacts.size(), scanResult.truncated ? " (پیش‌نمایش امن)" : ""));
+        resultText.setText(String.format(new Locale("fa", "IR"), "%d مخاطب دارای اکشن پیام‌رسان • %d اتصال تشخیص‌داده‌شده%s", withApps, appSignals, scanResult.truncated ? " • نمایش روی ۲۵هزار مخاطب نخست محدود شده تا حافظه پر نشود" : ""));
         buildFilters();
         applyFilter();
     }
@@ -365,6 +661,10 @@ public final class MainActivity extends Activity {
 
     @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == OPEN_VCF_DOCUMENT) {
+            if (resultCode == RESULT_OK && data != null && data.getData() != null) handleVcfSelection(data);
+            return;
+        }
         if (requestCode != SAVE_DOCUMENT) return;
         if (resultCode != RESULT_OK || data == null || data.getData() == null || pendingBytes == null) {
             pendingBytes = null;
@@ -437,7 +737,8 @@ public final class MainActivity extends Activity {
 
     private LinearLayout.LayoutParams matchWrap() { return new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT); }
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
-    private String localNumber(int value) { return String.format(new Locale("fa", "IR"), "%d", value); }
+    private String localNumber(int value) { return localNumber((long) value); }
+    private String localNumber(long value) { return String.format(new Locale("fa", "IR"), "%d", value); }
 
     @Override protected void onDestroy() {
         worker.shutdownNow();
