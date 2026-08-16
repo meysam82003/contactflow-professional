@@ -1,1 +1,1 @@
-window.CONTACTFLOW_CONFIG={edition:'Personal Ultimate 3.5',version:'3.5.0',googleClientId:'',telegramApiId:0,telegramApiHash:'',miniAppUrl:'',botUsername:'',telegramMode:'user_session_optional',telegramNativeAppConfigured:false};
+window.CONTACTFLOW_CONFIG={edition:'Personal Ultimate 3.6',version:'3.6.0',googleClientId:'',telegramApiId:0,telegramApiHash:'',miniAppUrl:'',botUsername:'',telegramMode:'desktop_export_offline',telegramPrimaryMode:'desktop_export_offline',telegramNativeAppConfigured:false};

@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-const VERSION='3.5.0';
+const VERSION='3.6.0';
 const MAX_PAIRS=10;
 const LS_GATEWAY='cf_business_gateway_url';
 const LS_PAIRS='cf_business_pairs_v1';

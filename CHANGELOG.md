@@ -184,3 +184,14 @@
 - Added province/operator fields, IndexedDB indexes, search and export support.
 - Added a consent-aware Telegram/WhatsApp/Rubika/Bale/Soroush handoff center, manual-confirmation CSV queues and VCF export.
 - Upgraded shared PWA/Desktop/Android/Mini App assets, backup metadata and release automation to 3.5.0.
+
+# 3.6.0
+
+- Fixed Smart Import so the default action atomically analyzes, commits and verifies contacts in IndexedDB; preview-only is now explicit.
+- Applied the saved automatic/fixed source policy to CSV, JSON, VCF, Telegram Desktop export and legacy-tool imports.
+- Added an exact transactional name engine with count limits and rich templates.
+- Replaced the primary Telegram credential flow with local parsing of official Telegram Desktop JSON/HTML/VCF exports.
+- Added native Save As integration, city intelligence, a command palette and a complete Aurora UI refresh.
+- Added an offline Legacy V14 toolbox for conversion, deduplication, prefix modes, chunked VCF, duplicate reports, Hex/Unicode and image Base64.
+- Added WhatsApp, Rubika, Bale and Soroush visibility to the dashboard while retaining consent-aware manual handoff.
+- Updated shared PWA, Desktop, Android and Mini App assets and release automation to 3.6.0.

@@ -1,0 +1,20 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
+const root=path.resolve(new URL('..',import.meta.url).pathname);
+const read=file=>fs.readFileSync(path.join(root,file),'utf8');
+const required=['web/index.html','web/app.js','web/import-merge.js','web/location-operator.js','web/channel-handoff.js','web/name-engine.js','web/telegram-export.js','web/legacy-tools.js','web/file-save.js','web/v34.js','web/v35.js','web/v36.js','web/v36.css','web/sw.js','.github/workflows/release-all.yml'];
+for(const file of required)if(!fs.existsSync(path.join(root,file)))throw new Error(`missing ${file}`);
+const html=read('web/index.html');
+for(const asset of ['name-engine.js','telegram-export.js','legacy-tools.js','file-save.js','v36.js','v36.css'])if(!html.includes(asset))throw new Error(`index missing ${asset}`);
+const v34=read('web/v34.js'),v36=read('web/v36.js');
+for(const marker of ['cf34-dry" type="checkbox"','تحلیل و ثبت در مخاطبین','skipConfirm:true','ثبت و راستی‌آزمایی شد'])if(!v34.includes(marker))throw new Error(`atomic import missing ${marker}`);
+for(const marker of ['data-page="insights"','data-page="telegram-offline"','data-page="legacy-tools"','repairContactData','Telegram Desktop Export','ContactFlowFileSave','واتساپ، روبیکا، بله و سروش'])if(!v36.includes(marker))throw new Error(`v36 UI missing ${marker}`);
+for(const marker of ['whatsapp','rubika','bale','soroush'])if(!read('web/channel-handoff.js').includes(marker))throw new Error(`channel missing ${marker}`);
+if(read('web/config.js').includes("telegramMode:'user_session_optional'"))throw new Error('API-dependent Telegram mode must not be primary');
+if(!read('web/config.js').includes("telegramMode:'desktop_export_offline'"))throw new Error('offline Telegram export mode missing');
+if(read('VERSION').trim()!=='3.6.0')throw new Error('VERSION must be 3.6.0');
+for(const [file,marker] of [['desktop/main.go','appVersion = "3.6.0"'],['android/app/build.gradle',"versionName '3.6.0'"],['telegram-miniapp/lib.php',"CF_VERSION = '3.6.0'"],['.github/workflows/release-all.yml','VERSION: 3.6.0']])if(!read(file).includes(marker))throw new Error(`${file} is not on 3.6.0`);
+for(const asset of ["'./v36.js'","'./v36.css'","'./telegram-export.js'","'./legacy-tools.js'","'./file-save.js'"])if(!read('web/sw.js').includes(asset))throw new Error(`service worker missing ${asset}`);
+JSON.parse(read('web/manifest.webmanifest'));
+console.log('ContactFlow 3.6 source verification PASS');

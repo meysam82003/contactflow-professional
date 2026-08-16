@@ -1,4 +1,4 @@
-name: Release All Devices — ContactFlow 3.5
+name: Release All Devices — ContactFlow 3.6
 
 on:
   workflow_dispatch:
@@ -24,12 +24,12 @@ permissions:
   contents: write
 
 concurrency:
-  group: contactflow-release-3.5
+  group: contactflow-release-3.6
   cancel-in-progress: false
 
 env:
-  VERSION: 3.5.0
-  PREFIX: ContactFlow_Personal_Ultimate_3.5.0
+  VERSION: 3.6.0
+  PREFIX: ContactFlow_Personal_Ultimate_3.6.0
 
 jobs:
   webcore:
@@ -59,6 +59,11 @@ jobs:
           node --check web/location-operator.js
           node --check web/channel-handoff.js
           node --check web/v35.js
+          node --check web/name-engine.js
+          node --check web/telegram-export.js
+          node --check web/legacy-tools.js
+          node --check web/file-save.js
+          node --check web/v36.js
 
       - name: Build Telegram User API connector
         run: |
@@ -82,12 +87,15 @@ jobs:
           cp -R build/webcore/. build/pwa/
           cp README.md README_FA.md CHANGELOG.md SECURITY.md build/pwa/
           mkdir -p build/pwa/docs
-          cp docs/ARCHITECTURE_FA.md docs/FEATURES_3_3_FA.md docs/FEATURES_3_4_FA.md docs/FEATURES_3_5_FA.md docs/RELEASE_CHECKLIST_FA.md docs/TELEGRAM_CONTACT_EXPORT_3_3_FA.md build/pwa/docs/
+          cp docs/ARCHITECTURE_FA.md docs/FEATURES_3_3_FA.md docs/FEATURES_3_4_FA.md docs/FEATURES_3_5_FA.md docs/FEATURES_3_6_FA.md docs/RELEASE_CHECKLIST_FA.md docs/TELEGRAM_CONTACT_EXPORT_3_3_FA.md build/pwa/docs/
           (cd build/pwa && zip -qr "../${PREFIX}_PWA.zip" .)
           grep -q 'telegram-web.bundle.js' build/webcore/index.html
           grep -q 'data-page="telegram-contacts"' build/webcore/v33.js
           grep -q 'data-page="smart-import"' build/webcore/v34.js
           grep -q 'data-page="channels"' build/webcore/v35.js
+          grep -q 'data-page="insights"' build/webcore/v36.js
+          grep -q 'data-page="telegram-offline"' build/webcore/v36.js
+          grep -q 'data-page="legacy-tools"' build/webcore/v36.js
           grep -q 'planMerge' build/webcore/import-merge.js
           grep -q 'Api.contacts.GetContacts' enhancements/telegram-web-entry.js
           grep -q 'ContactFlowSpreadsheet' enhancements/telegram-web-entry.js
@@ -100,12 +108,12 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: cf35-webcore
+          name: cf36-webcore
           path: build/webcore
           retention-days: 30
       - uses: actions/upload-artifact@v4
         with:
-          name: cf35-release-pwa
+          name: cf36-release-pwa
           path: build/${{ env.PREFIX }}_PWA.zip
           retention-days: 30
 
@@ -119,13 +127,13 @@ jobs:
           go-version: '1.23.x'
       - uses: actions/download-artifact@v4
         with:
-          name: cf35-webcore
+          name: cf36-webcore
           path: desktop/webapp
       - name: Build Windows, Linux and macOS shells
         run: |
           set -euo pipefail
           test "$(cat VERSION)" = "$VERSION"
-          grep -q 'const appVersion = "3.5.0"' desktop/main.go
+          grep -q 'const appVersion = "3.6.0"' desktop/main.go
           mkdir -p dist
           (cd desktop && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags='-s -w -H=windowsgui' -o "../dist/${PREFIX}_Windows_Portable.exe" .)
           (cd desktop && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o "../dist/${PREFIX}_Linux_x64" .)
@@ -137,7 +145,7 @@ jobs:
           for file in Windows_Portable.exe Windows_Setup.exe Linux_x64 macOS_Intel macOS_AppleSilicon; do test -s "dist/${PREFIX}_${file}"; done
       - uses: actions/upload-artifact@v4
         with:
-          name: cf35-release-desktop
+          name: cf36-release-desktop
           path: dist/*
           retention-days: 30
 
@@ -158,7 +166,7 @@ jobs:
           gradle-version: '9.5.0'
       - uses: actions/download-artifact@v4
         with:
-          name: cf35-webcore
+          name: cf36-webcore
           path: android/app/src/main/assets
       - name: Build and verify APK
         run: |
@@ -172,13 +180,15 @@ jobs:
           unzip -p "$APK" assets/v33.js | grep -q 'telegram-contacts'
           unzip -p "$APK" assets/v34.js | grep -q 'smart-import'
           unzip -p "$APK" assets/v35.js | grep -q 'data-page="channels"'
+          unzip -p "$APK" assets/v36.js | grep -q 'telegram-offline'
+          unzip -p "$APK" assets/v36.js | grep -q 'legacy-tools'
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions "$APK" | grep -q 'android.permission.READ_CONTACTS'
           mkdir -p dist
           cp "$APK" "dist/${PREFIX}_Android.apk"
           sha256sum "dist/${PREFIX}_Android.apk" > dist/APK_SHA256.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: cf35-release-android
+          name: cf36-release-android
           path: dist/*
           retention-days: 30
 
@@ -192,7 +202,7 @@ jobs:
           node-version: '22'
       - uses: actions/download-artifact@v4
         with:
-          name: cf35-webcore
+          name: cf36-webcore
           path: build/webcore
       - name: Build full shared-core Mini App package
         run: |
@@ -207,15 +217,17 @@ jobs:
           grep -q 'v33.js' build/miniapp/miniapp.html
           grep -q 'v34.js' build/miniapp/miniapp.html
           grep -q 'v35.js' build/miniapp/miniapp.html
+          grep -q 'v36.js' build/miniapp/miniapp.html
           grep -q 'telegram-contacts' build/miniapp/v33.js
           grep -q 'smart-import' build/miniapp/v34.js
           grep -q 'data-page="channels"' build/miniapp/v35.js
+          grep -q 'data-page="telegram-offline"' build/miniapp/v36.js
           mkdir -p dist
           (cd build/miniapp && zip -qr "../../dist/${PREFIX}_Telegram_MiniApp_cPanel.zip" .)
           test -s "dist/${PREFIX}_Telegram_MiniApp_cPanel.zip"
       - uses: actions/upload-artifact@v4
         with:
-          name: cf35-release-miniapp
+          name: cf36-release-miniapp
           path: dist/*
           retention-days: 30
 
@@ -232,7 +244,7 @@ jobs:
           test -s "dist/${PREFIX}_Source.zip"
       - uses: actions/upload-artifact@v4
         with:
-          name: cf35-release-source
+          name: cf36-release-source
           path: dist/*
           retention-days: 30
 
@@ -243,7 +255,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          pattern: cf35-release-*
+          pattern: cf36-release-*
           path: release
           merge-multiple: true
       - name: Generate release metadata and checksums
@@ -254,46 +266,49 @@ jobs:
           set -euo pipefail
           cd release
           cat > "${PREFIX}_RELEASE_INFO_FA.txt" <<EOF
-          ContactFlow Personal Ultimate 3.5.0
+          ContactFlow Personal Ultimate 3.6.0
           Source commit: ${GITHUB_SHA}
           Workflow run: ${GITHUB_RUN_ID}
           Shared web core across PWA/Desktop/Android/Mini App: yes
-          Telegram contacts method: official MTProto contacts.getContacts
-          Telegram phone status method: privacy-aware contacts.importContacts with cleanup and 500/run cap
+          Telegram contacts primary method: official Telegram Desktop result.json/HTML export; no API ID/hash
+          Telegram Mini App method: user-selected export file, local view/import/VCF/CSV
           Android device contacts: explicit READ_CONTACTS runtime permission
           Android business card OCR: on-device ML Kit
-          Smart Import/Merge: dry-run, per-file undo and last-merge rollback
-          Build-level Telegram credentials configured: ${TELEGRAM_CONFIGURED}
-          Local device credentials supported: yes
+          Smart Import/Merge: atomic analyze+commit by default, optional preview, per-file undo and rollback
+          Build-level Telegram credentials required: no
+          City intelligence and Legacy V14 toolbox: yes
           Google OAuth configured: ${GOOGLE_CONFIGURED}
           Data model: Local-First; no ContactFlow account server required
           EOF
           find . -maxdepth 1 -type f ! -name "${PREFIX}_SHA256.txt" -print0 | sort -z | xargs -0 sha256sum > "${PREFIX}_SHA256.txt"
           ls -lh
-      - name: Publish GitHub Release 3.5.0
+      - name: Publish GitHub Release 3.6.0
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: v3.5.0
+          tag_name: v3.6.0
           target_commitish: main
-          name: ContactFlow Personal Ultimate 3.5.0
+          name: ContactFlow Personal Ultimate 3.6.0
           prerelease: false
           make_latest: true
           overwrite_files: true
           preserve_order: true
           files: release/*
           body: |
-            # ContactFlow Personal Ultimate 3.5.0
+            # ContactFlow Personal Ultimate 3.6.0
 
-            نسخه ۳.۵ موتور Import/Merge، تشخیص شهر/استان و اپراتور و مرکز کانال‌های ارتباطی را در هسته مشترک Telegram Mini App، PWA، Android، Windows، Linux و macOS یکپارچه می‌کند.
+            نسخه ۳.۶ ورود اتمیک مخاطبین، تلگرام بدون API، نام‌گذاری دقیق، هوش شهری، ذخیره با نام و جعبه‌ابزار آفلاین V14 را در هسته مشترک Mini App، PWA، Android، Windows، Linux و macOS یکپارچه می‌کند.
 
             - Import هم‌زمان CSV/TSV/TXT/VCF/JSON/XLS/XLSX/ZIP، Drag & Drop، Progress و کنترل فایل خراب/Zip Bomb
             - تشخیص `Qom.txt → قم`، ترانویسی فارسی، تشخیص کشور/شهر تلفن ثابت، E.164، نوع و اعتبار شماره و تفکیک شرکت
-            - مقایسه قبل از Merge، Dry-run، انتخاب قدیم/جدید/هوشمند، گزارش تکراری شهر/فامیل/دامنه، خروجی فقط جدید و گزارش Excel/PDF
+            - تحلیل و ثبت اتمیک با یک دکمه، راستی‌آزمایی دیتابیس، پیش‌نمایش اختیاری، انتخاب قدیم/جدید/هوشمند و گزارش کامل
             - Undo مستقل هر فایل، Rollback آخرین Merge، شماره‌گذاری مجدد، برچسب منبع، Watch Folder هنگام اجرای برنامه و ZIP عکس
             - دفترچه Android با مجوز صریح، OCR محلی کارت ویزیت، Contact Picker انتخابی وب و Web Share موبایل
-            - User Session رسمی Telegram، دریافت فهرست حساب، بررسی وضعیت شماره‌ها با سقف ۵۰۰ در هر اجرا، برچسب دیتابیس، فیلتر و خروجی جدا
+            - مشاهده، جستجو، ثبت و VCF/CSV مخاطبین فایل رسمی Telegram Desktop بدون API ID/Hash و بدون Session مخفی
             - تشخیص شهر و استان از متن فارسی/انگلیسی/فینگلیش و جستجوی استان در مخاطبین
             - تشخیص اپراتور اولیه و قانون منبع خودکار/ثابت ذخیره‌شده برای Importهای بعدی
             - صف رضایت‌محور، VCF/CSV و تحویل دستی به Telegram، WhatsApp، Rubika، Bale و Soroush
+            - داشبورد هوش شهری با رتبه شهر، پوشش استان، سهم اپراتورها، امتیاز کیفیت و خروجی CSV
+            - جعبه‌ابزار مستقل V14: TXT/CSV/VCF/JSON/Excel، حذف تکراری، Prefix، Chunk VCF، Hex/Unicode و Image Base64
+            - Save As بومی در APK و مرورگرهای پشتیبانی‌شده؛ Download فقط مسیر جایگزین
 
-            محدودیت رسمی: `Telegram.WebApp` فهرست کامل مخاطبین گوشی یا حساب Telegram را خودکار ارائه نمی‌کند؛ دسترسی حساب به User Session مستقل نیاز دارد و دسترسی دفترچه فقط با انتخاب/مجوز صریح پلتفرم انجام می‌شود. وضعیت `not_returned` ممکن است ناشی از Privacy باشد و اثبات قطعی نداشتن Telegram نیست.
+            محدودیت رسمی: `Telegram.WebApp` فهرست کامل مخاطبین حساب را مستقیم ارائه نمی‌کند؛ نسخه ۳.۶ به‌جای API خصوصی، فایل Export انتخاب‌شده توسط خود کاربر را محلی پردازش می‌کند. دسترسی دفترچه دستگاه فقط با انتخاب یا مجوز صریح پلتفرم است.
