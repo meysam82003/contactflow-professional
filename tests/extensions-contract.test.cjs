@@ -50,10 +50,24 @@ test('Android million-card VCF pipeline is streaming, durable and resumable',()=
   assert.match(scanner,/QUERY_CHUNK = 400/);
 });
 
-test('release workflow publishes both essential extension binaries on v3.6.0',()=>{
+test('native Android sequential renamer uses SAF and keeps Persian input stable',()=>{
+  const manifest=read('android/sequentialrenamer/src/main/AndroidManifest.xml');
+  assert.doesNotMatch(manifest,/android\.permission\.INTERNET|MANAGE_EXTERNAL_STORAGE|READ_EXTERNAL_STORAGE|WRITE_EXTERNAL_STORAGE/);
+  const main=read('android/sequentialrenamer/src/main/java/com/contactflow/sequentialrenamer/MainActivity.java');
+  for(const marker of ['Intent.ACTION_OPEN_DOCUMENT','Intent.ACTION_OPEN_DOCUMENT_TREE','Intent.ACTION_CREATE_DOCUMENT','EditorInfo.IME_ACTION_NEXT','suppressTextEvents','undoLast','showTemplateDialog','SessionStore.save'])assert.ok(main.includes(marker),`Android renamer missing ${marker}`);
+  const repository=read('android/sequentialrenamer/src/main/java/com/contactflow/sequentialrenamer/SafFileRepository.java');
+  for(const marker of ['DocumentsContract.renameDocument','FLAG_SUPPORTS_RENAME','buildChildDocumentsUriUsingTree'])assert.ok(repository.includes(marker),`Android SAF repository missing ${marker}`);
+  assert.match(read('android/sequentialrenamer/src/main/java/com/contactflow/sequentialrenamer/SessionStore.java'),/AtomicFile/);
+  assert.match(read('android/sequentialrenamer/src/main/java/com/contactflow/sequentialrenamer/RenameRules.java'),/Normalizer\.Form\.NFC/);
+  assert.match(read('android/sequentialrenamer/build.gradle'),/applicationId 'com\.contactflow\.sequentialrenamer'/);
+});
+
+test('release workflow publishes all essential extension binaries on v3.6.0',()=>{
   const workflow=read('.github/workflows/release-all.yml');
   assert.match(workflow,/ContactFlow_3\.6_Sequential_File_Renamer_Windows_x64\.exe/);
+  assert.match(workflow,/ContactFlow_3\.6_Sequential_File_Renamer_Android\.apk/);
   assert.match(workflow,/ContactFlow_3\.6_Messenger_Contacts_Android\.apk/);
   assert.match(workflow,/:messengercontacts:assembleDebug/);
+  assert.match(workflow,/:sequentialrenamer:assembleDebug/);
   assert.match(workflow,/desktop_extensions/);
 });

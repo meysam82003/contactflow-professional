@@ -1,6 +1,6 @@
 # ContactFlow Personal Ultimate 3.6
 
-The `v3.6.0` release also ships two source-auditable essential extensions: a native Windows sequential file renamer and an offline Android messenger-contact inspector. See [`extensions/README_FA.md`](extensions/README_FA.md).
+The `v3.6.0` release also ships three source-auditable essential binaries: native Windows and Android sequential file renamers plus an offline Android messenger-contact inspector. See [`extensions/README_FA.md`](extensions/README_FA.md).
 
 ContactFlow is a local-first contact workspace with one shared web core for Telegram Mini App, PWA, Android, Windows, Linux and macOS.
 

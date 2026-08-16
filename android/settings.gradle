@@ -3,3 +3,4 @@ dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_P
 rootProject.name = "ContactFlowProfessional"
 include ':app'
 include ':messengercontacts'
+include ':sequentialrenamer'

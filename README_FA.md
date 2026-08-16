@@ -2,7 +2,7 @@
 
 ContactFlow یک نرم‌افزار Local‑First برای Import، پاک‌سازی، Merge، Backup، تحلیل شهری و خروجی مخاطبین است. نسخه ۳.۶ از یک هسته آفلاین مشترک برای Telegram Mini App، PWA، Android، Windows، Linux و macOS استفاده می‌کند.
 
-افزونه‌های ضروری همین Release شامل ابزار بومی Windows برای تغییرنام ترتیبی فایل‌ها و اپ آفلاین Android برای تفکیک مخاطبین تلگرام، واتساپ، روبیکا، ایتا، بله، سروش و سایر اکشن‌های ثبت‌شده است. جزئیات در [`extensions/README_FA.md`](extensions/README_FA.md) قرار دارد.
+افزونه‌های ضروری همین Release شامل ابزارهای بومی Windows و Android برای تغییرنام ترتیبی فایل‌ها و اپ آفلاین Android برای تفکیک مخاطبین تلگرام، واتساپ، روبیکا، ایتا، بله، سروش و سایر اکشن‌های ثبت‌شده است. جزئیات در [`extensions/README_FA.md`](extensions/README_FA.md) قرار دارد.
 
 ## تغییرهای اصلی ۳.۶
 

@@ -203,11 +203,13 @@ jobs:
       - name: Build and verify APKs
         run: |
           set -euo pipefail
-          (cd android && gradle --no-daemon :app:assembleDebug :messengercontacts:assembleDebug --stacktrace)
+          (cd android && gradle --no-daemon :app:assembleDebug :messengercontacts:assembleDebug :sequentialrenamer:assembleDebug --stacktrace)
           APK=android/app/build/outputs/apk/debug/app-debug.apk
           MESSENGER_APK=android/messengercontacts/build/outputs/apk/debug/messengercontacts-debug.apk
+          RENAMER_APK=android/sequentialrenamer/build/outputs/apk/debug/sequentialrenamer-debug.apk
           test -s "$APK"
           test -s "$MESSENGER_APK"
+          test -s "$RENAMER_APK"
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | tee apk-badging.txt
           grep "sdkVersion:'23'" apk-badging.txt
           grep "targetSdkVersion:'36'" apk-badging.txt
@@ -231,10 +233,21 @@ jobs:
           grep -q 'Intent.ACTION_OPEN_DOCUMENT' android/messengercontacts/src/main/java/com/contactflow/messengercontacts/MainActivity.java
           grep -q 'MAX_CARDS_PER_FILE = 1_000_000L' android/messengercontacts/src/main/java/com/contactflow/messengercontacts/VCardStreamParser.java
           grep -q 'applyBatch(ContactsContract.AUTHORITY' android/messengercontacts/src/main/java/com/contactflow/messengercontacts/MassImportService.java
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$RENAMER_APK" | tee renamer-apk-badging.txt
+          grep "package: name='com.contactflow.sequentialrenamer'" renamer-apk-badging.txt
+          grep "versionCode='30602'" renamer-apk-badging.txt
+          grep "sdkVersion:'23'" renamer-apk-badging.txt
+          grep "targetSdkVersion:'36'" renamer-apk-badging.txt
+          if "$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions "$RENAMER_APK" | grep -q 'android.permission.INTERNET'; then echo 'Sequential Renamer APK must stay offline' >&2; exit 1; fi
+          if "$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions "$RENAMER_APK" | grep -q 'android.permission.MANAGE_EXTERNAL_STORAGE'; then echo 'Sequential Renamer APK must use SAF, not broad storage access' >&2; exit 1; fi
+          grep -q 'Intent.ACTION_OPEN_DOCUMENT' android/sequentialrenamer/src/main/java/com/contactflow/sequentialrenamer/MainActivity.java
+          grep -q 'Intent.ACTION_OPEN_DOCUMENT_TREE' android/sequentialrenamer/src/main/java/com/contactflow/sequentialrenamer/MainActivity.java
+          grep -q 'DocumentsContract.renameDocument' android/sequentialrenamer/src/main/java/com/contactflow/sequentialrenamer/SafFileRepository.java
           mkdir -p dist
           cp "$APK" "dist/${PREFIX}_Android.apk"
           cp "$MESSENGER_APK" "dist/ContactFlow_3.6_Messenger_Contacts_Android.apk"
-          sha256sum "dist/${PREFIX}_Android.apk" "dist/ContactFlow_3.6_Messenger_Contacts_Android.apk" > dist/APK_SHA256.txt
+          cp "$RENAMER_APK" "dist/ContactFlow_3.6_Sequential_File_Renamer_Android.apk"
+          sha256sum "dist/${PREFIX}_Android.apk" "dist/ContactFlow_3.6_Messenger_Contacts_Android.apk" "dist/ContactFlow_3.6_Sequential_File_Renamer_Android.apk" > dist/APK_SHA256.txt
       - uses: actions/upload-artifact@v4
         with:
           name: cf36-release-android
@@ -327,7 +340,7 @@ jobs:
           Smart Import/Merge: atomic analyze+commit by default, optional preview, per-file undo and rollback
           Build-level Telegram credentials required: no
           City intelligence and Legacy V14 toolbox: yes
-          Essential extensions: native sequential Windows file renamer + offline Android messenger-contact inspector and million-card streaming VCF vault/importer
+          Essential extensions: native sequential file renamers for Windows/Android + offline Android messenger-contact inspector and million-card streaming VCF vault/importer
           Google OAuth configured: ${GOOGLE_CONFIGURED}
           Data model: Local-First; no ContactFlow account server required
           EOF
@@ -365,8 +378,9 @@ jobs:
             ## افزونه‌های کاربردی و ضروری همین نسخه
 
             - **Sequential File Renamer برای Windows:** انتخاب هم‌زمان صدها فایل، ثبت نام و رفتن مستقیم به بعدی با Enter، حفظ پسوند، Undo، کنترل تداخل، Drag & Drop، مرتب‌سازی طبیعی و گزارش CSV
+            - **Sequential File Renamer برای Android:** اپ بومی با انتخاب چندفایل/پوشه از System Picker، تایپ صحیح فارسی، دکمهٔ Next کیبورد، حفظ پسوند، Undo، ترتیب صف، الگو، ذخیرهٔ خودکار جلسه و گزارش CSV
             - **Messenger Contacts برای Android:** تفکیک مخاطبین بر اساس اکشن واقعی Telegram، WhatsApp، Rubika، Eitaa، Bale، Soroush و پیام‌رسان‌های دیگر، بازکردن کارت بومی مخاطب و خروجی TXT/CSV/XLSX/VCF
             - **ورود میلیونی VCF در همان APK:** پارس استریم تا ۱٬۰۰۰٬۰۰۰ کارت در هر فایل، مخزن SQLite/WAL محدود به فضای دستگاه، مقصد اختیاری دفترچه گوشی، Dedupe، Pause/Resume، Checkpoint و گزارش CSV
-            - افزونهٔ Android مجوز اینترنت و `QUERY_ALL_PACKAGES` ندارد و فقط داده‌های ثبت‌شده در `ContactsContract` را می‌خواند؛ عضویت افراد در سرور پیام‌رسان‌ها حدس زده نمی‌شود.
+            - هر دو افزونهٔ Android بدون مجوز اینترنت ساخته می‌شوند؛ تغییرنام‌دهنده فقط URIهای انتخاب‌شدهٔ کاربر و `DocumentsContract` را استفاده می‌کند و اپ مخاطبین عضویت افراد در سرور پیام‌رسان‌ها را حدس نمی‌زند.
 
             محدودیت رسمی: `Telegram.WebApp` فهرست کامل مخاطبین حساب را مستقیم ارائه نمی‌کند؛ نسخه ۳.۶ به‌جای API خصوصی، فایل Export انتخاب‌شده توسط خود کاربر را محلی پردازش می‌کند. دسترسی دفترچه دستگاه فقط با انتخاب یا مجوز صریح پلتفرم است.
