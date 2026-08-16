@@ -12,4 +12,4 @@ node --check web/v33.js
 node --check web/import-merge.js
 node --check web/v34.js
 node scripts/verify-v34.mjs
-echo "ContactFlow Personal Ultimate 3.5 verification PASS"
+echo "ContactFlow Personal Ultimate 3.6 verification PASS"

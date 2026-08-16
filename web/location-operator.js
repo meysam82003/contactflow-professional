@@ -1,4 +1,4 @@
-/* ContactFlow 3.5 offline Iran location and original mobile-network inference. */
+/* ContactFlow 3.6 offline Iran location and original mobile-network inference. */
 (function(root,factory){
   const api=factory();
   if(typeof module==='object'&&module.exports)module.exports=api;
@@ -6,7 +6,7 @@
 })(typeof globalThis!=='undefined'?globalThis:this,function(){
 'use strict';
 
-const VERSION='3.5.0';
+const VERSION='3.6.0';
 const DIGITS={'۰':'0','۱':'1','۲':'2','۳':'3','۴':'4','۵':'5','۶':'6','۷':'7','۸':'8','۹':'9','٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'};
 const PROVINCES={
   'آذربایجان شرقی':['تبریز:tabriz','مراغه:maragheh,maragha','مرند:marand','اهر:ahar','میانه:mianeh,miyaneh','بناب:bonab','شبستر:shabestar'],

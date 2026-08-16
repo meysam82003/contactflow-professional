@@ -21,7 +21,7 @@ import (
 //go:embed webapp/* webapp/icons/*
 var content embed.FS
 
-const appVersion = "3.5.0"
+const appVersion = "3.6.0"
 const defaultPort = 17655
 
 func dataDir() string {
@@ -136,10 +136,10 @@ func main() {
 	h := http.FileServer(http.FS(sub))
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, 200, map[string]any{"ok": true, "desktop": true, "local_only": true, "version": appVersion, "port": port, "telegram_mode": "user_session_optional", "telegram_contacts": true})
+		writeJSON(w, 200, map[string]any{"ok": true, "desktop": true, "local_only": true, "offline_assets": true, "version": appVersion, "port": port, "telegram_mode": "desktop_export_offline", "telegram_contacts": true})
 	})
 	mux.HandleFunc("/native/capabilities", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, 200, map[string]any{"ok": true, "connector": true, "telegramQr": true, "telegramMode": "user_session_optional", "telegramContacts": true, "nativeTelegramQr": false, "filePicker": false, "platform": runtime.GOOS, "version": appVersion})
+		writeJSON(w, 200, map[string]any{"ok": true, "connector": false, "telegramQr": false, "telegramMode": "desktop_export_offline", "telegramContacts": true, "offlineAssets": true, "nativeTelegramQr": false, "filePicker": false, "saveAs": "browser-file-system-access", "platform": runtime.GOOS, "version": appVersion})
 	})
 	// Backward-compatible endpoint: 501 was removed. New Web Core owns QR directly.
 	mux.HandleFunc("/native/telegram/qr", func(w http.ResponseWriter, r *http.Request) {

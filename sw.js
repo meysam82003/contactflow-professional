@@ -1,4 +1,4 @@
-const CACHE = 'contactflow-personal-ultimate-v3.5.0';
+const CACHE = 'contactflow-personal-ultimate-v3.6.0';
 const ASSETS = ['./','./index.html','./styles.css','./app.js','./ultimate.js','./config.js','./manifest.webmanifest','./icons/icon.svg'];
 
 self.addEventListener('install', e => e.waitUntil(

@@ -1,4 +1,4 @@
-/* ContactFlow 3.5 shared smart import/merge engine (browser + Node tests). */
+/* ContactFlow 3.6 shared smart import/merge engine (browser + Node tests). */
 (function(root,factory){
   const api=factory();
   if(typeof module==='object'&&module.exports)module.exports=api;
@@ -6,7 +6,7 @@
 })(typeof globalThis!=='undefined'?globalThis:this,function(){
 'use strict';
 
-const VERSION='3.5.0';
+const VERSION='3.6.0';
 function locationApi(){
   if(typeof globalThis!=='undefined'&&globalThis.ContactFlowLocationOperator)return globalThis.ContactFlowLocationOperator;
   if(typeof require==='function'){try{return require('./location-operator.js')}catch{}}

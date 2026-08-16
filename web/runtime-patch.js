@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-const VERSION='3.5.0';
+const VERSION='3.6.0';
 const E={stopSignal:{stopped:false},lastCheckResults:[],selectedCampaignId:null};
 const q=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -13,6 +13,7 @@ const coreAll=s=>coreReq(s,'readonly',x=>x.getAll()).then(x=>x||[]);
 const corePut=(s,v)=>coreReq(s,'readwrite',x=>x.put(v));
 function csv(v){v=String(v??'');return /[",\r\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
 function dl(name,blob){
+  if(window.ContactFlowFileSave)return window.ContactFlowFileSave.save(blob,name).catch(error=>console.error('Save As failed',error));
   if(window.ContactFlowAndroid?.saveDocument){blob.arrayBuffer().then(buf=>{const u8=new Uint8Array(buf);let b='';for(let i=0;i<u8.length;i+=0x8000)b+=String.fromCharCode(...u8.subarray(i,i+0x8000));window.ContactFlowAndroid.saveDocument(name,blob.type||'application/octet-stream',btoa(b));});return;}
   const a=document.createElement('a'),u=URL.createObjectURL(blob);a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),2500);
 }
@@ -122,7 +123,7 @@ async function fullBackup(){
 }
 async function restoreFullBlob(blob){const data=JSON.parse(await blob.text());if(data.format!=='ContactFlowBackup')throw new Error('Backup معتبر نیست.');if(!confirm('Backup روی داده محلی بازیابی شود؟'))return;for(const [s,rows] of Object.entries(data.stores||{})){try{const tx=state.db.transaction(s,'readwrite'),st=tx.objectStore(s);st.clear();for(const r of rows)st.put(r)}catch(e){console.warn('restore',s,e)}}location.reload();}
 window.ContactFlowFullBackup={create:fullBackup,restoreBlob:restoreFullBlob,download:async()=>{const d=await fullBackup(),blob=new Blob([JSON.stringify(d)],{type:'application/x-contactflow-backup'});dl(`ContactFlow_${new Date().toISOString().replace(/[:.]/g,'-')}.cfbackup`,blob);return blob;}};
-async function refreshTelegram(){await renderAccounts().catch(e=>console.warn(e));}
+async function refreshTelegram(){if(window.CONTACTFLOW_CONFIG?.telegramMode==='desktop_export_offline')return;await renderAccounts().catch(e=>console.warn(e));}
 function bind(){
   q('tg-add-account')&&(q('tg-add-account').onclick=beginQr);q('tg-native-check')&&(q('tg-native-check').onclick=refreshTelegram);q('tg-qr-cancel')&&(q('tg-qr-cancel').onclick=async()=>{(await connector()).cancelQr();q('tg-qr-wrap').classList.add('hidden')});
   q('cf-account-refresh')&&(q('cf-account-refresh').onclick=refreshTelegram);q('tg-account-list')&&(q('tg-account-list').onclick=async e=>{const tg=await connector();if(e.target.dataset.cfActive){await tg.setActiveAccount(e.target.dataset.cfActive);await renderAccounts()}if(e.target.dataset.cfHealth){const r=await tg.accountHealth(e.target.dataset.cfHealth);note(r.ok?'حساب سالم و متصل است.':r.error,r.ok?'good':'bad')}if(e.target.dataset.cfRemove&&confirm('Session این حساب از این دستگاه حذف شود؟')){await tg.disconnectAccount(e.target.dataset.cfRemove);await renderAccounts()}});

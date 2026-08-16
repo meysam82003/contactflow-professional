@@ -1,5 +1,5 @@
 <?php
-const CF_VERSION = '3.5.0';
+const CF_VERSION = '3.6.0';
 function cf_storage_dir(){ $d=__DIR__.'/storage'; if(!is_dir($d)) @mkdir($d,0700,true); return $d; }
 function cf_config_path(){ return cf_storage_dir().'/config.php'; }
 function cf_config(){ $p=cf_config_path(); if(!is_file($p)) return null; $c=include $p; return is_array($c)?$c:null; }

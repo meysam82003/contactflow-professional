@@ -1,6 +1,15 @@
-# ContactFlow Personal Ultimate 3.5
+# ContactFlow Personal Ultimate 3.6
 
-ContactFlow یک نرم‌افزار Local‑First برای Import، پاک‌سازی، Merge، Backup، بررسی وضعیت Telegram و خروجی مخاطبین است. نسخه ۳.۵ از یک Web Core مشترک برای Telegram Mini App، PWA، Android، Windows، Linux و macOS استفاده می‌کند.
+ContactFlow یک نرم‌افزار Local‑First برای Import، پاک‌سازی، Merge، Backup، تحلیل شهری و خروجی مخاطبین است. نسخه ۳.۶ از یک هسته آفلاین مشترک برای Telegram Mini App، PWA، Android، Windows، Linux و macOS استفاده می‌کند.
+
+## تغییرهای اصلی ۳.۶
+
+- Import پیش‌فرض با یک دکمه تحلیل، Merge، ثبت و راستی‌آزمایی می‌شود؛ «فقط پیش‌نمایش» اختیاری است.
+- موتور نام‌گذاری دقیق، تعداد مشخص یا همه ردیف‌ها را در یک Transaction تغییر می‌دهد و از قالب‌های شهر، استان، اپراتور، منبع و شماره پشتیبانی می‌کند.
+- مخاطبین فایل رسمی Telegram Desktop بدون API ID/Hash در Mini App/PWA/اپ باز، جستجو، ثبت و VCF/CSV می‌شوند.
+- داشبورد «هوش شهری» رتبه شهرها، استان‌ها، اپراتورها، تمرکز داده و امتیاز کیفیت را زنده محاسبه می‌کند.
+- جعبه‌ابزار جداگانه V14 تبدیل TXT/CSV/VCF/JSON/Excel، حذف تکراری، Prefix، VCF قطعه‌ای، Hex/Unicode و Image Base64 را یکپارچه می‌کند.
+- ذخیره خروجی با System Save As در Android و مرورگرهای پشتیبانی‌شده انجام می‌شود و Download فقط fallback است.
 
 ## تغییرهای اصلی ۳.۵
 
@@ -12,33 +21,13 @@ ContactFlow یک نرم‌افزار Local‑First برای Import، پاک‌س
 
 مرکز «Import و Merge هوشمند» چند فایل CSV/TSV/TXT/VCF/JSON/XLS/XLSX یا ZIP را هم‌زمان تحلیل می‌کند؛ XLS باینری OLE/BIFF نیز با Parser نسخه‌پین‌شده پشتیبانی می‌شود. تشخیص `Qom.txt → قم`، ترانویسی فارسی، E.164، کشور، شهر تلفن ثابت، نوع و اعتبار شماره، تفکیک شرکت، گزارش تکراری شهر/فامیل/دامنه و نمودار شهرها روی دستگاه انجام می‌شود.
 
-Merge ابتدا Dry-run است. کاربر می‌تواند نسخه قدیمی، جدید یا Smart Fill را برای تعارض انتخاب کند؛ سپس Undo مستقل هر فایل یا Rollback کامل آخرین Merge در دسترس است. Android دفترچه کامل را فقط با مجوز صریح می‌خواند و OCR کارت ویزیت را محلی اجرا می‌کند. در وب Contact Picker فقط موارد انتخاب‌شده کاربر را تحویل می‌دهد.
+Merge در حالت عادی پس از تحلیل به‌صورت اتمیک ثبت و شمارش دیتابیس راستی‌آزمایی می‌شود. حالت Preview-only، انتخاب نسخه قدیمی/جدید/Smart Fill، Undo مستقل هر فایل و Rollback کامل آخرین Merge همچنان وجود دارد. Android دفترچه کامل را فقط با مجوز صریح می‌خواند و OCR کارت ویزیت را محلی اجرا می‌کند. در وب Contact Picker فقط موارد انتخاب‌شده کاربر را تحویل می‌دهد.
 
-## قابلیت Telegram از ۳.۳، یکپارچه‌شده در ۳.۴
+## تلگرام بدون API
 
-صفحه «مخاطبین تلگرام» می‌تواند پس از ورود رسمی User Session، فهرست واقعی مخاطبین حساب را با `contacts.getContacts` دریافت کند و با تنظیمات کامل خروجی بگیرد:
+مسیر اصلی نسخه ۳.۶ فایل رسمی Telegram Desktop است: در Desktop از Settings → Advanced → Export Telegram data فقط Contacts را انتخاب کنید و `result.json` یا HTML را در بخش «تلگرام بدون API» باز کنید. برنامه همه پردازش‌ها را محلی انجام می‌دهد، پیش‌نمایش و جستجو می‌دهد و خروجی VCF/CSV یا ثبت در مخاطبین می‌سازد.
 
-- جستجو، مرتب‌سازی و فیلتر Mutual
-- انتخاب صفحه یا همه نتایج
-- خروجی همه یا فقط Selection
-- CSV، VCF، TXT، JSON و XLS
-- انتخاب ستون، Chunk و ZIP
-- پروفایل‌های ذخیره‌شده خروجی
-- Snapshot آفلاین و پاک‌سازی مستقل Cache
-- Import به ContactFlow و Undo محدود به رکوردهای جدید
-- بررسی شماره‌های دیتابیس با User Session در Batch حداکثر ۵۰۰تایی
-- ثبت `matched / not_returned / retry`، فیلتر، درصد و دو خروجی جدا
-
-## محدودیت رسمی Telegram
-
-Bot API و `Telegram.WebApp` مستقیماً فهرست مخاطبین حساب یا گوشی را نمی‌دهند. `requestContact` فقط درخواست شماره خود کاربر را به Bot می‌فرستد. مشاهده همه مخاطبین حساب به User Session رسمی و API ID/Hash نیاز دارد. `not_returned` نیز به‌دلیل Privacy معادل قطعی «تلگرام ندارد» نیست.
-
-ContactFlow دو روش دارد:
-
-1. API ID/Hash از قبل در Build تنظیم شده باشد.
-2. کاربر API ID/Hash رسمی خودش را از `my.telegram.org/apps` فقط روی همان دستگاه ذخیره کند.
-
-Session و Snapshot در IndexedDB همان Origin نگه‌داری می‌شوند و به Account Server متعلق به ContactFlow ارسال نمی‌شوند. جزئیات: [راهنمای خروجی مخاطبین Telegram](docs/TELEGRAM_CONTACT_EXPORT_3_3_FA.md).
+Mini App نمی‌تواند مخفیانه فهرست خصوصی مخاطبین حساب Telegram را بخواند؛ انتخاب فایل توسط کاربر جایگزین امن و قابل‌اتکا است. API ID، API Hash، Session یا QR برای این مسیر لازم نیست.
 
 ## ساختار سورس
 
@@ -50,7 +39,7 @@ Session و Snapshot در IndexedDB همان Origin نگه‌داری می‌شو
 - `scripts/build-miniapp.mjs` — ساخت Mini App کامل از همان `web/`
 - `.github/workflows/release-all.yml` — Build و Release همه دستگاه‌ها
 
-موتورهای `web/import-merge.js` و `web/location-operator.js`، رابط Merge در `web/v34.js` و رابط کانال‌ها در `web/v35.js` Source of Truth نسخه ۳.۵ هستند.
+موتورهای `web/import-merge.js`، `web/location-operator.js`، `web/name-engine.js`، `web/telegram-export.js` و `web/legacy-tools.js` به‌همراه رابط `web/v36.js` Source of Truth نسخه ۳.۶ هستند.
 
 ## اجرای PWA محلی
 
@@ -68,23 +57,23 @@ cp enhancements/dist/telegram-web.bundle.js web/
 
 ```bash
 node --test tests/*.test.cjs
-node scripts/verify-v35.mjs
+node scripts/verify-v36.mjs
 ```
 
 ## Mini App
 
 Release با نام زیر یک بسته Flat و آماده cPanel می‌سازد:
 
-`ContactFlow_Personal_Ultimate_3.5.0_Telegram_MiniApp_cPanel.zip`
+`ContactFlow_Personal_Ultimate_3.6.0_Telegram_MiniApp_cPanel.zip`
 
 محتویات ZIP را روی HTTPS Extract و `https://domain/path/miniapp.html` را در BotFather ثبت کنید. این فایل همان رابط کامل برنامه را بارگذاری می‌کند، نه صفحه Placeholder نسخه قبلی.
 
 ## اصول استفاده
 
 - داده‌ها Local‑First هستند.
-- Session Telegram در Backup عمومی صادر نمی‌شود.
+- مسیر تلگرام بدون API هیچ Session تلگرامی ایجاد یا صادر نمی‌کند.
 - Bot یا Mini App برای اسکن پنهانی شماره‌ها استفاده نمی‌شود.
 - ارسال تبلیغاتی باید فقط به مخاطب دارای رضایت صریح انجام شود.
 - استفاده Flood/Spam می‌تواند باعث محدودیت یا مسدودشدن حساب Telegram شود.
 
-فهرست قابلیت‌ها و مرزهای واقعی پلتفرم‌ها: [FEATURES_3_4_FA.md](docs/FEATURES_3_4_FA.md) و [FEATURES_3_5_FA.md](docs/FEATURES_3_5_FA.md)
+فهرست قابلیت‌ها و مرزهای واقعی پلتفرم‌ها: [FEATURES_3_4_FA.md](docs/FEATURES_3_4_FA.md)، [FEATURES_3_5_FA.md](docs/FEATURES_3_5_FA.md) و [FEATURES_3_6_FA.md](docs/FEATURES_3_6_FA.md)

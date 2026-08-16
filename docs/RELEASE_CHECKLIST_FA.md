@@ -1,8 +1,8 @@
-# چک‌لیست Release — ContactFlow 3.5
+# چک‌لیست Release — ContactFlow 3.6
 
 ## قرارداد نسخه و سورس
 
-- [ ] `VERSION`، `package.json`، Android، Desktop، Manifest، Service Worker و PHP Gateway روی `3.5.0` هستند.
+- [ ] `VERSION`، `package.json`، Android، Desktop، Manifest، Service Worker و PHP Gateway روی `3.6.0` هستند.
 - [ ] `node scripts/verify-v35.mjs` و همه تست‌های `node --test` موفق‌اند.
 - [ ] تشخیص شهر/استان انگلیسی و فینگلیش، اپراتور و قانون منبع خودکار/ثابت تست شده‌اند.
 - [ ] صف کانال‌ها فقط مخاطبین مجاز را وارد CSV/VCF می‌کند و ارسال نهایی نیازمند تأیید است.
@@ -50,7 +50,7 @@
 
 ## GitHub Release
 
-- [ ] Tag پایدار `v3.5.0` به Commit مورد نظر اشاره می‌کند.
+- [ ] Tag پایدار `v3.6.0` به Commit مورد نظر اشاره می‌کند.
 - [ ] همه Artifactها، Source ZIP، Release info و SHA-256 پیوست‌اند.
 - [ ] Release به‌صورت latest و non-prerelease منتشر شده است.
 - [ ] توضیح Release محدودیت رسمی WebApp/Bot API و نیاز User Session را بیان می‌کند.

@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 
-const VERSION='3.5.0';
+const VERSION='3.6.0';
 const PAGE_SIZE_DEFAULT=50;
 const FIELDS=['name','phone','username','telegramId','city','section','source'];
 const FEATURES=[
@@ -208,7 +208,7 @@ async function missingRows(rows){
   await new Promise((resolve,reject)=>{const tx=state.db.transaction('contacts','readonly'),store=tx.objectStore('contacts');for(const row of candidates){const request=store.get(row.phone);request.onsuccess=()=>{if(!request.result)missing.push(row)};request.onerror=()=>reject(request.error)}tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});return missing;
 }
 async function importLocal(){
-  try{const source=rowsForExport(),fresh=await missingRows(source);if(!fresh.length)return notify('شماره جدیدی برای افزودن وجود ندارد.','bad');const records=fresh.map(row=>({phone:row.phone,name:row.name||row.username||row.phone,city:'Telegram',section:row.isMutual?'Mutual':'Contacts',source:'Telegram Contacts 3.5',sourceFiles:['Telegram Contacts'],telegramStatus:'matched',telegramId:row.telegramId,username:row.username,createdAt:Date.now()}));let added=0;for(let i=0;i<records.length;i+=1000){const result=await addContactsBatch(records.slice(i,i+1000));added+=result.added}S.lastImported=records.slice(0,added).map(row=>row.phone);q('cf33-undo-import').disabled=!S.lastImported.length;await rebuildStats();await fillCitySelects();await addArtifact({type:'telegram-contacts-import',name:'Telegram Contacts',city:'Telegram',count:added});await logActivity('telegram-contacts','مخاطبین Telegram به ContactFlow افزوده شدند',{added});notify(`${fmt.format(added)} مخاطب جدید افزوده شد.`)}catch(error){notify(error.message,'bad')}
+  try{const source=rowsForExport(),fresh=await missingRows(source);if(!fresh.length)return notify('شماره جدیدی برای افزودن وجود ندارد.','bad');const records=fresh.map(row=>({phone:row.phone,name:row.name||row.username||row.phone,city:'Telegram',section:row.isMutual?'Mutual':'Contacts',source:'Telegram Contacts 3.6',sourceFiles:['Telegram Contacts'],telegramStatus:'matched',telegramId:row.telegramId,username:row.username,createdAt:Date.now()}));let added=0;for(let i=0;i<records.length;i+=1000){const result=await addContactsBatch(records.slice(i,i+1000));added+=result.added}S.lastImported=records.slice(0,added).map(row=>row.phone);q('cf33-undo-import').disabled=!S.lastImported.length;await rebuildStats();await fillCitySelects();await addArtifact({type:'telegram-contacts-import',name:'Telegram Contacts',city:'Telegram',count:added});await logActivity('telegram-contacts','مخاطبین Telegram به ContactFlow افزوده شدند',{added});notify(`${fmt.format(added)} مخاطب جدید افزوده شد.`)}catch(error){notify(error.message,'bad')}
 }
 async function undoImport(){
   if(!S.lastImported.length||!confirm(`فقط ${S.lastImported.length} مخاطب جدید آخرین ورود حذف شود؟`))return;
@@ -243,9 +243,9 @@ function bind(){
 }
 
 function updateVersion(){
-  document.title='ContactFlow Personal Ultimate 3.5';document.body.dataset.runtime=runtimeKind();
-  document.querySelectorAll('.brand span,.setting-box code,.callout strong').forEach(el=>{el.textContent=el.textContent.replace(/3\.[0134](?:\.0(?:-alpha\.1)?)?/g,'3.5.0')});
-  let meta=document.querySelector('meta[name="application-name"]');if(!meta){meta=document.createElement('meta');meta.name='application-name';document.head.appendChild(meta)}meta.content='ContactFlow 3.5';
+  document.title='ContactFlow Personal Ultimate 3.6';document.body.dataset.runtime=runtimeKind();
+  document.querySelectorAll('.brand span,.setting-box code,.callout strong').forEach(el=>{el.textContent=el.textContent.replace(/3\.[01345](?:\.0(?:-alpha\.1)?)?/g,'3.6.0')});
+  let meta=document.querySelector('meta[name="application-name"]');if(!meta){meta=document.createElement('meta');meta.name='application-name';document.head.appendChild(meta)}meta.content='ContactFlow 3.6';
 }
 async function diagnostics(){
   const tg=await telegram().catch(()=>null),td=tg?await tg.diagnostics():null;
@@ -253,7 +253,7 @@ async function diagnostics(){
 }
 
 async function init(){
-  await waitCore();initTelegramHost();addNavigation();addPage();patchRouting();updateVersion();restoreFilters();renderProfiles();bind();updateOnline();await refreshAccounts();await loadCached();
+  await waitCore();initTelegramHost();if(window.CONTACTFLOW_CONFIG?.telegramMode==='desktop_export_offline'){updateVersion();window.ContactFlow33={VERSION,FEATURES:[],diagnostics:async()=>({version:VERSION,runtime:runtimeKind(),mode:'desktop_export_offline',apiCredentialsRequired:false})};window.dispatchEvent(new CustomEvent('contactflow:3.3-ready',{detail:{version:VERSION,mode:'desktop_export_offline'}}));return}addNavigation();addPage();patchRouting();updateVersion();restoreFilters();renderProfiles();bind();updateOnline();await refreshAccounts();await loadCached();
   window.ContactFlow33={VERSION,FEATURES,diagnostics,loadTelegramContacts:loadRemote,exportTelegramContacts:makeEntries};
   window.dispatchEvent(new CustomEvent('contactflow:3.3-ready',{detail:{version:VERSION,runtime:runtimeKind()}}));
   const last=localStorage.getItem('cf33_last_page');if(location.hash==='#telegram-contacts'||last==='telegram-contacts')window.setPage('telegram-contacts');

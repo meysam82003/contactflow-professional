@@ -1,6 +1,7 @@
 window.CONTACTFLOW_CONFIG = {
-  edition: 'Personal Ultimate 3.5',
-  version: '3.5.0',
+  edition: 'Personal Ultimate 3.6',
+  version: '3.6.0',
   googleClientId: '',
-  telegramNativeAppConfigured: false
+  telegramNativeAppConfigured: false,
+  telegramMode: 'desktop_export_offline'
 };

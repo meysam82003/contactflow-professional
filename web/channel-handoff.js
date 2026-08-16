@@ -1,7 +1,7 @@
-/* ContactFlow 3.5 consent-aware handoff/export engine. It never bypasses messenger sessions. */
+/* ContactFlow 3.6 consent-aware handoff/export engine. It never bypasses messenger sessions. */
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;if(root)root.ContactFlowChannelHandoff=api})(typeof globalThis!=='undefined'?globalThis:this,function(){
 'use strict';
-const VERSION='3.5.0';
+const VERSION='3.6.0';
 const CHANNELS=Object.freeze({
   telegram:{label:'تلگرام',supportsDirectPhone:false,officialShare:true,home:'https://web.telegram.org/'},
   whatsapp:{label:'واتساپ',supportsDirectPhone:true,officialShare:true,home:'https://web.whatsapp.com/'},
