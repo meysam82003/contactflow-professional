@@ -60,7 +60,7 @@ public class MainActivity extends Activity {
             s.setAllowUniversalAccessFromFileURLs(false);
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
-        s.setUserAgentString(s.getUserAgentString() + " ContactFlowPersonalUltimate/3.4");
+        s.setUserAgentString(s.getUserAgentString() + " ContactFlowPersonalUltimate/3.5");
         CookieManager.getInstance().setAcceptCookie(true);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) CookieManager.getInstance().setAcceptThirdPartyCookies(webView, false);
 
@@ -199,7 +199,7 @@ public class MainActivity extends Activity {
     }
 
     public class AndroidBridge {
-        @JavascriptInterface public String nativeCapabilities() {return "{\"ok\":true,\"connector\":true,\"telegramQr\":true,\"telegramContacts\":true,\"deviceContacts\":true,\"businessCardOcr\":true,\"telegramMode\":\"user_session_optional\",\"secureAssetOrigin\":true,\"systemDrivePicker\":true,\"filePicker\":true,\"platform\":\"android\",\"version\":\"3.4.0\"}";}
+        @JavascriptInterface public String nativeCapabilities() {return "{\"ok\":true,\"connector\":true,\"telegramQr\":true,\"telegramContacts\":true,\"deviceContacts\":true,\"businessCardOcr\":true,\"telegramMode\":\"user_session_optional\",\"secureAssetOrigin\":true,\"systemDrivePicker\":true,\"filePicker\":true,\"platform\":\"android\",\"version\":\"3.5.0\"}";}
         @JavascriptInterface public String startTelegramQr() {return "{\"ok\":true,\"mode\":\"user_session_optional\",\"message\":\"QR and contacts.getContacts are handled by the shared Web connector\"}";}
         @JavascriptInterface public void saveFile(final String name,final String mime,final String base64) {runOnUiThread(() -> MainActivity.this.saveFile(name,mime,base64));}
         @JavascriptInterface public void saveDocument(final String name,final String mime,final String base64) {runOnUiThread(() -> MainActivity.this.chooseSaveDocument(name,mime,base64));}

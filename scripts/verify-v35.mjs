@@ -1,0 +1,21 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
+const root=path.resolve(new URL('..',import.meta.url).pathname);
+const read=file=>fs.readFileSync(path.join(root,file),'utf8');
+const required=['web/index.html','web/app.js','web/import-merge.js','web/location-operator.js','web/channel-handoff.js','web/v34.js','web/v35.js','web/v35.css','web/contact-export.js','web/runtime-patch.js','enhancements/telegram-web-entry.js','.github/workflows/release-all.yml'];
+for(const file of required)if(!fs.existsSync(path.join(root,file)))throw new Error(`missing ${file}`);
+const html=read('web/index.html');
+for(const asset of ['location-operator.js','channel-handoff.js','import-merge.js','v35.js','v35.css','telegram-web.bundle.js'])if(!html.includes(asset))throw new Error(`index missing ${asset}`);
+const locations=read('web/location-operator.js'),handoff=read('web/channel-handoff.js'),v35=read('web/v35.js');
+for(const marker of ['inferLocation','provinceForCity','detectOperator','resolveSource','ترابردپذیری'])if(!locations.includes(marker))throw new Error(`location/operator engine missing ${marker}`);
+for(const marker of ['telegram','whatsapp','rubika','bale','soroush','eligibleContacts','pending_manual_confirmation'])if(!handoff.includes(marker))throw new Error(`channel handoff missing ${marker}`);
+for(const marker of ['data-page="channels"','cf35-source-mode','cf35-location-query','cf35-export-queue','cf35-export-vcf'])if(!v35.includes(marker))throw new Error(`v35 UI missing ${marker}`);
+for(const marker of ['planMerge','inferCityFromFilename','sourcePolicy','province','operator'])if(!read('web/import-merge.js').includes(marker))throw new Error(`import engine missing ${marker}`);
+if(!read('enhancements/telegram-web-entry.js').includes('Api.contacts.GetContacts'))throw new Error('Telegram official User Session connector missing');
+if(read('web/config.js').includes("telegramApiHash:'")&&!/telegramApiHash:''/.test(read('web/config.js')))throw new Error('public config must not embed Telegram API hash');
+if(read('VERSION').trim()!=='3.5.0')throw new Error('VERSION must be 3.5.0');
+for(const [file,marker] of [['desktop/main.go','appVersion = "3.5.0"'],['android/app/build.gradle',"versionName '3.5.0'"],['telegram-miniapp/lib.php',"CF_VERSION = '3.5.0'"],['.github/workflows/release-all.yml','VERSION: 3.5.0']])if(!read(file).includes(marker))throw new Error(`${file} is not on 3.5.0`);
+for(const marker of ['android.permission.READ_CONTACTS','requestDeviceContacts','recognizeBusinessCard'])if(!read(marker.startsWith('android.permission')?'android/app/src/main/AndroidManifest.xml':'android/app/src/main/java/com/contactflow/pro/MainActivity.java').includes(marker))throw new Error(`Android missing ${marker}`);
+if(!read('web/sw.js').includes("'./v35.js'"))throw new Error('service worker missing v35 assets');
+console.log(`ContactFlow 3.5 source verification PASS (${Object.keys(JSON.parse(read('web/manifest.webmanifest'))).length} manifest fields)`);

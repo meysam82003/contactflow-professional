@@ -176,3 +176,11 @@
 
 ## 1.x
 معماری قدیمی Professional مبتنی بر Account/Sync Server. از نسخه 3.0 دیگر معماری فعال پروژه نیست.
+# 3.5.0
+
+- Added offline Iranian city/province inference from Persian, English and Finglish text.
+- Added original-prefix operator detection with an explicit mobile-number-portability warning.
+- Added a persisted automatic/fixed/keep source policy for all Smart Import jobs.
+- Added province/operator fields, IndexedDB indexes, search and export support.
+- Added a consent-aware Telegram/WhatsApp/Rubika/Bale/Soroush handoff center, manual-confirmation CSV queues and VCF export.
+- Upgraded shared PWA/Desktop/Android/Mini App assets, backup metadata and release automation to 3.5.0.

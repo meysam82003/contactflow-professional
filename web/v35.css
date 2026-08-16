@@ -1,0 +1,4 @@
+.cf35-page .cf35-location-result{display:flex;flex-direction:column;gap:6px;min-height:78px;margin-top:12px;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
+.cf35-location-result strong{font-size:18px;color:#bdc5ff}.cf35-location-result span{font-size:10px;color:var(--muted);line-height:1.8}
+.cf35-page .message-preview{min-height:150px;margin-top:12px}.cf35-link{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+.cf35-page textarea{resize:vertical}.cf35-page .callout p{max-width:900px}

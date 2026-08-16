@@ -13,5 +13,5 @@ fs.writeFileSync(path.join(output,'index.html'),html,'utf8');
 fs.writeFileSync(path.join(output,'miniapp.html'),html,'utf8');
 const sw=path.join(output,'sw.js');
 fs.writeFileSync(sw,fs.readFileSync(sw,'utf8').replace("'./index.html'","'./index.html','./miniapp.html'"),'utf8');
-fs.writeFileSync(path.join(output,'BUILD_INFO.txt'),`ContactFlow Personal Ultimate 3.4.0\nShared web core: yes\nSmart import/merge: yes\nTelegram Mini App entry: miniapp.html\nTelegram contacts: official User Session required\nDevice contacts: permission/capability gated\n`,'utf8');
-console.log(JSON.stringify({source,output,version:'3.4.0',entry:'miniapp.html'}));
+fs.writeFileSync(path.join(output,'BUILD_INFO.txt'),`ContactFlow Personal Ultimate 3.5.0\nShared web core: yes\nSmart import/merge: yes\nProvince/operator inference: yes\nConsent-aware messenger handoff: yes\nTelegram Mini App entry: miniapp.html\nTelegram contacts: official User Session required\nDevice contacts: permission/capability gated\n`,'utf8');
+console.log(JSON.stringify({source,output,version:'3.5.0',entry:'miniapp.html'}));

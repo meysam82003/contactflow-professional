@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "ContactFlow Personal Ultimate 3.4",
+  "name": "ContactFlow Personal Ultimate 3.5",
   "short_name": "ContactFlow",
-  "description": "Local-First ContactFlow 3.4 with smart multi-file merge, device contacts and Telegram status",
+  "description": "Local-first ContactFlow 3.5 with smart merge, province/operator inference and consent-aware messenger handoff",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -15,6 +15,7 @@
   "shortcuts": [
     {"name":"Import و Merge هوشمند","short_name":"Smart Merge","url":"./#smart-import"},
     {"name":"مخاطبین تلگرام","short_name":"Telegram","url":"./#telegram-contacts"},
+    {"name":"کانال‌های ارتباطی","short_name":"Channels","url":"./#channels"},
     {"name":"خروجی","short_name":"Export","url":"./#exports"},
     {"name":"Backup","short_name":"Backup","url":"./#backup"}
   ],

@@ -1,4 +1,4 @@
-/* ContactFlow 3.4 shared smart import/merge engine (browser + Node tests). */
+/* ContactFlow 3.5 shared smart import/merge engine (browser + Node tests). */
 (function(root,factory){
   const api=factory();
   if(typeof module==='object'&&module.exports)module.exports=api;
@@ -6,7 +6,12 @@
 })(typeof globalThis!=='undefined'?globalThis:this,function(){
 'use strict';
 
-const VERSION='3.4.0';
+const VERSION='3.5.0';
+function locationApi(){
+  if(typeof globalThis!=='undefined'&&globalThis.ContactFlowLocationOperator)return globalThis.ContactFlowLocationOperator;
+  if(typeof require==='function'){try{return require('./location-operator.js')}catch{}}
+  return null;
+}
 const DIGITS={'۰':'0','۱':'1','۲':'2','۳':'3','۴':'4','۵':'5','۶':'6','۷':'7','۸':'8','۹':'9','٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'};
 const FA_DIGITS=['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
 const CITY_ALIASES={
@@ -44,9 +49,9 @@ const HEADER_ALIASES={
   name:['name','full name','fullname','contact','نام','نام کامل','نام مخاطب'],
   firstName:['first name','firstname','given name','نام کوچک'],
   lastName:['last name','lastname','surname','family','نام خانوادگی','فامیل'],
-  email:['email','e-mail','mail','ایمیل','رایانامه'],city:['city','town','شهر'],country:['country','کشور'],
+  email:['email','e-mail','mail','ایمیل','رایانامه'],city:['city','town','شهر'],province:['province','state','استان'],address:['address','location','آدرس','نشانی','مکان'],country:['country','کشور'],
   company:['company','organization','organisation','business','شرکت','سازمان'],section:['section','group','category','بخش','گروه'],
-  note:['note','notes','description','یادداشت','توضیحات']
+  note:['note','notes','description','یادداشت','توضیحات'],source:['source','carrier','operator','منبع','اپراتور']
 };
 
 function latinDigits(value){return String(value??'').replace(/[۰-۹٠-٩]/g,c=>DIGITS[c]||c)}
@@ -58,6 +63,7 @@ function onlyLatinName(value){const s=cleanText(value);return !!s&&/[a-z]/i.test
 function stem(filename){return cleanText(String(filename||'').replace(/^.*[\\/]/,'').replace(/\.[^.]+$/,''))}
 
 function cityFromAlias(value){
+  const location=locationApi()?.inferLocation?.(value);if(location?.city)return location.city;
   const raw=keyText(value).replace(/[_\s]+/g,'-');
   if(CITY_ALIASES[raw])return CITY_ALIASES[raw];
   const joined=raw.replace(/-/g,'');if(CITY_ALIASES[joined])return CITY_ALIASES[joined];
@@ -125,14 +131,16 @@ function rowToObject(headers,row){const columns=resolveColumns(headers),out={};f
 
 function normalizeRecord(raw,context={}){
   const info=normalizePhone(raw.phone??raw.mobile??raw.tel,{defaultCountry:context.defaultCountry===undefined?'IR':context.defaultCountry}),phone=info?.e164||'';
-  const typed=classifyPhone(info),fileCity=inferCityFromFilename(context.filename||''),rawCity=cityFromAlias(raw.city)||cleanText(raw.city),city=rawCity||cleanText(context.city)||typed.city||fileCity||'بدون عنوان';
+  const L=locationApi(),typed=classifyPhone(info),locationText=[raw.city,raw.province,raw.address,raw.location,context.city,context.filename,raw.name,raw.note].filter(Boolean).join(' '),detected=L?.inferLocation?.(locationText)||{},fileCity=inferCityFromFilename(context.filename||''),rawCity=cityFromAlias(raw.city)||cleanText(raw.city),city=rawCity||cleanText(context.city)||detected.city||typed.city||fileCity||'بدون عنوان';
   const rawName=cleanText(raw.name||[raw.firstName,raw.lastName].filter(Boolean).join(' ')),nameFa=persianize(rawName),cityFa=persianize(city,{knownOnly:false}),company=cleanText(raw.company)||companyFromName(rawName).company;
-  const now=context.now||Date.now(),source=cleanText(context.source||raw.source||context.filename||'Import'),importId=cleanText(context.importId||'');
+  const province=cleanText(raw.province)||L?.provinceForCity?.(cityFa.value)||detected.province||'',operatorInfo=L?.detectOperator?.(phone)||{operator:'نامشخص',prefix:'',note:''};
+  const policy=context.sourcePolicy,fallback=cleanText(context.source||raw.source||context.filename||'Import'),source=policy&&L?.resolveSource?.(phone,{...policy,existing:raw.source,fallback})||fallback;
+  const now=context.now||Date.now(),importId=cleanText(context.importId||'');
   const sourceFiles=[...new Set([...(Array.isArray(raw.sourceFiles)?raw.sourceFiles:[]),context.filename].filter(Boolean).map(cleanText))];
   const importIds=[...new Set([...(Array.isArray(raw.importIds)?raw.importIds:[]),importId].filter(Boolean))];
   return {
     phone,name:nameFa.value||phone,firstName:cleanText(raw.firstName),lastName:cleanText(raw.lastName),email:cleanEmail(raw.email),
-    city:cityFa.value,country:cleanText(raw.country)||info?.country||'نامشخص',countryCode:info?.countryCode||'',phoneType:typed.phoneType,
+    city:cityFa.value,province,country:cleanText(raw.country)||info?.country||'نامشخص',countryCode:info?.countryCode||'',phoneType:typed.phoneType,operator:operatorInfo.operator,operatorPrefix:operatorInfo.prefix,operatorNote:operatorInfo.note,
     phoneValid:!!info?.valid,section:cleanText(raw.section||context.section),company,note:cleanText(raw.note),source,sourceFiles,importIds,
     importNote:`${new Date(now).toLocaleString('fa-IR')} • ${context.filename||source}`,rawPhone:cleanText(raw.phone),rowNumber:Number(context.rowNumber)||0,
     telegramStatus:raw.telegramStatus||'unchecked',telegramCheckedAt:raw.telegramCheckedAt||0,createdAt:raw.createdAt||now,updatedAt:now,

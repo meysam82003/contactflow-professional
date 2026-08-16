@@ -1,4 +1,4 @@
-# Security Policy — ContactFlow Personal Ultimate 3.4
+# Security Policy — ContactFlow Personal Ultimate 3.5
 
 ## Supported branch
 
@@ -23,7 +23,7 @@ TELEGRAM_API_HASH
 
 A public build can instead let a user enter credentials created for that user at `my.telegram.org/apps`. ContactFlow stores that choice only in browser storage for the current origin. Because every script running on an origin can access its storage, only install or open the Mini App from an HTTPS origin you control and trust.
 
-Do not inject Telegram API credentials into a public GitHub Release: browser artifacts expose embedded configuration. The official public `v3.4.0` workflow intentionally leaves the Telegram credential pair empty and uses the per-device setup path.
+Do not inject Telegram API credentials into a public GitHub Release: browser artifacts expose embedded configuration. The official public `v3.5.0` workflow intentionally leaves the Telegram credential pair empty and uses the per-device setup path.
 
 ## Device contacts and imported files
 

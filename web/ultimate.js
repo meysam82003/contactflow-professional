@@ -31,7 +31,7 @@ async function allowedPhones(mode='allowed'){const flags=await uAll('contact_fla
 
 // ---------- Telegram native / QR ----------
 async function nativeFetch(path,opts){try{const r=await fetch(path,{cache:'no-store',...(opts||{})});if(!r.ok)throw new Error(`HTTP ${r.status}`);return await r.json()}catch(e){return {ok:false,error:e.message,connector:false}}}
-async function checkNative(){let c;if(window.ContactFlowAndroid?.nativeCapabilities){try{c=JSON.parse(window.ContactFlowAndroid.nativeCapabilities())}catch{}}else c=await nativeFetch('/native/capabilities');c=c||{};$('tg-native-pill').textContent=c.telegramQr?'QR Ready':'QR Setup';$('tg-native-pill').className='pill '+(c.telegramQr?'active':'queued');$('tg-native-caps').innerHTML=`<li><b>${c.telegramQr?'✓':'○'} QR Login</b><span>${escapeHtml(c.telegramQr?'Connector آماده است':'برای ورود واقعی، API credentials رسمی Telegram را در Build یا تنظیم محلی همین دستگاه قرار دهید.')}</span></li><li><b>${c.filePicker?'✓':'○'} System File Picker</b><span>${c.filePicker?'فعال':'مرورگر/PWA'}</span></li><li><b>${c.platform||navigator.platform}</b><span>${escapeHtml(c.version||'ContactFlow 3.4.0')}</span></li>`;return c}
+async function checkNative(){let c;if(window.ContactFlowAndroid?.nativeCapabilities){try{c=JSON.parse(window.ContactFlowAndroid.nativeCapabilities())}catch{}}else c=await nativeFetch('/native/capabilities');c=c||{};$('tg-native-pill').textContent=c.telegramQr?'QR Ready':'QR Setup';$('tg-native-pill').className='pill '+(c.telegramQr?'active':'queued');$('tg-native-caps').innerHTML=`<li><b>${c.telegramQr?'✓':'○'} QR Login</b><span>${escapeHtml(c.telegramQr?'Connector آماده است':'برای ورود واقعی، API credentials رسمی Telegram را در Build یا تنظیم محلی همین دستگاه قرار دهید.')}</span></li><li><b>${c.filePicker?'✓':'○'} System File Picker</b><span>${c.filePicker?'فعال':'مرورگر/PWA'}</span></li><li><b>${c.platform||navigator.platform}</b><span>${escapeHtml(c.version||'ContactFlow 3.5.0')}</span></li>`;return c}
 function renderNativeQr(out){
   const box=$('tg-qr-box');
   box.innerHTML='';
@@ -80,7 +80,7 @@ async function renderRequests(){const rs=(await uAll('ad_requests')).sort((a,b)=
 // ---------- Backup ----------
 const backupStores=['contacts','imports','meta','settings','artifacts','contact_flags','campaigns','ad_requests','telegram_accounts','templates','activity','merge_runs','contact_images','watch_state'];
 function ser(v){if(v instanceof Blob)return {__blob:true,type:v.type,name:v.name||'',data:null};return v}
-async function makeBackupObject(note=''){const data={format:'ContactFlowBackup',version:6,appVersion:'3.4.0',createdAt:new Date().toISOString(),note,stores:{}};for(const s of backupStores){try{const rows=await uAll(s);data.stores[s]=rows.map(r=>JSON.parse(JSON.stringify(r,(k,v)=>v instanceof Blob?{__blob:true,type:v.type,size:v.size}:v)))}catch{data.stores[s]=[]}}return data}
+async function makeBackupObject(note=''){const data={format:'ContactFlowBackup',version:7,appVersion:'3.5.0',createdAt:new Date().toISOString(),note,stores:{}};for(const s of backupStores){try{const rows=await uAll(s);data.stores[s]=rows.map(r=>JSON.parse(JSON.stringify(r,(k,v)=>v instanceof Blob?{__blob:true,type:v.type,size:v.size}:v)))}catch{data.stores[s]=[]}}return data}
 async function createBackup(returnBlob=false){const data=await makeBackupObject($('backup-note').value.trim()),blob=new Blob([JSON.stringify(data)],{type:'application/x-contactflow-backup'}),name=`ContactFlow_${new Date().toISOString().replace(/[:.]/g,'-')}.cfbackup`;await log('backup','Backup ساخته شد',{name,size:blob.size});$('backup-state').textContent=`${name} • ${formatBytes(blob.size)}`;renderBackupHistory();if(returnBlob)return {blob,name};dl(name,blob);return {blob,name}}
 async function restoreBackup(file){const data=JSON.parse(await file.text());if(data.format!=='ContactFlowBackup')throw new Error('فرمت Backup معتبر نیست');if(!confirm('داده‌های محلی با Backup جایگزین شوند؟'))return;for(const s of backupStores){try{await uClear(s);for(const r of data.stores?.[s]||[])await uPut(s,r)}catch(e){console.warn(s,e)}}toast('Backup بازیابی شد.');await log('backup','Backup بازیابی شد',{file:file.name});location.reload()}
 async function renderBackupHistory(){const logs=(await uAll('activity')).filter(x=>x.type==='backup').sort((a,b)=>b.createdAt-a.createdAt).slice(0,30);$('backup-history').innerHTML=logs.map(x=>`<div class="export-row"><div><strong>${escapeHtml(x.message)}</strong><small>${new Date(x.createdAt).toLocaleString('fa-IR')}</small></div></div>`).join('')||'<div class="empty-state compact">هنوز Backup ساخته نشده.</div>'}
@@ -108,7 +108,7 @@ async function init(){await waitDB();
   // initial
   previewGenerator();refreshAudience();renderCampaigns();renderTemplates();renderRequests();renderBackupHistory();checkNative();
   // Log startup once per session
-  if(!sessionStorage.getItem('cf3_started')){sessionStorage.setItem('cf3_started','1');log('system','ContactFlow Personal Ultimate 3.4 اجرا شد');}
+  if(!sessionStorage.getItem('cf3_started')){sessionStorage.setItem('cf3_started','1');log('system','ContactFlow Personal Ultimate 3.5 اجرا شد');}
 }
 init().catch(e=>{console.error(e);toast('Ultimate module: '+e.message,'bad',8000)});
 })();
