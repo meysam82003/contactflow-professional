@@ -41,7 +41,7 @@ internal sealed class MainForm : Form
 
     public MainForm()
     {
-        Text = "ContactFlow — تغییرنام ترتیبی فایل‌ها 3.6 r2";
+        Text = "ContactFlow — تغییرنام ترتیبی فایل‌ها 3.6 r3";
         Width = 1180;
         Height = 760;
         MinimumSize = new Size(940, 620);
@@ -268,23 +268,51 @@ internal sealed class MainForm : Form
 
     private void SelectFiles()
     {
-        using var dialog = new OpenFileDialog { Multiselect = true, Filter = "همهٔ فایل‌ها (*.*)|*.*", Title = "فایل‌ها را به ترتیب انتخاب کنید", RestoreDirectory = true };
-        if (dialog.ShowDialog(this) == DialogResult.OK) AddPaths(dialog.FileNames);
+        try
+        {
+            using var dialog = new OpenFileDialog { Multiselect = true, CheckFileExists = true, DereferenceLinks = true, Filter = "همهٔ فایل‌ها (*.*)|*.*", Title = "فایل‌ها را به ترتیب انتخاب کنید", RestoreDirectory = true };
+            if (dialog.ShowDialog(this) == DialogResult.OK) AddPaths(dialog.FileNames);
+            else SetStatus("انتخاب لغو شد؛ صف قبلی دست‌نخورده ماند.", false);
+        }
+        catch (Exception exception) { SetStatus($"خواندن انتخاب فایل ناموفق بود: {exception.Message}", true); }
     }
 
     private void SelectFolder()
     {
-        using var dialog = new FolderBrowserDialog { Description = "فایل‌های پوشه به ترتیب طبیعی نام اضافه می‌شوند", ShowNewFolderButton = false };
-        if (dialog.ShowDialog(this) == DialogResult.OK) AddPaths(Directory.EnumerateFiles(dialog.SelectedPath));
+        try
+        {
+            using var dialog = new FolderBrowserDialog { Description = "فایل‌های پوشه به ترتیب طبیعی نام اضافه می‌شوند", ShowNewFolderButton = false };
+            if (dialog.ShowDialog(this) == DialogResult.OK) AddPaths(Directory.EnumerateFiles(dialog.SelectedPath));
+            else SetStatus("انتخاب پوشه لغو شد؛ صف قبلی دست‌نخورده ماند.", false);
+        }
+        catch (Exception exception) { SetStatus($"خواندن پوشه ناموفق بود: {exception.Message}", true); }
     }
 
     private void AddPaths(IEnumerable<string> paths)
     {
-        var added = paths.Where(File.Exists).Select(Path.GetFullPath).Where(path => queuedPaths.Add(path)).OrderBy(path => Path.GetFileName(path), Comparer<string>.Create(RenameRules.NaturalCompare)).ToList();
+        var readable = new List<string>();
+        var rejected = 0;
+        try
+        {
+            foreach (var rawPath in paths)
+            {
+                try
+                {
+                    if (string.IsNullOrWhiteSpace(rawPath) || !File.Exists(rawPath)) { rejected++; continue; }
+                    var path = Path.GetFullPath(rawPath);
+                    if (queuedPaths.Add(path)) readable.Add(path);
+                }
+                catch { rejected++; }
+            }
+        }
+        catch { rejected++; }
+        var added = readable.OrderBy(path => Path.GetFileName(path), Comparer<string>.Create(RenameRules.NaturalCompare)).ToList();
         foreach (var path in added) entries.Add(new RenameEntry(path));
         RebuildQueue();
         if (entries.Count > 0) SelectIndex(currentIndex < 0 ? 0 : currentIndex);
-        SetStatus(added.Count == 0 ? "فایل جدیدی اضافه نشد." : $"{added.Count:N0} فایل اضافه شد؛ جمع صف {entries.Count:N0} فایل است.", false);
+        var message = added.Count == 0 ? "فایل جدیدی اضافه نشد." : $"{added.Count:N0} فایل اضافه شد؛ جمع صف {entries.Count:N0} فایل است.";
+        if (rejected > 0) message += $" • {rejected:N0} مسیر خراب یا بدون دسترسی رد شد.";
+        SetStatus(message, added.Count == 0 && rejected > 0);
     }
 
     private void RebuildQueue()

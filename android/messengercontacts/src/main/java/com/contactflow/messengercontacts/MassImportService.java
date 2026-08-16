@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 /** Foreground, resumable and bounded-memory VCF import pipeline. */
 public final class MassImportService extends Service {
@@ -44,6 +45,7 @@ public final class MassImportService extends Service {
     private static final int SYSTEM_BATCH_CARDS = 80;
     private static final int VAULT_BATCH_CARDS = 1_000;
     private static final int MAX_PROVIDER_OPERATIONS = 350;
+    private static final AtomicLong PROCESS_ACTIVE_JOB = new AtomicLong(-1L);
 
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private final AtomicBoolean running = new AtomicBoolean(false);
@@ -80,6 +82,7 @@ public final class MassImportService extends Service {
         if (!running.compareAndSet(false, true)) return START_NOT_STICKY;
         startForeground(NOTIFICATION_ID, buildNotification(job, "آماده‌سازی ورود…", false));
         activeJobId = jobId;
+        PROCESS_ACTIVE_JOB.set(jobId);
         activeGroupId = -1L;
         pauseRequested = false;
         timedOut = false;
@@ -410,6 +413,7 @@ public final class MassImportService extends Service {
 
     private void finishService() {
         running.set(false);
+        PROCESS_ACTIVE_JOB.compareAndSet(activeJobId, -1L);
         activeJobId = -1L;
         activeGroupId = -1L;
         if (Build.VERSION.SDK_INT >= 24) stopForeground(STOP_FOREGROUND_DETACH); else stopForeground(false);
@@ -426,6 +430,8 @@ public final class MassImportService extends Service {
     }
 
     @Override public IBinder onBind(Intent intent) { return null; }
+
+    static boolean isJobActiveInProcess(long jobId) { return jobId > 0 && PROCESS_ACTIVE_JOB.get() == jobId; }
 
     private int pendingFlags() {
         return PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0);

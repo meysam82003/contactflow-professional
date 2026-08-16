@@ -306,6 +306,20 @@ async function sendCampaign(accountId,phones,campaign,{delayMs=1800,dailyCap=80,
   return {campaignId,sent,failed,skipped,total:unique.length};
 }
 async function exportState(){return {accounts:await listAccounts(),checks:await all('checks'),history:await all('history'),contacts:await all('contacts'),activeAccountId:await activeAccountId()};}
+async function importState(snapshot={}){
+  const checks=Array.isArray(snapshot.checks)?snapshot.checks:[],history=Array.isArray(snapshot.history)?snapshot.history:[],contacts=Array.isArray(snapshot.contacts)?snapshot.contacts:[];
+  const db=await openDB();
+  await new Promise((resolve,reject)=>{
+    const tx=db.transaction(['checks','history','contacts'],'readwrite');
+    for(const [name,rows] of [['checks',checks],['history',history],['contacts',contacts]]){
+      const store=tx.objectStore(name);store.clear();for(const row of rows)store.put(row);
+    }
+    tx.oncomplete=resolve;tx.onabort=()=>reject(tx.error||new Error('Telegram connector restore aborted'));tx.onerror=()=>reject(tx.error||new Error('Telegram connector restore failed'));
+  });
+  const requested=snapshot.activeAccountId||null,existing=requested?await get('accounts',requested):null;
+  await setActiveAccount(existing?requested:null);
+  return {checks:checks.length,history:history.length,contacts:contacts.length,accountsPreserved:(await listAccounts()).length};
+}
 async function diagnostics(){
   const a=await listAccounts(), active=await activeAccountId();
   const creds=credentialStatus(),contacts=await all('contacts');
@@ -313,5 +327,5 @@ async function diagnostics(){
 }
 
 window.ContactFlowSpreadsheet={version:'SheetJS CE 0.20.3',readRows:readSpreadsheetRows};
-window.ContactFlowTelegramWeb={MAX_ACCOUNTS,renderQr,connectQr,cancelQr,listAccounts,setActiveAccount,activeAccountId,disconnectAccount,accountHealth,configureCredentials,clearCredentials,credentialStatus,listTelegramContacts,getCachedContacts,clearContactCache,checkContacts,listChecks,clearChecks,loadDialogs,sendCampaign,exportState,diagnostics};
+window.ContactFlowTelegramWeb={MAX_ACCOUNTS,renderQr,connectQr,cancelQr,listAccounts,setActiveAccount,activeAccountId,disconnectAccount,accountHealth,configureCredentials,clearCredentials,credentialStatus,listTelegramContacts,getCachedContacts,clearContactCache,checkContacts,listChecks,clearChecks,loadDialogs,sendCampaign,exportState,importState,diagnostics};
 window.dispatchEvent(new CustomEvent('contactflow:telegram-web-ready'));

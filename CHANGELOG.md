@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.6.0 reliability hotfix r3 — 2026-08-17
+
+- Fixed the Android million-VCF destination dialog whose list actions could disappear when an AlertDialog message was present; both «ورود سریع» and «ورود به گوشی» are now explicit buttons.
+- Added a real read/access/header preflight before creating an import job, immediate cancellation/error feedback and a visible selection state instead of an apparently frozen modal.
+- Hardened Android Sequential File Renamer selection for OEM pickers: `ACTION_GET_CONTENT` fallback, combined `ClipData`/single-URI handling, per-ten-file progress, metadata projection fallback and clear read-only-provider reporting.
+- Hardened the Windows renamer file/folder picker so one missing, malformed or inaccessible path is reported and skipped instead of preventing the rest of the selection from loading; file version is now `3.6.0.3`.
+- Replaced duplicate partial backup implementations with backup schema 9: binary Blob/File preservation, SHA-256 integrity, per-store manifest counts, strict validation and one atomic multi-store Restore transaction followed by count verification.
+- Added chunked Android Save As for large `.cfbackup` files so the APK no longer converts the complete file to one in-memory Base64 string; Android Restore now uses the WebView system file picker directly.
+- Added backup round-trip/tamper/legacy tests and bumped all three Android build codes to `30603` so devices accept the fixed APKs as updates.
+
 ## 3.6.0 — Essential extensions refresh — 2026-08-16
 
 - Added an installed-app/PWA VCF exporter that processes up to 1,000,000 contacts with IndexedDB cursors, bounded 2,000-row text blocks and chunks of up to 100,000 contacts.
