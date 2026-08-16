@@ -20,7 +20,7 @@ test('all canonical version markers are 3.6.0',()=>{
 
 test('shared web core includes smart merge and Telegram contact modules',()=>{
   const html=read('web/index.html');
-  for(const asset of ['contact-export.js','runtime-patch.js','import-merge.js','location-operator.js','channel-handoff.js','name-engine.js','telegram-export.js','legacy-tools.js','file-save.js','v34.js','v34.css','v35.js','v35.css','v36.js','v36.css'])assert.ok(html.includes(asset),`index missing ${asset}`);
+  for(const asset of ['contact-export.js','runtime-patch.js','import-merge.js','location-operator.js','channel-handoff.js','name-engine.js','telegram-export.js','legacy-tools.js','file-save.js','bulk-vcf-export.js','v34.js','v34.css','v35.js','v35.css','v36.js','v36.css'])assert.ok(html.includes(asset),`index missing ${asset}`);
   assert.match(read('web/v33.js'),/data-page="telegram-contacts"/);
   assert.match(read('web/v34.js'),/data-page="smart-import"/);
   assert.match(read('enhancements/telegram-web-entry.js'),/Api\.contacts\.GetContacts/);
@@ -28,6 +28,14 @@ test('shared web core includes smart merge and Telegram contact modules',()=>{
   assert.match(JSON.parse(read('enhancements/package.json')).dependencies.xlsx,/cdn\.sheetjs\.com\/xlsx-0\.20\.3/);
   assert.match(read('enhancements/webpack.config.cjs'),/process\/browser\$/);
   assert.match(read('enhancements/webpack.config.cjs'),/fullySpecified: false/);
+});
+
+test('million-contact VCF export is shared by installed apps but excluded from Mini App',()=>{
+  const html=read('web/index.html'),app=read('web/app.js'),builder=read('scripts/build-miniapp.mjs');
+  for(const marker of ['export-extra','export-max-total','export-offline','export-online-fallback','export-split-city','cancel-export'])assert.match(html,new RegExp(marker));
+  for(const marker of ['listExportScopes','makeJobExportBlob','executeLegacyExportJob','exportAbort','maxTotal'])assert.match(app,new RegExp(marker));
+  assert.match(builder,/rmSync\(path\.join\(output,'bulk-vcf-export\.js'\)/);
+  assert.match(builder,/BULK_VCF_START/);
 });
 
 test('3.6 preserves more than fifty 3.4 shared feature contracts',()=>{

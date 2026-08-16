@@ -66,7 +66,9 @@ jobs:
           node --check web/telegram-export.js
           node --check web/legacy-tools.js
           node --check web/file-save.js
+          node --check web/bulk-vcf-export.js
           node --check web/v36.js
+          node scripts/stress-bulk-vcf.mjs
 
       - name: Build Telegram User API connector
         run: |
@@ -102,6 +104,8 @@ jobs:
           grep -q 'planMerge' build/webcore/import-merge.js
           grep -q 'Api.contacts.GetContacts' enhancements/telegram-web-entry.js
           grep -q 'ContactFlowSpreadsheet' enhancements/telegram-web-entry.js
+          grep -q 'MAX_TOTAL=1_000_000' build/webcore/bulk-vcf-export.js
+          grep -q 'export-online-fallback' build/webcore/index.html
           node --check build/webcore/telegram-web.bundle.js
           test -s "build/${PREFIX}_PWA.zip"
           node - <<'NODE'
@@ -266,7 +270,7 @@ jobs:
         with:
           name: cf36-webcore
           path: build/webcore
-      - name: Build full shared-core Mini App package
+      - name: Build Mini App package without million-contact exporter
         run: |
           set -euo pipefail
           mkdir -p build/miniapp
@@ -284,6 +288,8 @@ jobs:
           grep -q 'smart-import' build/miniapp/v34.js
           grep -q 'data-page="channels"' build/miniapp/v35.js
           grep -q 'data-page="telegram-offline"' build/miniapp/v36.js
+          test ! -e build/miniapp/bulk-vcf-export.js
+          ! grep -q 'export-max-total' build/miniapp/miniapp.html
           mkdir -p dist
           (cd build/miniapp && zip -qr "../../dist/${PREFIX}_Telegram_MiniApp_cPanel.zip" .)
           test -s "dist/${PREFIX}_Telegram_MiniApp_cPanel.zip"
@@ -333,6 +339,7 @@ jobs:
           Source commit: ${GITHUB_SHA}
           Workflow run: ${GITHUB_RUN_ID}
           Shared web core across PWA/Desktop/Android/Mini App: yes
+          Million-contact VCF export: PWA/Desktop/Android only; excluded from Mini App
           Telegram contacts primary method: official Telegram Desktop result.json/HTML export; no API ID/hash
           Telegram Mini App method: user-selected export file, local view/import/VCF/CSV
           Android device contacts: explicit READ_CONTACTS runtime permission
@@ -373,6 +380,7 @@ jobs:
             - صف رضایت‌محور، VCF/CSV و تحویل دستی به Telegram، WhatsApp، Rubika، Bale و Soroush
             - داشبورد هوش شهری با رتبه شهر، پوشش استان، سهم اپراتورها، امتیاز کیفیت و خروجی CSV
             - جعبه‌ابزار مستقل V14: TXT/CSV/VCF/JSON/Excel، حذف تکراری، Prefix، Chunk VCF، Hex/Unicode و Image Base64
+            - خروجی VCF تا ۱٬۰۰۰٬۰۰۰ مخاطب در PWA/Android/Desktop با موتور آفلاین، fallback سازگار، تفکیک شهر، پسوند سراسری نام، Progress و لغو امن؛ خارج از Mini App
             - Save As بومی در APK و مرورگرهای پشتیبانی‌شده؛ Download فقط مسیر جایگزین
 
             ## افزونه‌های کاربردی و ضروری همین نسخه

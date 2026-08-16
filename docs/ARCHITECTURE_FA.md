@@ -9,7 +9,7 @@
 - Android WebViewAssetLoader
 - Windows، Linux و macOS Go shell
 
-هسته مشترک شامل مدیریت مخاطبین، Import/Export، Audience، Campaign، Backup، Activity، صفحه Telegram Contacts و Diagnostics است.
+هسته مشترک شامل مدیریت مخاطبین، Import/Export، Audience، Campaign، Backup، Activity، صفحه Telegram Contacts و Diagnostics است. ماژول `bulk-vcf-export.js` یک استثنای صریح است: در PWA و پوسته‌های نصب‌شده بسته‌بندی می‌شود و Build Mini App آن را به‌همراه کنترل‌های میلیونی حذف می‌کند.
 
 ## ذخیره‌سازی محلی
 
