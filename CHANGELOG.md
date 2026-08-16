@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.6.0 — Essential extensions refresh — 2026-08-16
+
+- Fixed adjacent city/province word spacing and added an automatic repair pass for existing names such as `ابرکوهیزد`.
+- Added a native Windows sequential file renamer with Enter-to-next, extension safety, collision checks, Undo, natural ordering, templates and CSV audit reports.
+- Added an offline native Android messenger-contact inspector for Telegram, WhatsApp, Rubika, Eitaa, Bale, Soroush and other registered contact actions, with TXT/CSV/XLSX/VCF Save As.
+
 ## 3.4.0 — Smart import, reversible merge and Telegram status — 2026-08-15
 
 ### Smart Import/Merge shared core

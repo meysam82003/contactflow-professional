@@ -30,3 +30,9 @@ test('operator result warns that mobile number portability can change current ne
   assert.equal(result.operator,'همراه اول');
   assert.match(result.note,/ترابردپذیری/);
 });
+
+test('repairs missing city/province spaces in imported and previously generated names',()=>{
+  assert.equal(location.formatLocation('ابرکوه','یزد'),'ابرکوه یزد');
+  assert.equal(location.repairLocationSpacing('ابرکوهیزد ۰۰۱','ابرکوه','یزد'),'ابرکوه یزد ۰۰۱');
+  assert.equal(location.repairLocationSpacing('  ابرکوه\u200cیزد\t۰۰۲  ','ابرکوه','یزد'),'ابرکوه یزد ۰۰۲');
+});

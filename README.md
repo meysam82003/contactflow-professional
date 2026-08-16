@@ -1,5 +1,7 @@
 # ContactFlow Personal Ultimate 3.6
 
+The `v3.6.0` release also ships two source-auditable essential extensions: a native Windows sequential file renamer and an offline Android messenger-contact inspector. See [`extensions/README_FA.md`](extensions/README_FA.md).
+
 ContactFlow is a local-first contact workspace with one shared web core for Telegram Mini App, PWA, Android, Windows, Linux and macOS.
 
 Version 3.6 makes Smart Import atomic by default: analyze, merge, commit and database verification happen from one action, while preview-only remains optional. It adds an exact batch name engine, an API-free Telegram Desktop export reader, native Save As where the platform supports it, a live city-intelligence dashboard, and an offline Legacy V14 toolbox for TXT/CSV/VCF/JSON/Excel conversion, deduplication, chunked VCF, prefix conversion, Hex/Unicode and image Base64.

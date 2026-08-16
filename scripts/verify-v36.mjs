@@ -3,7 +3,7 @@ import path from 'node:path';
 
 const root=path.resolve(new URL('..',import.meta.url).pathname);
 const read=file=>fs.readFileSync(path.join(root,file),'utf8');
-const required=['web/index.html','web/app.js','web/import-merge.js','web/location-operator.js','web/channel-handoff.js','web/name-engine.js','web/telegram-export.js','web/legacy-tools.js','web/file-save.js','web/v34.js','web/v35.js','web/v36.js','web/v36.css','web/sw.js','.github/workflows/release-all.yml'];
+const required=['web/index.html','web/app.js','web/import-merge.js','web/location-operator.js','web/channel-handoff.js','web/name-engine.js','web/telegram-export.js','web/legacy-tools.js','web/file-save.js','web/v34.js','web/v35.js','web/v36.js','web/v36.css','web/sw.js','extensions/sequential-file-renamer/SequentialFileRenamer.csproj','extensions/sequential-file-renamer/MainForm.cs','android/messengercontacts/build.gradle','android/messengercontacts/src/main/AndroidManifest.xml','android/messengercontacts/src/main/java/com/contactflow/messengercontacts/MainActivity.java','.github/workflows/release-all.yml'];
 for(const file of required)if(!fs.existsSync(path.join(root,file)))throw new Error(`missing ${file}`);
 const html=read('web/index.html');
 for(const asset of ['name-engine.js','telegram-export.js','legacy-tools.js','file-save.js','v36.js','v36.css'])if(!html.includes(asset))throw new Error(`index missing ${asset}`);
@@ -16,5 +16,7 @@ if(!read('web/config.js').includes("telegramMode:'desktop_export_offline'"))thro
 if(read('VERSION').trim()!=='3.6.0')throw new Error('VERSION must be 3.6.0');
 for(const [file,marker] of [['desktop/main.go','appVersion = "3.6.0"'],['android/app/build.gradle',"versionName '3.6.0'"],['telegram-miniapp/lib.php',"CF_VERSION = '3.6.0'"],['.github/workflows/release-all.yml','VERSION: 3.6.0']])if(!read(file).includes(marker))throw new Error(`${file} is not on 3.6.0`);
 for(const asset of ["'./v36.js'","'./v36.css'","'./telegram-export.js'","'./legacy-tools.js'","'./file-save.js'"])if(!read('web/sw.js').includes(asset))throw new Error(`service worker missing ${asset}`);
+for(const asset of ['ContactFlow_3.6_Sequential_File_Renamer_Windows_x64.exe','ContactFlow_3.6_Messenger_Contacts_Android.apk'])if(!read('.github/workflows/release-all.yml').includes(asset))throw new Error(`release workflow missing extension ${asset}`);
+if(read('android/messengercontacts/src/main/AndroidManifest.xml').includes('android.permission.INTERNET'))throw new Error('messenger contacts extension must remain offline');
 JSON.parse(read('web/manifest.webmanifest'));
 console.log('ContactFlow 3.6 source verification PASS');

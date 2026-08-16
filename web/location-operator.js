@@ -46,7 +46,7 @@ function text(value){return String(value??'').replace(/[يى]/g,'ی').replace(/�
 function latin(value){return text(value).replace(/[۰-۹٠-٩]/g,c=>DIGITS[c]||c).toLowerCase().replace(/[^a-z0-9]+/g,'')}
 function persianKey(value){return text(value).replace(/[^\u0600-\u06ff0-9]+/g,'')}
 const LOCATIONS=[];
-for(const [province,items] of Object.entries(PROVINCES))for(const item of items){const [city,raw='']=item.split(':');const aliases=[city,...raw.split(',').filter(Boolean)];LOCATIONS.push({city,province,aliases,latinAliases:aliases.map(latin).filter(Boolean),persianAliases:aliases.map(persianKey).filter(Boolean)})}
+for(const [province,items] of Object.entries(PROVINCES))for(const item of items){const [city,raw='']=item.split(':');const aliases=[city,...raw.split(',').filter(Boolean)];LOCATIONS.push({city:text(city),province:text(province),aliases,latinAliases:aliases.map(latin).filter(Boolean),persianAliases:aliases.map(persianKey).filter(Boolean)})}
 const PROVINCE_ALIASES={
   tehran:'تهران',alborz:'البرز',qom:'قم',fars:'فارس',esfahan:'اصفهان',isfahan:'اصفهان',khuzestan:'خوزستان',mazandaran:'مازندران',gilan:'گیلان',golestan:'گلستان',kerman:'کرمان',kermanshah:'کرمانشاه',yazd:'یزد',semnan:'سمنان',zanjan:'زنجان',qazvin:'قزوین',ardabil:'اردبیل',bushehr:'بوشهر',hormozgan:'هرمزگان',lorestan:'لرستان',kordestan:'کردستان',kurdistan:'کردستان',hamedan:'همدان',hamadan:'همدان',markazi:'مرکزی',ilam:'ایلام'
 };
@@ -61,6 +61,16 @@ function inferLocation(value){
 }
 function provinceForCity(value){return inferLocation(value).province}
 
+function formatLocation(city,province,separator=' '){return [text(city),text(province)].filter(Boolean).join(separator||' ')}
+function repairLocationSpacing(value,city='',province=''){
+  let result=text(value);if(!result)return '';
+  const pairs=[],seen=new Set(),add=(rawCity,rawProvince)=>{const c=text(rawCity),p=text(rawProvince),key=`${c}\u0000${p}`;if(c&&p&&!seen.has(key)){seen.add(key);pairs.push([c,p])}};
+  add(city,province);for(const row of LOCATIONS)add(row.city,row.province);
+  pairs.sort((a,b)=>(b[0].length+b[1].length)-(a[0].length+a[1].length));
+  for(const [c,p] of pairs){const joined=(c+p).replace(/\s+/g,''),reversed=(p+c).replace(/\s+/g,'');if(joined&&result.includes(joined))result=result.split(joined).join(`${c} ${p}`);if(reversed&&reversed!==joined&&result.includes(reversed))result=result.split(reversed).join(`${p} ${c}`)}
+  return text(result);
+}
+
 const PREFIX_RULES=[
   {operator:'همراه اول',prefixes:['910','911','912','913','914','915','916','917','918','919','990','991','992','993','994']},
   {operator:'ایرانسل',prefixes:['900','901','902','903','904','905','930','933','935','936','937','938','939']},
@@ -71,5 +81,5 @@ function nationalMobile(phone){let d=String(phone??'').replace(/[۰-۹٠-٩]/g,c
 function detectOperator(phone){const mobile=nationalMobile(phone);if(!mobile)return {operator:'نامشخص',prefix:'',confidence:0,note:'شماره موبایل ایران نیست'};const prefix=mobile.slice(0,3),rule=PREFIX_RULES.find(item=>item.prefixes.includes(prefix));return {operator:rule?.operator||'سایر اپراتورها',prefix:'0'+prefix,confidence:rule?0.9:0.45,note:'اپراتور اولیه پیش‌شماره؛ به‌دلیل ترابردپذیری ممکن است اپراتور فعلی متفاوت باشد'} }
 function resolveSource(phone,policy={}){const mode=policy.mode||'auto';if(mode==='fixed')return text(policy.fixedSource)||'نامشخص';if(mode==='keep')return text(policy.existing)||text(policy.fallback)||'Import';const detected=detectOperator(phone);return detected.operator==='نامشخص'?(text(policy.fallback)||'نامشخص'):detected.operator}
 
-return {VERSION,PROVINCES,LOCATIONS,PREFIX_RULES,text,latin,persianKey,inferLocation,provinceForCity,nationalMobile,detectOperator,resolveSource};
+return {VERSION,PROVINCES,LOCATIONS,PREFIX_RULES,text,latin,persianKey,inferLocation,provinceForCity,formatLocation,repairLocationSpacing,nationalMobile,detectOperator,resolveSource};
 });

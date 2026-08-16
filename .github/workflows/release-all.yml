@@ -2,6 +2,8 @@ name: Release All Devices — ContactFlow 3.6
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [main]
   push:
     branches: [main]
     paths:
@@ -9,6 +11,7 @@ on:
       - 'enhancements/**'
       - 'telegram-miniapp/**'
       - 'desktop/**'
+      - 'extensions/**'
       - 'android/**'
       - 'scripts/**'
       - 'tests/**'
@@ -149,6 +152,33 @@ jobs:
           path: dist/*
           retention-days: 30
 
+  desktop_extensions:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build native sequential file renamer
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $project = 'extensions/sequential-file-renamer/SequentialFileRenamer.csproj'
+          dotnet publish $project -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o build/file-renamer
+          $source = 'build/file-renamer/ContactFlow.SequentialFileRenamer.exe'
+          if (!(Test-Path $source)) { throw 'Sequential File Renamer executable was not produced.' }
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          $target = 'dist/ContactFlow_3.6_Sequential_File_Renamer_Windows_x64.exe'
+          Copy-Item $source $target
+          $hash = (Get-FileHash -Algorithm SHA256 $target).Hash.ToLowerInvariant()
+          "$hash  ContactFlow_3.6_Sequential_File_Renamer_Windows_x64.exe" | Set-Content -Encoding ascii dist/ContactFlow_3.6_Sequential_File_Renamer_SHA256.txt
+          if ((Get-Item $target).Length -lt 1000000) { throw 'Sequential File Renamer executable is unexpectedly small.' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cf36-release-desktop-extensions
+          path: dist/*
+          retention-days: 30
+
   android:
     needs: webcore
     runs-on: ubuntu-latest
@@ -168,12 +198,14 @@ jobs:
         with:
           name: cf36-webcore
           path: android/app/src/main/assets
-      - name: Build and verify APK
+      - name: Build and verify APKs
         run: |
           set -euo pipefail
-          (cd android && gradle --no-daemon :app:assembleDebug --stacktrace)
+          (cd android && gradle --no-daemon :app:assembleDebug :messengercontacts:assembleDebug --stacktrace)
           APK=android/app/build/outputs/apk/debug/app-debug.apk
+          MESSENGER_APK=android/messengercontacts/build/outputs/apk/debug/messengercontacts-debug.apk
           test -s "$APK"
+          test -s "$MESSENGER_APK"
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | tee apk-badging.txt
           grep "sdkVersion:'23'" apk-badging.txt
           grep "targetSdkVersion:'36'" apk-badging.txt
@@ -183,9 +215,19 @@ jobs:
           unzip -p "$APK" assets/v36.js | grep -q 'telegram-offline'
           unzip -p "$APK" assets/v36.js | grep -q 'legacy-tools'
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions "$APK" | grep -q 'android.permission.READ_CONTACTS'
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$MESSENGER_APK" | tee messenger-apk-badging.txt
+          grep "package: name='com.contactflow.messengercontacts'" messenger-apk-badging.txt
+          grep "sdkVersion:'23'" messenger-apk-badging.txt
+          grep "targetSdkVersion:'36'" messenger-apk-badging.txt
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions "$MESSENGER_APK" | grep -q 'android.permission.READ_CONTACTS'
+          if "$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions "$MESSENGER_APK" | grep -q 'android.permission.INTERNET'; then echo 'Messenger Contacts APK must stay offline' >&2; exit 1; fi
+          unzip -p "$MESSENGER_APK" classes.dex > messenger-classes.dex
+          grep -aq 'ContactsContract' messenger-classes.dex
+          grep -aq 'android.intent.action.CREATE_DOCUMENT' messenger-classes.dex
           mkdir -p dist
           cp "$APK" "dist/${PREFIX}_Android.apk"
-          sha256sum "dist/${PREFIX}_Android.apk" > dist/APK_SHA256.txt
+          cp "$MESSENGER_APK" "dist/ContactFlow_3.6_Messenger_Contacts_Android.apk"
+          sha256sum "dist/${PREFIX}_Android.apk" "dist/ContactFlow_3.6_Messenger_Contacts_Android.apk" > dist/APK_SHA256.txt
       - uses: actions/upload-artifact@v4
         with:
           name: cf36-release-android
@@ -249,7 +291,8 @@ jobs:
           retention-days: 30
 
   release:
-    needs: [webcore, desktop, android, miniapp, source]
+    if: github.event_name != 'pull_request'
+    needs: [webcore, desktop, desktop_extensions, android, miniapp, source]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -277,6 +320,7 @@ jobs:
           Smart Import/Merge: atomic analyze+commit by default, optional preview, per-file undo and rollback
           Build-level Telegram credentials required: no
           City intelligence and Legacy V14 toolbox: yes
+          Essential extensions: native sequential Windows file renamer + offline Android messenger-contact inspector
           Google OAuth configured: ${GOOGLE_CONFIGURED}
           Data model: Local-First; no ContactFlow account server required
           EOF
@@ -310,5 +354,11 @@ jobs:
             - داشبورد هوش شهری با رتبه شهر، پوشش استان، سهم اپراتورها، امتیاز کیفیت و خروجی CSV
             - جعبه‌ابزار مستقل V14: TXT/CSV/VCF/JSON/Excel، حذف تکراری، Prefix، Chunk VCF، Hex/Unicode و Image Base64
             - Save As بومی در APK و مرورگرهای پشتیبانی‌شده؛ Download فقط مسیر جایگزین
+
+            ## افزونه‌های کاربردی و ضروری همین نسخه
+
+            - **Sequential File Renamer برای Windows:** انتخاب هم‌زمان صدها فایل، ثبت نام و رفتن مستقیم به بعدی با Enter، حفظ پسوند، Undo، کنترل تداخل، Drag & Drop، مرتب‌سازی طبیعی و گزارش CSV
+            - **Messenger Contacts برای Android:** تفکیک مخاطبین بر اساس اکشن واقعی Telegram، WhatsApp، Rubika، Eitaa، Bale، Soroush و پیام‌رسان‌های دیگر، بازکردن کارت بومی مخاطب و خروجی TXT/CSV/XLSX/VCF
+            - افزونهٔ Android مجوز اینترنت و `QUERY_ALL_PACKAGES` ندارد و فقط داده‌های ثبت‌شده در `ContactsContract` را می‌خواند؛ عضویت افراد در سرور پیام‌رسان‌ها حدس زده نمی‌شود.
 
             محدودیت رسمی: `Telegram.WebApp` فهرست کامل مخاطبین حساب را مستقیم ارائه نمی‌کند؛ نسخه ۳.۶ به‌جای API خصوصی، فایل Export انتخاب‌شده توسط خود کاربر را محلی پردازش می‌کند. دسترسی دفترچه دستگاه فقط با انتخاب یا مجوز صریح پلتفرم است.
