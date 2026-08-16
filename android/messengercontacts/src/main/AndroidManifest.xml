@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+
+    <!-- Package visibility is limited to the supported messenger identifiers; network access is intentionally absent. -->
+    <queries>
+        <package android:name="org.telegram.messenger" />
+        <package android:name="org.telegram.messenger.beta" />
+        <package android:name="org.thunderdog.challegram" />
+        <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
+        <package android:name="ir.resaneh1.iptv" />
+        <package android:name="app.rbmain.a" />
+        <package android:name="ir.eitaa.messenger" />
+        <package android:name="ir.nasim" />
+        <package android:name="mobi.mmdt.ottplus" />
+        <package android:name="mobi.mmdt.ott" />
+        <package android:name="com.gapafzar.messenger" />
+        <package android:name="ir.igap" />
+        <package android:name="ir.medu.shad" />
+        <package android:name="org.thoughtcrime.securesms" />
+        <package android:name="com.viber.voip" />
+        <package android:name="com.imo.android.imoim" />
+        <package android:name="com.skype.raider" />
+        <package android:name="jp.naver.line.android" />
+        <package android:name="com.facebook.orca" />
+    </queries>
+
+    <application
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:icon="@drawable/ic_launcher"
+        android:label="ContactFlow مخاطبین پیام‌رسان"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.ContactFlowMessengerContacts"
+        android:usesCleartextTraffic="false">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:screenOrientation="unspecified">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

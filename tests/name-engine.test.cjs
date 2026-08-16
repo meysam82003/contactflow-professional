@@ -17,3 +17,8 @@ test('name templates support old names, source and phone suffix',()=>{
   const value=names.renderTemplate('{old} • {source} • {phone:last4}',{name:'علی رضایی',source:'ایرانسل',phone:'+989351234567'},1);
   assert.equal(value,'علی رضایی • ایرانسل • 4567');
 });
+
+test('adjacent template tokens always receive a readable word boundary',()=>{
+  assert.equal(names.renderTemplate('{city}{province}',{city:'ابرکوه',province:'یزد'},1),'ابرکوه یزد');
+  assert.equal(names.renderTemplate('{city}\u200c{n:000}',{city:'ابرکوه'},7),'ابرکوه 007');
+});
