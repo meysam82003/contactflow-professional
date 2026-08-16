@@ -39,7 +39,7 @@ test('3.6 preserves more than fifty 3.4 shared feature contracts',()=>{
 
 test('release workflow builds all supported device artifacts and essential extensions',()=>{
   const workflow=read('.github/workflows/release-all.yml');
-  for(const marker of ['_PWA.zip','_Windows_Portable.exe','_Windows_Setup.exe','_Linux_x64','_macOS_Intel','_macOS_AppleSilicon','_Android.apk','_Telegram_MiniApp_cPanel.zip','_Source.zip','ContactFlow_3.6_Sequential_File_Renamer_Windows_x64.exe','ContactFlow_3.6_Messenger_Contacts_Android.apk'])assert.ok(workflow.includes(marker),`workflow missing ${marker}`);
+  for(const marker of ['_PWA.zip','_Windows_Portable.exe','_Windows_Setup.exe','_Linux_x64','_macOS_Intel','_macOS_AppleSilicon','_Android.apk','_Telegram_MiniApp_cPanel.zip','_Source.zip','ContactFlow_3.6_Sequential_File_Renamer_Windows_x64.exe','ContactFlow_3.6_Sequential_File_Renamer_Android.apk','ContactFlow_3.6_Messenger_Contacts_Android.apk'])assert.ok(workflow.includes(marker),`workflow missing ${marker}`);
   assert.match(workflow,/tag_name: v3\.6\.0/);
 });
 
